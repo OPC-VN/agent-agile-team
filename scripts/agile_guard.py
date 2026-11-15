@@ -1,25 +1,37 @@
 """Rào máy agile — hook PreToolUse từ chối lệnh shell thuộc danh sách loại (method/agile.md mục 5). Chỉ thư viện chuẩn.
 
 Gọi: python agile_guard.py --format {claude,codex,antigravity}; đọc JSON sự kiện ở stdin.
-Lối dừng tường minh: python agile_guard.py --clear <thư mục làm việc> xoá đúng <thư mục>/.tmp/autopilot.json (chỉ file đó; in đường
-đã xoá; không có thì báo và thoát 0). Hook nhận ra lệnh này (đúng script của plugin, đúng dạng `--clear <đường>`, không thêm gì khác)
-và cho qua kể cả khi có file dấu; mọi đường xoá khác vẫn bị chặn. ĐÂY LÀ RÀO HÀNH VI: phiên con gọi được lệnh này về mặt máy, nhưng luật
-cấm — chỉ điều phối (sau `Dừng agile.` hay khi thu hồi) hoặc người dùng được gọi, và lần gọi hiện trong transcript để soát.
-Chỉ hoạt động khi có file dấu `.tmp/autopilot.json`: tìm từ thư mục chạy lệnh của sự kiện (`tool_input.workdir`/`cwd`,
-`toolCall.args.Cwd`, rồi `cwd` của phiên) đi lên, dừng sau cấp đầu tiên có `.git` (thư mục hoặc file `gitdir:` của worktree);
-thư mục lệnh và thư mục phiên khác nhau thì thấy file dấu ở đâu cũng bật. Không có file dấu → cho qua (claude/codex thoát 0
-không in; antigravity in `{}`). Có file dấu và lệnh khớp mục loại → chặn: claude/codex in lý do ở stderr rồi thoát 2;
-antigravity in JSON `deny` ở stdout, thoát 0. Lý do: `agile: '<mục loại>' cần người dùng nói trong chat — lệnh không chạy`.
+
+KÍCH HOẠT (SPR-32 B3, thay file dấu `.tmp/autopilot.json`): rào BẬT khi (a) công tắc agile hiệu lực — `always` của repo (khoá repo suy từ
+`cwd` của sự kiện / `CLAUDE_PROJECT_DIR`, đúng như `agile_state`) hoặc phiên của `session_id` trong sự kiện đang BẬT; (b) lớp trạng thái
+báo `guard_must_stay_active` (trạng thái hỏng/không đọc được: đóng khi lỗi, chặn cả 13 mục); (c) sự kiện có `agent_id` (tác tử con) mà
+không có file phiên nào khớp: coi là đang bảo vệ, không bao giờ ngủ; (d) không nạp được `agile_state`: đóng khi lỗi. Ngoài bốn trường hợp
+đó (agile TẮT, trạng thái lành) rào thoát 0 ngay, không in. Không dùng tiến trình con (không `git`): tra trạng thái trong tiến trình.
+Rào KHÔNG đọc file dấu cũ; nếu `.tmp/autopilot.json` còn đó thì chỉ in MỘT dòng nhắc ở stderr, không chặn.
+
+Lối dừng: lối thoát cũ (`--clear` xoá file dấu) đã bỏ. Thay bằng luật chống phá công tắc dưới đây và lệnh `/agile stop` do NGƯỜI DÙNG gõ
+(hook `UserPromptExpansion`, không phải tác tử, ghi trạng thái); đó là cách duy nhất được phép tắt rào.
+
+Khi rào đang bật: lệnh shell hay công cụ ghi file bị chặn (thoát 2, cùng khuôn lý do) nếu (a) đích là thư mục trạng thái (thư mục mặc định
+của nền tảng hay giá trị `AGENT_AGILE_STATE_DIR`; đường tương đối, `..`, dạng biến môi trường, qua liên kết/junction) hay file `repo-*.json`/
+`session-*.json` trong đó; (b) chạy `agile_state.py` với lệnh con đổi công tắc (`on|off|stop|always|manual`; `status`/`get` vẫn qua) hay chạy
+`agile_hook.py` (nhận JSON qua stdin); (c) `import agile_state`/`agile_hook` trong `python -c`/heredoc/văn bản lệnh; (d) đặt hay export
+`AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` để đổi hướng trạng thái. Lệnh chỉ-đọc (`cat`, `ls`, `grep`…) vào thư mục trạng thái vẫn qua.
+
+GIỚI HẠN ĐÃ BIẾT (nói thẳng): so khớp chuỗi LUÔN lách được bằng gián tiếp (`python -c` ghép tên lệnh/đường từ mảnh, file script viết trước
+rồi chạy sau, biến chưa biết giá trị, `getattr`, `eval` dựng chuỗi). Luật này là sàn chống TAI NẠN, không phải bằng chứng an ninh; cùng tài
+khoản có Bash thì ghi đè file trạng thái được. Cái bảo vệ thật là lệnh người dùng gõ + cờ `source` + soát transcript.
+
+Không có file dấu: không còn "không có file dấu → cho qua"; xem KÍCH HOẠT. Đầu ra: claude/codex in lý do ở stderr rồi thoát 2; antigravity
+in JSON `deny` ở stdout, thoát 0; cho qua: claude/codex thoát 0 không in, antigravity in `{}`.
+Lý do: `agile: '<mục loại>' cần người dùng nói trong chat — lệnh không chạy`.
 
 Mục có mẫu lệnh: chỉ `irreversible_delete` — xoá đệ quy ngoài `.tmp/`, mọi lệnh xoá có đích thuộc `.git`, `find -delete`/`-exec rm`,
 `Get-ChildItem -Recurse | Remove-Item`, `[IO.Directory]::Delete(…, $true)`, `robocopy /MIR`, `busybox rm`, chuỗi `mv`/`robocopy`/`cp -r` vào `.tmp/` rồi xoá,
 `git worktree remove --force` và các lệnh git phá hoàn tác (`reflog expire`, `gc --prune=now`, `update-ref -d`, `push` xoá hay ép, `branch -D`; SPR-20 TK27b).
 Lệnh git khác (đẩy thường, tag, gộp, `commit`, `reset`) không bị hook chặn (TK21): luật chữ ở method/git-conventions.md. Các mục khác là rào hành vi.
-Ngoài danh sách loại, hook bảo vệ chính file dấu: lệnh shell không chỉ-đọc có đối số trỏ tới file dấu (hoặc `.tmp/` bao nó, hay glob khớp
-nó) và công cụ ghi file (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `apply_patch`, `write_to_file`, `replace_file_content`…) có đường
-đích là file dấu đều bị chặn với lý do `file dấu là rào`. Claude đã đăng ký matcher cho công cụ ghi file ở hooks/hooks.json; Codex và Antigravity chưa.
-Danh sách đóng 13 mục lấy từ `_agile_rules.AGILE_EXCLUSIONS` chỉ dùng khi file dấu hỏng (chặn cả 13); file dấu hợp lệ chặn bảy mục
-`OPEN_ALWAYS_BLOCKED`. Tiến trình con duy nhất: `git check-ignore -q <file dấu>` khi gặp `git stash -u` hay `git clean -f` (lỗi → coi là không ignore).
+Danh sách đóng 13 mục lấy từ `_agile_rules.AGILE_EXCLUSIONS` chỉ dùng khi trạng thái hỏng (chặn cả 13); trạng thái lành chặn bảy mục
+`OPEN_ALWAYS_BLOCKED`. Không còn tiến trình con nào (SPR-32 B3 bỏ `git check-ignore` cùng với bảo vệ file dấu).
 
 Không phân tích chuỗi chương trình tuỳ ý (`awk 'BEGIN{system(…)}'`, `perl -e`, `ruby -e`, `node -e`, `python -c`): giới hạn đã biết.
 
@@ -28,8 +40,8 @@ dấu nháy (chấp nhận chặn nhầm). Chỉ mở lớp `bash -c`/`pwsh -Com
 Đối thủ cố ý (biến môi trường, script, `python -c`, thoát ký tự `g\\it`, ghép chuỗi tên lệnh) lách được; đây là lưới
 an toàn, không phải ranh giới bảo mật.
 
-Đóng khi lỗi: có file dấu (dò từ thư mục sự kiện khi đã đọc được sự kiện) mà JSON hỏng hay hook gặp ngoại lệ → chặn; không có
-file dấu thì ngoại lệ không chặn việc của người dùng. AGILE_GUARD_DEBUG=1 in traceback ra stderr.
+Đóng khi lỗi: rào đang bật (hay không xác định được) mà JSON hỏng hay hook gặp ngoại lệ → chặn; agile tắt và trạng thái lành thì
+ngoại lệ không chặn việc của người dùng. AGILE_GUARD_DEBUG=1 in traceback ra stderr.
 """
 
 from __future__ import annotations
@@ -39,13 +51,12 @@ import fnmatch
 import json
 import os
 import re
-import subprocess
 import sys
 import traceback
 from typing import TextIO
 
 FORMATS = ("claude", "codex", "antigravity")
-MARKER_PARTS = (".tmp", "autopilot.json")
+LEGACY_MARKER_PARTS = (".tmp", "autopilot.json")  # chỉ để in dòng nhắc; rào không đọc nó
 SHELL_TOOLS = frozenset({"bash", "powershell", "shell", "exec_command", "run_command", "local_shell", "shell_command"})
 COMMAND_KEYS = ("command", "cmd", "CommandLine")  # tool_input.* (Claude, Codex) và toolCall.args.* (Antigravity)
 CWD_KEYS = ("workdir", "cwd", "Cwd")
@@ -89,10 +100,9 @@ ROBOCOPY_FLAG = re.compile(r"/[A-Za-z]+(?::.*)?")
 UNSAFE_PATH_CHARS = set(",$%`~{}()<>!^\"'\n\r;|&")
 GLOB_CHARS = set("*?[")
 MAX_UNWRAP = 3
-MAX_WALK_DEPTH = 6  # độ sâu tối đa khi dò file dấu lồng trong đích dọn .tmp/
 NESTED = "nested"  # đơn vị chặn riêng: lồng shell quá sâu, không phân tích được
-MARKER = "marker"  # đơn vị chặn riêng: đụng tới chính file dấu
-SPECIAL_ITEMS = frozenset({NESTED, MARKER})
+TAMPER = "tamper"  # đơn vị chặn riêng: đụng tới công tắc agile (thư mục trạng thái, agile_state/agile_hook, biến đổi hướng)
+SPECIAL_ITEMS = frozenset({NESTED, TAMPER})
 WRITE_TOOLS = frozenset({"write", "edit", "multiedit", "notebookedit", "apply_patch", "write_to_file", "replace_file_content",
                          "multi_replace_file_content"})
 PATH_KEYS = ("file_path", "path", "notebook_path", "TargetFile")
@@ -118,55 +128,6 @@ READ_ONLY_GIT = frozenset({"status", "log", "diff", "show", "ls-files", "check-i
 PYTHON_NAME = re.compile(r"^(?:py|python[0-9.]*)$")
 
 
-def clear_marker(directory: str, stdout: TextIO, stderr: TextIO) -> int:
-    """`--clear <dir>`: xoá đúng `<dir>/.tmp/autopilot.json` (tên so không phân biệt hoa thường), không đụng gì khác."""
-    folder = os.path.join(os.path.abspath(directory), MARKER_PARTS[0])
-    try:
-        names = os.listdir(folder)
-    except OSError:
-        names = []
-    removed = []
-    for entry in names:
-        path = os.path.join(folder, entry)
-        if entry.lower() == MARKER_PARTS[1] and (os.path.isfile(path) or os.path.islink(path)):
-            try:
-                os.remove(path)
-            except OSError as exc:
-                stderr.write("không xoá được {}: {}\n".format(path, exc))
-                return 1
-            removed.append(path)
-    if removed:
-        for path in removed:
-            stdout.write("đã xoá {}\n".format(path))
-    else:
-        stdout.write("không có file dấu: {}\n".format(os.path.join(folder, MARKER_PARTS[1])))
-    return 0
-
-
-def _is_clear_command(tokens: list[str]) -> bool:
-    """`python <plugin>/scripts/agile_guard.py --clear <đường>` (hay `sh <plugin>/scripts/agile-hook.sh --clear <đường>`): đúng
-    script của plugin này, không đối số nào khác, đích không chứa chuyển hướng hay nháy."""
-    if len(tokens) < 4 or tokens[-2] != "--clear":
-        return False
-    target = tokens[-1]
-    if not target or target.startswith("-") or set("<>\"'") & set(target):
-        return False
-    name = _exe_name(tokens[0])
-    here = os.path.dirname(os.path.realpath(__file__))
-    if PYTHON_NAME.match(name):
-        wanted = os.path.join(here, "agile_guard.py")
-    elif name in ("sh", "bash"):
-        wanted = os.path.join(here, "agile-hook.sh")
-    else:
-        return False
-    script_at = len(tokens) - 3
-    for token in tokens[1:script_at]:
-        if not token.startswith("-") and not (token == "utf8" and "-X" in tokens[1:script_at]):
-            return False
-    script = tokens[script_at]
-    return script.startswith("-") is False and os.path.normcase(os.path.realpath(script)) == os.path.normcase(wanted)
-
-
 def known_exclusions() -> tuple[str, ...]:
     """Danh sách đóng 13 mục từ `_agile_rules.AGILE_EXCLUSIONS`; nạp muộn để lệnh không có file dấu không trả phí nhập."""
     here = os.path.dirname(os.path.abspath(__file__))
@@ -176,23 +137,10 @@ def known_exclusions() -> tuple[str, ...]:
     return tuple(AGILE_EXCLUSIONS)
 
 
-# --- file dấu ---------------------------------------------------------------------------------------------------
+# --- gốc repo ---------------------------------------------------------------------------------------------------
 
 def _has_git(directory: str) -> bool:
     return os.path.exists(os.path.join(directory, ".git"))
-
-
-def find_marker(start: str) -> str | None:
-    """Đường tới `.tmp/autopilot.json` gần nhất từ `start` đi lên; dừng sau cấp đầu tiên có `.git`."""
-    current = os.path.abspath(start)
-    while True:
-        candidate = os.path.join(current, *MARKER_PARTS)
-        if os.path.exists(candidate):
-            return candidate
-        parent = os.path.dirname(current)
-        if _has_git(current) or parent == current:
-            return None
-        current = parent
 
 
 def find_repo_root(start: str) -> str | None:
@@ -207,20 +155,292 @@ def find_repo_root(start: str) -> str | None:
         current = parent
 
 
-def load_active(marker: str) -> tuple[set[str], bool]:
-    """(mục đang chặn, file dấu hỏng?). Một chế độ (SPR-20 TK22): file dấu hợp lệ chặn bảy mục luôn-chặn của
-    `_agile_rules.OPEN_ALWAYS_BLOCKED`; khoá `mode`/`exclusions` (file dấu kiểu cũ) bị bỏ qua. File không đọc được hoặc không
-    phải đối tượng JSON → chặn cả 13 mục và báo hỏng."""
-    known = known_exclusions()
+# --- kích hoạt theo trạng thái agile ------------------------------------------------------------------------------
+
+def _text(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _state_module():
+    """Nạp `agile_state` (cùng thư mục) muộn; ngoại lệ nổi lên cho người gọi (không nạp được = đóng khi lỗi)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import agile_state
+    return agile_state
+
+
+def _state_dirs(st: object) -> tuple[str, ...]:
+    """Thư mục trạng thái đã chuẩn hoá (`normcase`): thư mục đang dùng, thư mục mặc định nền tảng, giá trị `AGENT_AGILE_STATE_DIR` (nếu hợp lệ), mỗi
+    cái ở dạng chữ và dạng `realpath` (liên kết/junction)."""
+    found: list[str] = []
+    for getter in ("state_dir", "platform_state_dir", "state_dir_override"):
+        try:
+            path = getattr(st, getter)()
+        except Exception:  # noqa: BLE001 — vd. không xác định được thư mục home: bỏ ứng viên đó, không coi là hỏng
+            continue
+        if path is None:
+            continue
+        for variant in (str(path), os.path.realpath(str(path))):
+            norm = os.path.normcase(os.path.normpath(variant))
+            if norm not in found:
+                found.append(norm)
+    return tuple(found)
+
+
+def activation(payload: dict, projects: tuple[str, ...] = ()) -> tuple[set[str], bool, tuple[str, ...]] | None:
+    """Rào có bật cho sự kiện này không? None = ngủ (agile TẮT, trạng thái lành). Ngược lại (mục đang chặn, trạng thái hỏng?, thư mục trạng thái).
+    Bật khi: công tắc hiệu lực (`always` của repo hay phiên `session_id` BẬT) · trạng thái hỏng (`guard_must_stay_active`) · có `agent_id` mà
+    không có file phiên khớp (tác tử con không bao giờ ngủ) · không nạp được `agile_state`. Không có tiến trình con; chỉ đọc vài file nhỏ.
+    Khoá repo như `agile_hook`: `cwd` của sự kiện (hay `CLAUDE_PROJECT_DIR`, do `agile_state` đọc). Sự kiện của host không có `cwd` (Codex/
+    Antigravity chỉ có thư mục lệnh) thì dùng `projects` (người gọi đưa vào), rồi thư mục tiến trình. Thư mục lệnh khác thư mục phiên thì `always`
+    của repo ở thư mục lệnh cũng tính (như file dấu cũ: thấy ở đâu cũng bật); khi harness đã xuất `CLAUDE_PROJECT_DIR` hai khoá trùng nhau."""
     try:
-        with open(marker, encoding="utf-8-sig") as handle:
-            data = json.load(handle)
-    except (OSError, ValueError):
-        return set(known), True
-    if not isinstance(data, dict):
-        return set(known), True
+        st = _state_module()
+    except Exception:  # noqa: BLE001 — không nạp được lớp trạng thái: đóng khi lỗi
+        return set(known_exclusions()), True, ()
     from _agile_rules import OPEN_ALWAYS_BLOCKED  # nạp muộn như `known_exclusions`
-    return set(OPEN_ALWAYS_BLOCKED), False
+    try:
+        session = _text(payload.get("session_id"))
+        first = _text(payload.get("cwd")) or (projects[0] if projects else None) or os.getcwd()
+        states = [st.load_state(first, session)]
+        for extra in projects:
+            if os.path.normcase(os.path.abspath(extra)) != os.path.normcase(os.path.abspath(first)):
+                states.append(st.load_state(extra, session))
+        dirs = _state_dirs(st)
+    except Exception:  # noqa: BLE001
+        return set(known_exclusions()), True, ()
+    if any(s["effective_on"] for s in states):
+        return set(OPEN_ALWAYS_BLOCKED), False, dirs
+    if any(s["state_problem"] or s["guard_must_stay_active"] for s in states):
+        return set(known_exclusions()), True, dirs
+    if _text(payload.get("agent_id")) and not states[0]["session_file_exists"]:
+        return set(OPEN_ALWAYS_BLOCKED), False, dirs  # tác tử con không có file phiên: được bảo vệ, không ngủ
+    return None
+
+
+def _salvage(raw: str) -> dict:
+    """Sự kiện không đọc được thành JSON: vớt `session_id`/`agent_id`/`cwd` bằng biểu thức chính quy để vẫn xác định được trạng thái."""
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data
+    except (ValueError, TypeError):
+        pass
+    found: dict = {}
+    for key in ("session_id", "agent_id", "cwd"):
+        hit = re.search(r'"%s"\s*:\s*"([^"\\]*)"' % key, raw or "")
+        if hit and hit.group(1):
+            found[key] = hit.group(1)
+    return found
+
+
+def _legacy_notice(dirs: tuple[str, ...], notes: list[str]) -> None:
+    """File dấu cũ còn đó: chỉ MỘT dòng nhắc (không chặn, không đọc nội dung). Dò: thư mục lệnh, thư mục phiên, gốc repo của chúng."""
+    seen: list[str] = []
+    for directory in dirs:
+        for base in (directory, find_repo_root(directory)):
+            if base and base not in seen:
+                seen.append(base)
+    for base in seen:
+        path = os.path.join(base, *LEGACY_MARKER_PARTS)
+        if os.path.isfile(path):
+            notes.append("agile: file dấu cũ {} không còn tác dụng (rào nay theo công tắc agile; bật bằng /agile). Không xoá giúp.".format(path))
+            return
+
+
+# --- tham chiếu tới thư mục trạng thái (chống phá công tắc) --------------------------------------------------------
+# NÓI THẲNG: mọi luật ở đây là so khớp chuỗi/đường. Chúng lách được bằng gián tiếp (`python -c` ghép tên từ mảnh, viết script rồi chạy sau,
+# biến không biết giá trị, `getattr`, `eval`). Đây là SÀN chống tai nạn, không phải bằng chứng an ninh.
+
+STATE_NAME = re.compile(r"(?:repo|session)-[A-Za-z0-9_.-]*\.json", re.IGNORECASE)
+SWITCH_COMMANDS = frozenset({"on", "off", "stop", "always", "manual"})  # lệnh con của agile_state.py đổi công tắc; `status`/`get` chỉ đọc
+SCRIPT_REF = re.compile(r"(?:^|[/.])agile_(state|hook)(?:\.py)?$", re.IGNORECASE)
+ENV_VAR = re.compile(r"\$env:([A-Za-z_][A-Za-z0-9_]*)|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)|%([A-Za-z_][A-Za-z0-9_]*)%", re.IGNORECASE)
+STATE_SIGNATURE = re.compile(r"agent-agile-team[/'\",\s]+state(?![\w-])|(?<![\w-])state[/'\",\s]+agent-agile-team(?![\w-])")
+_REDIRECT_ENV = r"(?:AGENT_AGILE_STATE_DIR|CLAUDE_PROJECT_DIR)"
+ENV_REDIRECT = re.compile("|".join([
+    _REDIRECT_ENV + r"['\"\]\})]*\s*=(?!=)",  # NAME=x, $env:NAME = x, os.environ['NAME']=x, set NAME=x
+    r"\b(?:export|unset|declare|typeset|setx|putenv|SetEnvironmentVariable)\b[^\n;|&]{0,200}?" + _REDIRECT_ENV,  # export NAME, setx NAME
+    r"\b(?:Set|New|Remove|Clear)-Item\s+(?:-\w+\s+)*Env:" + _REDIRECT_ENV,  # Set-Item Env:NAME
+    r"(?:^|\s)(?:-u|--unset)[\s=]+" + _REDIRECT_ENV,  # env -u NAME
+]), re.IGNORECASE)
+IMPORT_STATE = re.compile(
+    r"\bimport\s+[\w\s,.]*?\bagile_(?:state|hook)\b|\bfrom\s+(?:[\w.]+\.)?agile_(?:state|hook)\b"
+    r"|(?:__import__|import_module)\s*\(\s*['\"](?:[\w.]+\.)?agile_(?:state|hook)"
+    r"|(?:spec_from_file_location|run_path)\b[^\n]{0,160}agile_(?:state|hook)", re.IGNORECASE)
+PY_OR_HEREDOC = re.compile(r"(?<![\w.-])(?:python[0-9.]*|py|pythonw)(?:\.exe)?(?![\w-])|<<", re.IGNORECASE)
+
+
+def _expand(text: str) -> tuple[str, bool]:
+    """(chuỗi với biến môi trường đã biết được thay: `$env:X`, `${X}`, `$X`, `%X%`, `~` đầu chuỗi; còn phần động chưa giải được?)."""
+    unresolved = False
+
+    def sub(match: "re.Match[str]") -> str:
+        nonlocal unresolved
+        value = os.environ.get(next(g for g in match.groups() if g))
+        if value is None:
+            unresolved = True
+            return match.group(0)
+        return value
+
+    out = ENV_VAR.sub(sub, text)
+    if out.startswith("~"):
+        out = os.path.expanduser(out)
+    if any(ch in out for ch in "$%`"):
+        unresolved = True
+    return out, unresolved
+
+
+def _under(path: str, directory: str) -> bool:
+    return path == directory or path.startswith(directory.rstrip(os.sep) + os.sep)
+
+
+def _mentions_state(text: str, ctx: "Context") -> bool:
+    """Chuỗi chứa đường của thư mục trạng thái hay dấu hiệu của nó (`agent-agile-team/state`, `state/agent-agile-team`)."""
+    low = text.replace("\\", "/").lower()
+    return any(d.replace("\\", "/") in low for d in ctx.state_dirs) or bool(STATE_SIGNATURE.search(low))
+
+
+def _state_ref(text: str, ctx: "Context", ancestor: bool = False) -> bool:
+    """`text` (đối số hay đích chuyển hướng) trỏ vào thư mục trạng thái, hay file `repo-*.json`/`session-*.json` trong đó? Giải `~`, biến môi trường,
+    `..`, đường tương đối (từ thư mục lệnh), liên kết/junction (`realpath` cả đường và đường tới mục đã có). `ancestor`: cả thư mục BAO thư mục
+    trạng thái (cho lệnh xoá/chuyển). Chưa tính được đường (biến lạ, đã đổi thư mục) → so theo tên file trạng thái (đóng an toàn)."""
+    if not text:
+        return False
+    expanded, unresolved = _expand(text)
+    norm = expanded.replace("\\", "/")
+    if _mentions_state(norm, ctx):
+        return True
+    if unresolved or ctx.cwd_changed:
+        return bool(STATE_NAME.fullmatch(os.path.basename(norm.rstrip("/"))))
+    full = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm))
+    candidates = {os.path.normcase(full)}
+    try:
+        candidates.add(os.path.normcase(os.path.realpath(full)))
+    except OSError:
+        return True
+    return any(_under(c, d) or (ancestor and c != os.path.dirname(c) and _under(d, c)) for c in candidates for d in ctx.state_dirs)  # gốc ổ đĩa không tính là tổ tiên
+
+
+def _covers_state(text: str, ctx: "Context") -> bool:
+    """Điểm bắt đầu của `find`: trong thư mục trạng thái hay bao nó. Đã đổi thư mục thì `.`/`..` cũng tính."""
+    if not text:
+        return False
+    if _state_ref(text, ctx, ancestor=True):
+        return True
+    return ctx.cwd_changed and text.replace("\\", "/").strip("/") in ("", ".", "..")
+
+
+def _raw_tamper(text: str) -> bool:
+    """Luật trên VĂN BẢN lệnh nguyên (trước khi bỏ thân heredoc): (c) `import agile_state/agile_hook` trong lệnh có Python/heredoc,
+    (d) đặt hay export `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR`."""
+    return bool(ENV_REDIRECT.search(text) or (IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text)))
+
+
+def _tamper_item(tokens: list[str], ctx: "Context") -> str | None:
+    """TAMPER nếu một câu lệnh (a) ghi/đổi/xoá thứ nằm trong thư mục trạng thái (chuyển hướng tới đó, lệnh không chỉ-đọc có đối số trỏ tới đó, `cd` vào
+    đó) hay (b) chạy `agile_state.py` với lệnh con đổi công tắc, hay chạy `agile_hook.py`. Lệnh chỉ-đọc (`cat`, `ls`, `grep`…) và `agile_state.py status|get` qua."""
+    if not tokens:
+        return None
+    name, args = _exe_name(tokens[0]), tokens[1:]
+    read_only = _read_only(name, args, ctx)
+    if not read_only:
+        for position, token in enumerate(tokens):
+            script = SCRIPT_REF.search(token.replace("\\", "/"))
+            if script and (script.group(1).lower() == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):
+                return TAMPER
+    ancestor = name in DELETE_COMMANDS or name in MOVE_COMMANDS
+    ref_at: list[int] = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        redirect = REDIRECT.match(token)
+        if redirect:
+            target = redirect.group(1)
+            if not target and index + 1 < len(tokens):
+                index += 1
+                target = tokens[index]
+            if _state_ref(target, ctx):
+                return TAMPER
+        elif ">" in token and not token.startswith("<"):  # chuyển hướng dính liền: `lệnh>đích`
+            if _state_ref(token[REDIRECT_INSIDE.search(token).end():], ctx):
+                return TAMPER
+        elif index > 0 and not token.startswith("<") and not (token.startswith("-") and "=" not in token and ":" not in token):
+            if any(_state_ref(value, ctx, ancestor) for value in (token, _arg_value(token), token.partition("=")[2])):
+                ref_at.append(index)
+        index += 1
+    if name in COPY_COMMANDS:  # trạng thái chỉ là NGUỒN thì được chép (đọc)
+        ref_at = [i for i in ref_at if i in _copy_destinations(tokens)]
+    return TAMPER if ref_at and not read_only else None
+
+
+class Context:
+    """Trạng thái một lần phân tích: mục đang chặn, thư mục lệnh chạy, các gốc repo, thư mục trạng thái, thư mục git đang làm việc."""
+
+    def __init__(self, active: set[str], cwd: str, state_dirs: tuple[str, ...] = (), session: str | None = None) -> None:
+        self.active = active
+        self.state_dirs = tuple(state_dirs)
+        self.cwd = os.path.abspath(cwd)
+        self.roots = list(dict.fromkeys(r for r in (find_repo_root(self.cwd), find_repo_root(session) if session else None) if r))
+        self.root = self.roots[0] if self.roots else None
+        self.in_git = _is_git_path(self.cwd)  # thư mục lệnh (hay đích `cd`) nằm trong `.git`: mọi lệnh xoá/chuyển bị chặn
+        self.cwd_changed = False  # đã gặp thao tác đổi thư mục (cd, pushd, env -C…, kể cả trong subshell/bash -c)
+        self.tmp_moved = False  # đã gặp `mv`/`robocopy`/`cp -r`… với đích dưới `.tmp/`: phần xoá phía sau không còn ngoại lệ dọn tạm
+
+    def enter(self) -> None:
+        """Ghi nhận một thao tác đổi thư mục. Không tính đường đi (`cd` trong subshell hay vế pipeline không đổi thư mục của lệnh
+        sau, `cd` tương đối nối tiếp nhau khó tính đúng): từ đây đường tương đối không giải được nữa, so theo tên (đóng an toàn)."""
+        self.cwd_changed = True
+
+
+def tmp_target_ok(target: str, ctx: Context) -> bool:
+    """Đích xoá nằm thật sự dưới `<gốc repo>/.tmp/` (ngoại lệ dọn tạm, method/agile.md mục 5). Glob ở thành phần cuối được
+    mở rộng bằng `os.listdir`: mỗi mục khớp phải nằm thật trong `.tmp/` (theo `realpath`)."""
+    roots = list(ctx.roots)
+    expanded = target.replace(chr(92), "/")
+    if os.path.isabs(expanded) and not UNSAFE_PATH_CHARS & set(target):  # đường tuyệt đối vào `.tmp/` của cây khác (như khi file dấu cũ được dò theo đường đích)
+        other = find_repo_root(os.path.dirname(os.path.normpath(expanded)))
+        if other and other not in roots:
+            roots.append(other)
+    return any(_tmp_target_under(target, ctx, r) for r in roots)
+
+
+def _tmp_target_under(target: str, ctx: Context, root: str) -> bool:
+    if not target or UNSAFE_PATH_CHARS & set(target):
+        return False
+    norm = target.replace("\\", "/")
+    if ".." in norm.split("/"):
+        return False
+    full = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm))
+    tmp = os.path.normpath(os.path.join(root, ".tmp"))
+    full_n, tmp_n = os.path.normcase(full), os.path.normcase(tmp)
+    if not full_n.startswith(tmp_n + os.sep):
+        return False
+    comps = full[len(tmp) + 1:].split(os.sep)
+    if any(GLOB_CHARS & set(c) for c in comps[:-1]):
+        return False
+    is_glob = bool(GLOB_CHARS & set(comps[-1]))
+    real_tmp = os.path.normcase(os.path.realpath(tmp))
+    if real_tmp != os.path.normcase(os.path.join(os.path.realpath(root), ".tmp")):
+        return False  # chính `.tmp` là liên kết ra nơi khác
+    inside = real_tmp + os.sep
+    if not is_glob:
+        return os.path.normcase(os.path.realpath(full)).startswith(inside)
+    parent = os.path.dirname(full)
+    real_parent = os.path.normcase(os.path.realpath(parent))
+    if real_parent != real_tmp and not real_parent.startswith(inside):
+        return False
+    try:
+        names = os.listdir(parent)
+    except OSError:
+        return False
+    pattern = comps[-1].lower()
+    for entry in names:
+        if fnmatch.fnmatchcase(entry.lower(), pattern):
+            if not os.path.normcase(os.path.realpath(os.path.join(parent, entry))).startswith(inside):
+                return False
+    return True
 
 
 # --- phân tích lệnh -------------------------------------------------------------------------------------------
@@ -261,42 +481,6 @@ def _cluster(token: str, letters: str) -> bool:
     return bool(re.fullmatch(r"-[A-Za-z]+", token)) and any(ch in token for ch in letters)
 
 
-def _resolve_dir(base: str | None, target: str | None) -> str | None:
-    """Thư mục đích của `git -C`: đường tuyệt đối dùng thẳng, tương đối ghép với `base`; None khi không biết (đích rỗng, `-`,
-    có ký tự mở rộng shell, hoặc tương đối mà `base` không biết)."""
-    if not target or target == "-" or UNSAFE_PATH_CHARS & set(target):
-        return None
-    norm = target.replace("\\", "/")
-    if os.path.isabs(norm):
-        return os.path.normpath(norm)
-    return None if base is None else os.path.normpath(os.path.join(base, norm))
-
-
-class Context:
-    """Trạng thái một lần phân tích: mục đang chặn, thư mục lệnh chạy, gốc repo, thư mục git đang làm việc."""
-
-    def __init__(self, active: set[str], cwd: str, marker: str | None = None) -> None:
-        self.active = active
-        self.marker = os.path.abspath(marker) if marker else None
-        self.cwd = os.path.abspath(cwd)
-        self.root = find_repo_root(self.cwd)
-        self.in_git = _is_git_path(self.cwd)  # thư mục lệnh (hay đích `cd`) nằm trong `.git`: mọi lệnh xoá/chuyển bị chặn
-        self.cwd_changed = False  # đã gặp thao tác đổi thư mục (cd, pushd, env -C…, kể cả trong subshell/bash -c)
-        self.tmp_moved = False  # đã gặp `mv`/`robocopy`/`cp -r`… với đích dưới `.tmp/`: phần xoá phía sau không còn ngoại lệ dọn tạm
-        self._ignored: bool | None = None
-
-    def marker_ignored(self) -> bool:
-        """File dấu bị gitignore (`git check-ignore -q`, chạy ở thư mục lệnh)? Lỗi kiểm → False (coi là không ignore). Nhớ kết quả."""
-        if self._ignored is None:
-            self._ignored = bool(self.marker) and _marker_ignored(self.cwd, self.marker)
-        return self._ignored
-
-    def enter(self) -> None:
-        """Ghi nhận một thao tác đổi thư mục. Không tính đường đi (`cd` trong subshell hay vế pipeline không đổi thư mục của lệnh
-        sau, `cd` tương đối nối tiếp nhau khó tính đúng): từ đây đường tương đối không giải được nữa, so theo tên (đóng an toàn)."""
-        self.cwd_changed = True
-
-
 def _git_parse(args: list[str]) -> tuple[str, list[str]]:
     """(lệnh con, đối số còn lại) của một lệnh `git`, bỏ các tuỳ chọn toàn cục (`-C <dir>`, `-c k=v`…)."""
     index = 0
@@ -320,41 +504,27 @@ def _git_config(args: list[str]) -> dict[str, str]:
     return found
 
 
-def _marker_ignored(cwd: str, marker: str) -> bool:
-    """`git check-ignore -q <file dấu>` chạy ở `cwd`: True khi git nói file bị ignore. Mọi lỗi (không phải repo, git vắng, quá giờ) → False."""
-    try:
-        done = subprocess.run(["git", "-C", cwd, "check-ignore", "-q", "--", marker], capture_output=True, timeout=10,
-                              stdin=subprocess.DEVNULL, env=dict(os.environ, GIT_OPTIONAL_LOCKS="0"))
-    except (OSError, subprocess.SubprocessError):
-        return False
-    return done.returncode == 0
-
-
 def _git_item(args: list[str], ctx: Context) -> str | None:
-    """Mẫu git còn nằm trong hook. (1) Bảo vệ file dấu (`.tmp/`): `stash -a`/`--all` và `clean -f` kèm `-x`/`-X` (kể cả `-c clean.requireForce=false`,
-    không cần `-f`) luôn chặn; `stash -u`/`--include-untracked` và `clean -f` chỉ chặn khi file dấu KHÔNG bị gitignore (`git check-ignore -q`,
-    lỗi kiểm = không ignore). (2) Phá cơ chế hoàn tác, mục `irreversible_delete`: `worktree remove --force`, `reflog expire|delete`,
+    """Mẫu git còn nằm trong hook: phá cơ chế hoàn tác, mục `irreversible_delete`: `worktree remove --force`, `reflog expire|delete`,
     `gc --prune=now`, `prune` kèm `now`, `update-ref -d`, `push` xoá hay ép (`--delete`, `-d`, `--force*`, `-f`, `--mirror`, `--prune`,
-    refspec `:ref` hay `+ref`), `branch -D`. Mọi lệnh git khác (đẩy thường, gộp, tag, commit, `reset`) không bị hook chặn:
-    luật chữ ở method/git-conventions.md."""
+    refspec `:ref` hay `+ref`), `branch -D`. Mọi lệnh git khác (đẩy thường, gộp, tag, commit, `reset`, `stash`, `clean`) không bị hook chặn:
+    luật chữ ở method/git-conventions.md. Cộng `stash -a|-u` và `clean -f` (SPR-32 B3: chặn vô điều kiện, không còn phụ thuộc file dấu)."""
     sub, rest = _git_parse(args)
     config = _git_config(args)
     if sub in ("gc", "prune", "reflog", "maintenance") and any(re.fullmatch(r"gc\..*expire\w*", key) for key in config):
         return "irreversible_delete"  # `git -c gc.pruneExpire=<hạn bất kỳ> gc`: đặt hạn hết hạn qua cấu hình = `--prune=<hạn>`; không liệt kê hạn
-    if sub == "stash":
-        if "--all" in rest or any(_cluster(a, "a") for a in rest):
-            return MARKER
-        if "--include-untracked" in rest or any(_cluster(a, "u") for a in rest):
-            return None if ctx.marker_ignored() else MARKER
+    if sub == "stash":  # SPR-32 B3: giữ nguyên quyết định cũ (phá dữ liệu chưa theo dõi/ignore; luật chữ cấm `stash` trần): chặn `-a`/`-u` vô điều kiện
+        if "--all" in rest or "--include-untracked" in rest or any(_cluster(a, "au") for a in rest):
+            return "irreversible_delete"
         return None
-    if sub == "clean":  # `-x`/`-X` kéo file bị gitignore vào phạm vi xoá; phải kèm `-f`/`--force` (hay requireForce=false) mới thật sự xoá
+    if sub == "clean":  # `clean -f` (kể cả `-x`/`-X`, `-c clean.requireForce=false`) xoá file chưa theo dõi: chặn; `-n`/`--dry-run` và `clean` trần qua
         opts = rest[:rest.index("--")] if "--" in rest else rest
         no_force_needed = config.get("clean.requireforce") in ("false", "0", "no", "off")
         forced = "--force" in opts or any(_cluster(a, "f") for a in opts) or no_force_needed
-        if forced and any(_cluster(a, "xX") for a in opts):
-            return MARKER
         dry_run = "--dry-run" in opts or any(_cluster(a, "n") for a in opts)
-        return MARKER if forced and not dry_run and not ctx.marker_ignored() else None
+        if forced and any(_cluster(a, "xX") for a in opts):
+            return "irreversible_delete"
+        return "irreversible_delete" if forced and not dry_run else None
     if sub == "worktree":
         forced = "--force" in rest or any(_cluster(a, "f") for a in rest)
         return "irreversible_delete" if rest[:1] == ["remove"] and forced else None
@@ -403,79 +573,6 @@ def _delete_parts(name: str, args: list[str]) -> tuple[bool, list[str]]:
             elif re.fullmatch(r"-r[a-z]*(:.*)?", low):
                 recursive = True
     return recursive, [value for _, value in _ps_split([name] + args).src]
-
-
-def tmp_target_ok(target: str, ctx: Context) -> bool:
-    """Đích xoá nằm thật sự dưới `<gốc repo>/.tmp/` (ngoại lệ dọn tạm, method/agile.md mục 5). Glob ở thành phần cuối được
-    mở rộng bằng `os.listdir`: mỗi mục khớp phải nằm thật trong `.tmp/` (theo `realpath`) và không phải file dấu."""
-    marker_root = os.path.dirname(os.path.dirname(ctx.marker)) if ctx.marker else None
-    roots = [r for r in (ctx.root, marker_root if marker_root and _has_git(marker_root) else None) if r]
-    return any(_tmp_target_under(target, ctx, r) for r in dict.fromkeys(roots))
-
-
-def _holds_marker_below(path: str) -> bool:
-    """`path` (thư mục) hoặc thư mục con của nó (sâu tối đa MAX_WALK_DEPTH, bỏ `.git`) chứa `.tmp/autopilot.json` (tên không phân biệt hoa
-    thường)? Quá giới hạn độ sâu hay lỗi đọc → coi như có (chặn)."""
-    if not os.path.isdir(path):
-        return False
-    failed = [False]
-
-    def onerror(_exc: OSError) -> None:
-        failed[0] = True
-
-    base_depth = path.rstrip(os.sep).count(os.sep)
-    for dirpath, dirnames, filenames in os.walk(path, onerror=onerror):
-        if failed[0]:
-            return True
-        dirnames[:] = [d for d in dirnames if d.lower() != ".git"]
-        if os.path.basename(dirpath).lower() == MARKER_PARTS[0] and any(f.lower() == MARKER_PARTS[1] for f in filenames):
-            return True
-        if dirpath.rstrip(os.sep).count(os.sep) - base_depth >= MAX_WALK_DEPTH and dirnames:
-            return True
-    return failed[0]
-
-
-def _tmp_target_under(target: str, ctx: Context, root: str) -> bool:
-    if not target or UNSAFE_PATH_CHARS & set(target):
-        return False
-    norm = target.replace("\\", "/")
-    if ".." in norm.split("/"):
-        return False
-    full = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm))
-    tmp = os.path.normpath(os.path.join(root, ".tmp"))
-    full_n, tmp_n = os.path.normcase(full), os.path.normcase(tmp)
-    if not full_n.startswith(tmp_n + os.sep):
-        return False
-    comps = full[len(tmp) + 1:].split(os.sep)
-    if any(GLOB_CHARS & set(c) for c in comps[:-1]):
-        return False
-    name = MARKER_PARTS[1]
-    is_glob = bool(GLOB_CHARS & set(comps[-1]))
-    if len(comps) == 1 and (fnmatch.fnmatchcase(name, comps[0].lower()) if is_glob else comps[0].lower() == name):
-        return False
-    real_tmp = os.path.normcase(os.path.realpath(tmp))
-    if real_tmp != os.path.normcase(os.path.join(os.path.realpath(root), ".tmp")):
-        return False  # chính `.tmp` là liên kết ra nơi khác
-    marker_real = os.path.normcase(os.path.realpath(os.path.join(tmp, name)))
-    inside = real_tmp + os.sep
-    if not is_glob:
-        real = os.path.normcase(os.path.realpath(full))
-        return real != marker_real and real.startswith(inside) and not _holds_marker_below(real)
-    parent = os.path.dirname(full)
-    real_parent = os.path.normcase(os.path.realpath(parent))
-    if real_parent != real_tmp and not real_parent.startswith(inside):
-        return False
-    try:
-        names = os.listdir(parent)
-    except OSError:
-        return False
-    pattern = comps[-1].lower()
-    for entry in names:
-        if fnmatch.fnmatchcase(entry.lower(), pattern):
-            real = os.path.normcase(os.path.realpath(os.path.join(parent, entry)))
-            if entry.lower() == name or real == marker_real or not real.startswith(inside) or _holds_marker_below(real):
-                return False
-    return True
 
 
 def _changes_dir(name: str, token: str) -> bool:
@@ -537,54 +634,6 @@ def _strip_prefixes(tokens: list[str], ctx: Context) -> tuple[list[str], bool]:
     return tokens, redirected
 
 
-def _marker_ref(text: str, ctx: Context) -> bool:
-    """`text` (đối số hay đích chuyển hướng) trỏ tới file dấu đang bật, thư mục `.tmp/` bao nó, hay glob khớp nó? So không phân biệt hoa thường.
-    Đã có thao tác đổi thư mục thì không giải được đường tương đối: so theo tên (đóng an toàn)."""
-    if not text or ctx.marker is None or DYNAMIC_CHARS & set(text):
-        return False
-    if text.startswith("~"):
-        text = os.path.expanduser(text)
-    norm = text.replace("\\", "/")
-    name = os.path.basename(ctx.marker).lower()
-    is_glob = bool(GLOB_CHARS & set(os.path.basename(norm.rstrip("/"))))
-    if ctx.cwd_changed:
-        comps = [c.lower() for c in norm.split("/") if c not in ("", ".")]
-        if not comps:
-            return False
-        last = comps[-1]
-        if last in (name, ".tmp"):
-            return True
-        return is_glob and fnmatch.fnmatchcase(name, last) and (len(comps) == 1 or comps[-2] == ".tmp")
-    full = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm))
-    mark = os.path.normpath(ctx.marker)
-    tmp = os.path.dirname(mark)
-    low, mark_low, tmp_low = full.lower(), mark.lower(), tmp.lower()
-    if low in (mark_low, tmp_low):
-        return True
-    if is_glob:
-        return os.path.dirname(low) == tmp_low and fnmatch.fnmatchcase(name, os.path.basename(low))
-    try:
-        if os.path.lexists(full):
-            real = os.path.realpath(full).lower()
-            return real in (os.path.realpath(mark).lower(), os.path.realpath(tmp).lower())
-    except OSError:
-        return True
-    return False
-
-
-def _covers_marker(text: str, ctx: Context) -> bool:
-    """Điểm bắt đầu của `find` là file dấu, `.tmp/` bao nó hay một thư mục tổ tiên của nó? Đã đổi thư mục thì `.`/`..` cũng tính."""
-    if ctx.marker is None or not text or DYNAMIC_CHARS & set(text):
-        return False
-    if _marker_ref(text, ctx):
-        return True
-    norm = text.replace("\\", "/")
-    if ctx.cwd_changed:
-        return norm.strip("/") in ("", ".", "..")
-    full = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm)).lower()
-    return os.path.normpath(ctx.marker).lower().startswith(full.rstrip(os.sep) + os.sep)
-
-
 def _find_item(args: list[str], ctx: Context, depth: int) -> str | None:
     if "-delete" in args:
         return "irreversible_delete"
@@ -601,8 +650,8 @@ def _find_item(args: list[str], ctx: Context, depth: int) -> str | None:
                 return item
             stripped, _ = _strip_prefixes(list(rest), Context(set(), ctx.cwd))
             if stripped and not _read_only(_exe_name(stripped[0]), stripped[1:], ctx):
-                if any(_covers_marker(t, ctx) for t in (starts or ["."])):
-                    return MARKER
+                if any(_covers_state(t, ctx) for t in (starts or ["."])):
+                    return TAMPER
             if stripped and _exe_name(stripped[0]) in DELETE_COMMANDS:  # `find … -exec rm {} +`: mọi điểm bắt đầu phải nằm trong `.tmp/`
                 if ctx.cwd_changed or not all(tmp_target_ok(t, ctx) for t in (starts or ["."])):
                     return "irreversible_delete"
@@ -618,34 +667,6 @@ def _read_only(name: str, args: list[str], ctx: Context) -> bool:
     if name == "git":
         return _git_parse(args)[0] in READ_ONLY_GIT
     return False
-
-
-def _marker_item(tokens: list[str], ctx: Context) -> str | None:
-    """MARKER nếu lệnh ghi vào file dấu qua chuyển hướng, hoặc là lệnh không chỉ-đọc có đối số trỏ tới file dấu."""
-    if ctx.marker is None or not tokens:
-        return None
-    name = _exe_name(tokens[0])
-    ref_at: list[int] = []
-    index = 0
-    while index < len(tokens):
-        token = tokens[index]
-        redirect = REDIRECT.match(token)
-        if redirect:
-            target = redirect.group(1)
-            if not target and index + 1 < len(tokens):
-                index += 1
-                target = tokens[index]
-            if _marker_ref(target, ctx):
-                return MARKER
-        elif ">" in token and not token.startswith("<"):  # chuyển hướng dính liền: `lệnh>đích`
-            if _marker_ref(token[REDIRECT_INSIDE.search(token).end():], ctx):
-                return MARKER
-        elif index > 0 and not token.startswith("<") and _marker_ref(token, ctx):
-            ref_at.append(index)
-        index += 1
-    if name in COPY_COMMANDS:
-        ref_at = [i for i in ref_at if i in _copy_destinations(tokens)]
-    return MARKER if ref_at and not _read_only(name, tokens[1:], ctx) else None
 
 
 _COLON_FLAG = re.compile(r"-([a-z]+):(.*)", re.IGNORECASE | re.DOTALL)
@@ -952,9 +973,7 @@ def _segment_item(tokens: list[str], ctx: Context, depth: int) -> str | None:
     tokens, _ = _strip_prefixes(tokens, ctx)
     if not tokens:
         return None
-    if _is_clear_command(tokens):  # lối dừng tường minh của điều phối (rào hành vi, xem docstring)
-        return None
-    item = _command_item(tokens, ctx, depth) or _marker_item(tokens, ctx)
+    item = _tamper_item(tokens, ctx) or _command_item(tokens, ctx, depth)
     if _moves_into_tmp(tokens):
         ctx.tmp_moved = True  # từ đây phần xoá phía sau (cùng chuỗi) không còn ngoại lệ dọn `.tmp/`
     return item
@@ -1109,74 +1128,6 @@ def _event_dirs(payload: dict) -> tuple[str, str]:
     return command_dir, session or command_dir
 
 
-def reason_for(item: str, broken: bool) -> str:
-    if item == MARKER:
-        return "agile: file dấu là rào — chỉ người dùng hoặc lệnh dừng mới xoá"
-    if item == NESTED:
-        return "agile: lệnh lồng quá {} lớp shell, không phân tích được — cần người dùng nói trong chat — lệnh không chạy".format(MAX_UNWRAP)
-    lead = "agile: file dấu hỏng, " if broken else "agile: "
-    return "{}'{}' cần người dùng nói trong chat — lệnh không chạy".format(lead, item)
-
-
-class _Failed(Exception):
-    """Ngoại lệ sau khi đã biết thư mục sự kiện: mang theo các thư mục để dò file dấu."""
-
-    def __init__(self, dirs: tuple[str, ...], label: str) -> None:
-        super().__init__(label)
-        self.dirs = dirs
-        self.label = label
-
-
-def _path_candidates(args: list[str], base: str) -> list[str]:
-    """Đối số trông như đường (có dấu `/` `\\`, bắt đầu bằng `.` hay `~`) của lệnh không chỉ-đọc, kể cả đích chuyển hướng: để dò file dấu."""
-    found: list[str] = []
-    for arg in args:
-        redirect = REDIRECT.match(arg)
-        text = redirect.group(1) if redirect else arg
-        if not text or text.startswith("-") or DYNAMIC_CHARS & set(text):
-            continue
-        if text.startswith("~"):
-            text = os.path.expanduser(text)
-        if "/" in text or "\\" in text or text.startswith(".") or os.path.isabs(text):
-            resolved = _resolve_dir(base, text)
-            if resolved:
-                found.append(resolved)
-    return found
-
-
-def _extra_dirs(text: str, base: str, depth: int = 0) -> list[str]:
-    """Thư mục và đường mà lệnh trỏ tới (`git -C <dir>`, `cd <dir>`, đối số đường của lệnh không chỉ-đọc) để dò thêm file dấu khi lệnh chạy
-    từ ngoài cây có file dấu: đi lên từ chính đường đó tới thư mục có `.git`."""
-    scratch = Context(set(), base)
-    found: list[str | None] = []
-    for segment in SEPARATORS.split(_join_and_strip(text)):
-        tokens, _ = _strip_prefixes(tokenize(segment), scratch)
-        if not tokens:
-            continue
-        name, args = _exe_name(tokens[0]), tokens[1:]
-        if name == "git":
-            index = 0
-            while index < len(args) and args[index].startswith("-"):
-                if args[index] == "-C" and index + 1 < len(args):
-                    found.append(_resolve_dir(base, args[index + 1]))
-                index += 2 if args[index] in GIT_VALUE_OPTIONS else 1
-        elif name in CD_COMMANDS:
-            found.append(_resolve_dir(base, next((a for a in args if not a.startswith("-")), None)))
-        elif name in SHELL_WRAPPERS and depth < MAX_UNWRAP:
-            for index, arg in enumerate(args):
-                if arg.lower() in WRAPPER_FLAGS or re.fullmatch(r"-[a-z]*c[a-z]*", arg):
-                    found.extend(_extra_dirs(" ".join(args[index + 1:]), base, depth + 1))
-                    break
-        if name != "git" and name not in CD_COMMANDS and (name == "find" or not _read_only(name, args, scratch)):
-            found.extend(_path_candidates(args, base))
-        if tokens and any(REDIRECT.match(t) for t in tokens):  # `lệnh > đích` kể cả lệnh chỉ-đọc như echo
-            found.extend(_path_candidates([t for t in tokens if REDIRECT.match(t)], base))
-            for index, token in enumerate(tokens[:-1]):
-                if REDIRECT.match(token) and not REDIRECT.match(token).group(1):
-                    found.extend(_path_candidates([tokens[index + 1]], base))
-    return [d for d in found if d]
-
-
 def _write_paths(payload: dict) -> list[str]:
     """Đường đích của công cụ ghi file: giá trị chuỗi ở khoá đường (mọi độ sâu) cộng dòng vá của Codex."""
     found: list[str] = []
@@ -1201,70 +1152,6 @@ def _write_paths(payload: dict) -> list[str]:
     return found
 
 
-def _is_marker_path(path: str, base: str, marker: str) -> bool:
-    norm = path.replace("\\", "/")
-    full = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(base, norm))
-    mark = os.path.normpath(marker)
-    if full.lower() == mark.lower():
-        return True
-    return os.path.lexists(full) and os.path.realpath(full).lower() == os.path.realpath(mark).lower()
-
-
-def _evaluate(raw: str) -> str | None:
-    payload = json.loads(raw)
-    if not isinstance(payload, dict):
-        raise ValueError("payload is not an object")
-    dirs: tuple[str, ...] = (os.getcwd(),)
-    try:
-        dirs = _event_dirs(payload)
-        name = _tool_name(payload)
-        command_dir, session_dir = dirs
-        markers: list[str] = []
-
-        def add(found: str | None) -> None:
-            if found and all(os.path.normcase(found) != os.path.normcase(m) for m in markers):
-                markers.append(found)
-
-        add(find_marker(command_dir))
-        if session_dir != command_dir:
-            add(find_marker(session_dir))
-        if name is not None and name.lower() in WRITE_TOOLS:
-            paths = _write_paths(payload)
-            for path in paths:  # đường tuyệt đối vào cây khác: dò file dấu đi lên từ chính đường đó
-                add(find_marker(os.path.normpath(os.path.expanduser(path) if path.startswith("~") else (
-                    path if os.path.isabs(path) else os.path.join(command_dir, path)))))
-            if any(_is_marker_path(p, command_dir, m) for m in markers for p in paths):
-                return reason_for(MARKER, False)
-            return None
-        if name is not None and name.lower() not in SHELL_TOOLS:
-            return None
-        commands = _commands(payload)
-        if not commands:
-            return None
-        for text in commands:
-            for directory in _extra_dirs(text, command_dir):
-                add(find_marker(directory))
-        for marker in markers:
-            active, broken = load_active(marker)
-            for text in commands:
-                item = _analyze(text, Context(active, command_dir, marker))
-                if item:
-                    return reason_for(item, broken)
-        return None
-    except Exception as exc:
-        raise _Failed(dirs, type(exc).__name__) from exc
-
-
-def _unparsed_reason(label: str, dirs: tuple[str, ...]) -> str | None:
-    """Đầu vào hỏng hay ngoại lệ: chặn nếu có file dấu từ một trong `dirs` (hoặc không dò được), không thì cho qua."""
-    try:
-        if all(find_marker(d) is None for d in dirs):
-            return None
-    except Exception:  # noqa: BLE001 — không dò được thì đóng
-        pass
-    return "agile: hook gặp lỗi ({}) khi có file dấu — lệnh không chạy".format(label)
-
-
 def _deny(fmt: str, reason: str, stdout: TextIO, stderr: TextIO) -> int:
     if fmt == "antigravity":
         stdout.write(json.dumps({"decision": "deny", "reason": reason}, ensure_ascii=False) + "\n")
@@ -1279,28 +1166,88 @@ def _allow(fmt: str, stdout: TextIO) -> int:
     return 0
 
 
+def reason_for(item: str, broken: bool) -> str:
+    if item == TAMPER:
+        return "agile: công tắc agile là rào — chỉ người dùng gõ /agile stop mới tắt được; lệnh không chạy"
+    if item == NESTED:
+        return "agile: lệnh lồng quá {} lớp shell, không phân tích được — cần người dùng nói trong chat — lệnh không chạy".format(MAX_UNWRAP)
+    lead = "agile: trạng thái hỏng, " if broken else "agile: "
+    return "{}'{}' cần người dùng nói trong chat — lệnh không chạy".format(lead, item)
+
+
+class _Failed(Exception):
+    """Ngoại lệ sau khi đã đọc được sự kiện: mang nhãn để in lý do."""
+
+    def __init__(self, label: str, dirs: tuple[str, ...] = ()) -> None:
+        super().__init__(label)
+        self.label = label
+        self.dirs = dirs
+
+
+def _evaluate(raw: str, notes: list[str]) -> str | None:
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("payload is not an object")
+    dirs: tuple[str, ...] = ()
+    try:
+        dirs = _event_dirs(payload)
+        command_dir, session_dir = dirs
+        _legacy_notice(dirs, notes)
+        found = activation(payload, (session_dir, command_dir))
+        if found is None:
+            return None  # agile TẮT và trạng thái lành: thoát ngay
+        active, broken, state_dirs = found
+        name = _tool_name(payload)
+        if name is not None and name.lower() in WRITE_TOOLS:
+            scratch = Context(set(), command_dir, state_dirs)
+            if any(_state_ref(p, scratch) for p in _write_paths(payload)):
+                return reason_for(TAMPER, broken)
+            return None
+        if name is not None and name.lower() not in SHELL_TOOLS:
+            return None
+        for text in _commands(payload):
+            if _raw_tamper(text):
+                return reason_for(TAMPER, broken)
+            item = _analyze(text, Context(active, command_dir, state_dirs, session_dir))
+            if item:
+                return reason_for(item, broken)
+        return None
+    except Exception as exc:
+        raise _Failed(type(exc).__name__, dirs) from exc
+
+
+def _unparsed_reason(label: str, raw: str, dirs: tuple[str, ...] = ()) -> str | None:
+    """Đầu vào hỏng hay ngoại lệ: chặn nếu rào đang bật (hay không xác định được), không thì cho qua. `dirs`: thư mục sự kiện nếu đã biết."""
+    try:
+        if activation(_salvage(raw), dirs) is None:
+            return None
+    except Exception:  # noqa: BLE001 — không xác định được thì đóng
+        pass
+    return "agile: hook gặp lỗi ({}) khi agile đang bật — lệnh không chạy".format(label)
+
+
 def main(argv: list[str] | None = None, stdin: TextIO = sys.stdin, stdout: TextIO = sys.stdout, stderr: TextIO = sys.stderr) -> int:
     parser = argparse.ArgumentParser(description="Rào máy agile (PreToolUse).")
-    parser.add_argument("--format", choices=FORMATS)
-    parser.add_argument("--clear", metavar="DIR", help="xoá <DIR>/.tmp/autopilot.json rồi thoát")
+    parser.add_argument("--format", choices=FORMATS, required=True)
     args = parser.parse_args(argv)
-    if args.clear is not None:
-        return clear_marker(args.clear, stdout, stderr)
-    if args.format is None:
-        parser.error("the following arguments are required: --format")
     debug = os.environ.get("AGILE_GUARD_DEBUG", "") not in ("", "0")
     reason = None
+    raw = ""
+    notes: list[str] = []
     try:
-        reason = _evaluate(stdin.read())
+        raw = stdin.read()
+        reason = _evaluate(raw, notes)
     except _Failed as failed:
         if debug:
             traceback.print_exc(file=stderr)
-        reason = _unparsed_reason(failed.label, failed.dirs)
-    except Exception as exc:  # JSON hỏng, đầu vào không đọc được: chưa có thư mục sự kiện, dò từ thư mục tiến trình
+        reason = _unparsed_reason(failed.label, raw, failed.dirs)
+    except Exception as exc:  # JSON hỏng, đầu vào không đọc được: vớt session_id bằng biểu thức chính quy
         if debug:
             traceback.print_exc(file=stderr)
-        reason = _unparsed_reason(type(exc).__name__, (os.getcwd(),))
+        reason = _unparsed_reason(type(exc).__name__, raw)
     if reason is None:
+        for note in notes[:1]:  # một dòng nhắc file dấu cũ, không chặn
+            stderr.write(note + "\n")
         return _allow(args.format, stdout)
     return _deny(args.format, reason, stdout, stderr)
 
@@ -1316,7 +1263,7 @@ def _format_arg(argv: list[str]) -> str:
 def _last_resort(argv: list[str]) -> int:  # pragma: no cover — lưới cuối khi chính `main` văng
     fmt = "antigravity" if _format_arg(argv) == "antigravity" else "claude"
     try:
-        reason = _unparsed_reason("fatal", (os.getcwd(),))
+        reason = _unparsed_reason("fatal", "")
         return _allow(fmt, sys.stdout) if reason is None else _deny(fmt, reason, sys.stdout, sys.stderr)
     except BaseException:  # noqa: BLE001
         return 0 if fmt == "antigravity" else 2
@@ -1327,7 +1274,7 @@ if __name__ == "__main__":  # pragma: no cover
         for stream in (sys.stdin, sys.stdout, sys.stderr):
             if hasattr(stream, "reconfigure"):
                 stream.reconfigure(encoding="utf-8")
-        code = _last_resort(sys.argv) if sys.version_info < (3, 9) else main()  # Python quá cũ: chỉ dò file dấu, không phân tích
+        code = _last_resort(sys.argv) if sys.version_info < (3, 9) else main()  # Python quá cũ: chỉ xác định trạng thái, không phân tích
     except SystemExit:
         raise
     except BaseException:  # noqa: BLE001

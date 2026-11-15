@@ -25,6 +25,7 @@ KEYWORDS = "fence or floor or marker or agile or delegation or push"
 IGNORE = shutil.ignore_patterns(".git", ".tmp", ".claude", "__pycache__", ".pytest_cache", "*.pyc", ".env", ".env.*")
 WIRING = "tests/test_fence_wiring.py"
 UNDO = "tests/test_agile_guard_undo.py"
+GUARDT = "tests/test_agile_guard.py"
 
 
 @dataclass
@@ -95,16 +96,31 @@ def drop_always_blocked(root: Path) -> None:
 GUARD = "scripts/agile_guard.py"
 
 
-def stash_all_open(root: Path) -> None:
-    edit(root, GUARD, 'if "--all" in rest or any(_cluster(a, "a") for a in rest):', "if False:")
+def state_switch_script_open(root: Path) -> None:
+    """SPR-32 B3: bỏ luật chặn `agile_state.py on|off|stop|always|manual` (thay đột biến `stash-all-open` của bảo vệ file dấu đã gỡ)."""
+    edit(root, GUARD, 'if script and (script.group(1).lower() == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):', "if False:")
 
 
-def clean_x_open(root: Path) -> None:
-    edit(root, GUARD, 'if forced and any(_cluster(a, "xX") for a in opts):', "if False:")
+def state_path_open(root: Path) -> None:
+    """SPR-32 B3: đường vào thư mục trạng thái không còn được nhận ra (thay `clean-x-open`)."""
+    edit(root, GUARD, "    return any(_under(c, d) or (ancestor and c != os.path.dirname(c) and _under(d, c)) for c in candidates for d in ctx.state_dirs)",
+         "    return False")
 
 
-def ignore_check_inverted(root: Path) -> None:
-    edit(root, GUARD, "return None if ctx.marker_ignored() else MARKER", "return MARKER")
+def state_problem_open(root: Path) -> None:
+    """SPR-32 B3: trạng thái hỏng không còn giữ rào bật (thay `ignore-check-inverted`): đóng-khi-lỗi (SC4.3) bị gỡ."""
+    edit(root, GUARD, 'if any(s["state_problem"] or s["guard_must_stay_active"] for s in states):', "if False:")
+
+
+def subagent_dormant(root: Path) -> None:
+    """SPR-32 B3: tác tử con không có file phiên lại ngủ (R0-M11)."""
+    edit(root, GUARD, 'if _text(payload.get("agent_id")) and not states[0]["session_file_exists"]:', "if False:")
+
+
+def env_redirect_open(root: Path) -> None:
+    """SPR-32 B3: bỏ luật chặn đặt/export `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` (R1b-M1b)."""
+    edit(root, GUARD, "return bool(ENV_REDIRECT.search(text) or (IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text)))",
+         "return bool(IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text))")
 
 
 def git_dir_delete_open(root: Path) -> None:
@@ -171,9 +187,11 @@ MUTATIONS = {
     "guard-imports-check": Mutation(guard_imports_check, f"{WIRING}::test_guard_does_not_import_check", (WIRING,)),
     "drop-always-blocked": Mutation(drop_always_blocked, f"{WIRING}::test_fence_wiring_pins_7_plus_6", (WIRING,)),
     # SPR-20 TK27b: mười đột biến phủ rào mới của guard và trần phiên (mỗi cái trúng đúng một test ghim; hằng chết `drop-exclusion` cũ được thay bằng `drop-always-blocked`).
-    "stash-all-open": Mutation(stash_all_open, "tests/test_agile_guard.py::test_guard_marker_pattern_blocked", ("tests/test_agile_guard.py",)),
-    "clean-x-open": Mutation(clean_x_open, f"{UNDO}::test_guard_stash_all_and_clean_x_blocked_in_both_ignore_states", (UNDO,)),
-    "ignore-check-inverted": Mutation(ignore_check_inverted, f"{UNDO}::test_guard_stash_clean_allowed_when_marker_ignored", (UNDO,)),
+    "state-switch-script-open": Mutation(state_switch_script_open, f"{GUARDT}::test_switching_agile_state_script_blocked", (GUARDT,)),
+    "state-path-open": Mutation(state_path_open, f"{GUARDT}::test_guard_state_protection_resolves_from_command_dir_and_other_trees_allowed", (GUARDT,)),
+    "state-problem-open": Mutation(state_problem_open, f"{GUARDT}::test_corrupt_state_fails_guarded", (GUARDT,)),
+    "subagent-dormant": Mutation(subagent_dormant, f"{GUARDT}::test_subagent_without_session_file_is_guarded_not_dormant", (GUARDT,)),
+    "env-redirect-open": Mutation(env_redirect_open, f"{GUARDT}::test_redirecting_state_by_environment_blocked", (GUARDT,)),
     "git-dir-delete-open": Mutation(git_dir_delete_open, f"{UNDO}::test_guard_delete_inside_git_always_blocked", (UNDO,)),
     "tmp-move-ignored": Mutation(tmp_move_ignored, f"{UNDO}::test_guard_move_into_tmp_then_delete_blocked", (UNDO,)),
     "pipeline-delete-open": Mutation(pipeline_delete_open, f"{UNDO}::test_guard_other_recursive_delete_forms_blocked", (UNDO,)),

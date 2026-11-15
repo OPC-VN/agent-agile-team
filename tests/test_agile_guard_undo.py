@@ -13,9 +13,9 @@ import subprocess
 import pytest
 
 import agile_guard
-from test_agile_guard import MARKER_REASON, assert_allowed, assert_blocked, assert_marker_blocked, good_marker, make_repo, run
+from test_agile_guard import assert_allowed, assert_blocked, good_marker, make_repo, run, write_switch
 
-pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="cần git")
+pytestmark = [pytest.mark.skipif(shutil.which("git") is None, reason="cần git"), pytest.mark.usefixtures("agile_state_dir")]
 
 
 def active_repo(tmp_path):
@@ -23,12 +23,12 @@ def active_repo(tmp_path):
 
 
 def real_repo(tmp_path, ignored):
-    """Repo git THẬT có file dấu; `ignored` = `.tmp/` nằm trong .gitignore hay không."""
+    """Repo git THẬT, agile BẬT; `ignored` = `.tmp/` nằm trong .gitignore hay không (B3: không còn ảnh hưởng quyết định của rào)."""
     repo = tmp_path / "repo"
     (repo / ".tmp").mkdir(parents=True)
     done = subprocess.run(["git", "init", "-q", str(repo)], capture_output=True)
     assert done.returncode == 0, done.stderr
-    (repo / ".tmp" / "autopilot.json").write_text('{"sprints": ["SPR-20"]}', encoding="utf-8")
+    write_switch(repo, good_marker())
     if ignored:
         (repo / ".gitignore").write_text(".tmp/\n", encoding="utf-8")
     return repo
@@ -164,35 +164,25 @@ def test_guard_ordinary_git_commands_pass(tmp_path):
         assert_allowed(repo, cmd)
 
 
-# --- A3: stash -u / clean -f theo trạng thái gitignore của file dấu ---------------------------------------------------
+# --- A3 (SPR-20), SPR-32 B3: `stash -a|-u` và `clean -f` vẫn chặn, không còn phụ thuộc file dấu -------------------------------------
 
-UNIGNORED_ONLY = ["git stash -u", "git stash --include-untracked", "git stash push -u", "git stash push --include-untracked -m x", "git -C . stash -u",
-                  "git clean -f", "git clean -fd", "git clean -d -f", "git clean --force",
-                  "git -c clean.requireForce=false clean -d"]
-ALWAYS_MARKER = ["git stash -a", "git stash --all", "git clean -fx", "git clean -fdX", "git -c clean.requireForce=false clean -x",
-                 "git -c clean.requireForce=false clean -dX", "git -c clean.requireForce=0 clean -x", "git -C . -c clean.requireForce=false clean -fdx"]
-
-
-@pytest.mark.parametrize("cmd", UNIGNORED_ONLY)
-def test_guard_stash_clean_blocked_when_marker_not_ignored(tmp_path, cmd):
-    assert_marker_blocked(real_repo(tmp_path, ignored=False), cmd)
-
-
-@pytest.mark.parametrize("cmd", UNIGNORED_ONLY)
-def test_guard_stash_clean_allowed_when_marker_ignored(tmp_path, cmd):
-    assert_allowed(real_repo(tmp_path, ignored=True), cmd)
+STASH_CLEAN = ["git stash -u", "git stash --include-untracked", "git stash push -u", "git stash push --include-untracked -m x", "git -C . stash -u",
+               "git clean -f", "git clean -fd", "git clean -d -f", "git clean --force", "git -c clean.requireForce=false clean -d",
+               "git stash -a", "git stash --all", "git clean -fx", "git clean -fdX", "git -c clean.requireForce=false clean -x",
+               "git -c clean.requireForce=false clean -dX", "git -c clean.requireForce=0 clean -x", "git -C . -c clean.requireForce=false clean -fdx"]
 
 
 @pytest.mark.parametrize("ignored", [True, False])
-@pytest.mark.parametrize("cmd", ALWAYS_MARKER)
-def test_guard_stash_all_and_clean_x_blocked_in_both_ignore_states(tmp_path, cmd, ignored):
-    assert_marker_blocked(real_repo(tmp_path, ignored=ignored), cmd)
+@pytest.mark.parametrize("cmd", STASH_CLEAN)
+def test_guard_stash_clean_blocked_in_both_ignore_states(tmp_path, cmd, ignored):
+    """Trước B3 chặn để giữ file dấu (theo gitignore); các lệnh tự thân phá dữ liệu nên giữ chặn vô điều kiện, ignore hay không."""
+
+    assert_blocked(real_repo(tmp_path, ignored=ignored), cmd, "irreversible_delete")
 
 
-def test_guard_ignore_check_error_counts_as_not_ignored(tmp_path):
-    """Repo giả (`.git` chỉ có HEAD): `git check-ignore` lỗi → coi là không ignore → chặn."""
-    assert_marker_blocked(active_repo(tmp_path), "git stash -u")
-    assert_marker_blocked(active_repo(tmp_path / "b"), "git clean -fd")
+def test_guard_stash_clean_on_fake_repo_also_blocked(tmp_path):
+    assert_blocked(active_repo(tmp_path), "git stash -u", "irreversible_delete")
+    assert_blocked(active_repo(tmp_path / "b"), "git clean -fd", "irreversible_delete")
 
 
 def test_guard_clean_dry_run_and_plain_clean_still_allowed(tmp_path):
@@ -202,12 +192,19 @@ def test_guard_clean_dry_run_and_plain_clean_still_allowed(tmp_path):
             assert_allowed(repo, cmd)
 
 
-def test_guard_marker_ignored_helper_reports_both_states(tmp_path):
-    ignored = real_repo(tmp_path / "i", ignored=True)
-    plain = real_repo(tmp_path / "p", ignored=False)
-    assert agile_guard._marker_ignored(str(ignored), str(ignored / ".tmp" / "autopilot.json")) is True
-    assert agile_guard._marker_ignored(str(plain), str(plain / ".tmp" / "autopilot.json")) is False
-    assert MARKER_REASON  # nhập dùng chung: lý do chặn file dấu giữ nguyên
+def test_guard_hot_path_spawns_no_subprocess(tmp_path, monkeypatch):
+    """R0-S3: không `git` (hay tiến trình con nào) trên đường nóng của rào; khoá repo đọc `.git` trong tiến trình."""
+    repo = real_repo(tmp_path, ignored=True)  # dựng trước khi chặn tiến trình con (git init)
+
+    def boom(*args, **kwargs):
+        raise AssertionError("tiến trình con trên đường nóng của rào")
+
+    monkeypatch.setattr(subprocess, "run", boom)
+    monkeypatch.setattr(subprocess, "Popen", boom)
+    assert not hasattr(agile_guard, "subprocess") and not hasattr(agile_guard, "_marker_ignored")
+    assert_blocked(repo, "rm -rf src", "irreversible_delete")
+    assert_allowed(repo, "git status")
+    assert_blocked(repo, "git stash -u", "irreversible_delete")
 
 
 # --- TK27d: dạng dính `-Destination:x`/`-Path:x`, cwd trong `.git`, glob `?git`, `git -c gc.*=now` ------------------------------

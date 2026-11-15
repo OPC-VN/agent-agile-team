@@ -49,3 +49,13 @@ def _no_machine_ledger(monkeypatch):
     """Máy của chủ có thể đặt `AGENT_AGILE_LEDGER`; test không về sổ phải chạy như máy không đặt (tránh đỏ giả).
     Test về sổ tự đặt biến qua `monkeypatch` hay tham số `env` của `run_script`."""
     monkeypatch.delenv(LEDGER_ENV, raising=False)
+
+
+@pytest.fixture
+def agile_state_dir(tmp_path_factory, monkeypatch):
+    """Thư mục trạng thái agile tạm (`AGENT_AGILE_STATE_DIR`): test của rào không bao giờ chạm thư mục trạng thái thật của máy.
+    Xoá luôn `CLAUDE_PROJECT_DIR` (khoá repo suy từ `cwd` của sự kiện)."""
+    directory = tmp_path_factory.mktemp("agile-state")
+    monkeypatch.setenv("AGENT_AGILE_STATE_DIR", str(directory))
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    return directory

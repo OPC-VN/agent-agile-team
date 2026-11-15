@@ -1,80 +1,43 @@
 #!/bin/sh
-# Launcher cho hook agile (scripts/agile_guard.py): POSIX sh, không cần Python để chạy.
+# Launcher dự phòng POSIX cho hook agile (scripts/agile_guard.py): không cần Python để chạy chính nó. KHÔNG còn được `hooks/hooks.json` dùng
+# (hook mới gọi Python trực tiếp); giữ cho máy/host chỉ có `sh`.
 # Đọc sự kiện ở stdin một lần vào biến, rồi gọi thẳng guard bằng `python3`, `python`, `py -3` theo thứ tự (không dò phiên bản bằng tiến trình
 # riêng, để mỗi lệnh chỉ tốn một lần khởi động Python; guard tự xử khi Python quá cũ). Guard trả 0 hoặc 2 thì trả nguyên mã (kèm
-# stdout/stderr của guard). Guard vắng, Python không có, hoặc mọi ứng viên trả mã khác (lỗi cú pháp, import hỏng, traceback) thì KHÔNG
-# trả mã đó mà tự dò file dấu `.tmp/autopilot.json`
-# (không phân biệt hoa thường) đi lên từ $CLAUDE_PROJECT_DIR và $PWD tới thư mục có `.git`: có thì chặn (thoát 2), không thì cho qua (thoát 0).
-# `--clear <thư mục>` không đọc stdin. Guard luôn là agile_guard.py cạnh chính launcher (không có biến môi trường đổi đường).
-# Nhánh dự phòng chỉ dùng lệnh dựng sẵn của sh, nên vẫn chạy được khi PATH rỗng.
+# stdout/stderr của guard).
+# GIỚI HẠN CÓ CHỦ Ý (SPR-32 B3): guard vắng, Python không có, hoặc mọi ứng viên trả mã khác (lỗi cú pháp, import hỏng, traceback) thì launcher
+# KHÔNG tự phán đoán công tắc agile (trạng thái nằm trong file JSON ngoài dự án, `sh` thuần không đọc được): nó in cảnh báo rõ ở stderr rằng
+# rào KHÔNG hoạt động lần này và thoát 0. Nghĩa là: không có Python dùng được thì không có rào máy; luật chữ vẫn áp. Không dò file dấu cũ.
+# Guard luôn là agile_guard.py cạnh chính launcher (không có biến môi trường đổi đường). Chỉ dùng lệnh dựng sẵn của sh khi dò, nên vẫn chạy
+# được khi PATH rỗng.
 
 here=${0%/*}
 [ "$here" = "$0" ] && here=.
 here=$(cd "$here" 2>/dev/null && pwd) || here=.
 guard=$here/agile_guard.py
 
-has_marker() {
-  cur=${1%/}
-  [ -n "$1" ] || return 1
-  while :; do
-    if [ -d "$cur/.tmp" ]; then
-      for entry in "$cur"/.tmp/*; do
-        [ -e "$entry" ] || continue
-        case ${entry##*/} in
-          [Aa][Uu][Tt][Oo][Pp][Ii][Ll][Oo][Tt].[Jj][Ss][Oo][Nn]) return 0 ;;
-        esac
-      done
-    fi
-    [ -e "$cur/.git" ] && return 1
-    case $cur in
-      */*) ;;
-      *) return 1 ;;
-    esac
-    parent=${cur%/*}
-    if [ -z "$parent" ]; then
-      [ "$cur" = "/" ] && return 1
-      parent=/
-    fi
-    [ "$parent" = "$cur" ] && return 1
-    cur=$parent
-  done
-}
-
-reason="agile: không chạy được Python để kiểm lệnh — chặn vì đang bật agile"
+reason="agile: CẢNH BÁO — không chạy được Python để kiểm lệnh, rào máy agile KHÔNG hoạt động lần này (không chặn gì)"
 
 if [ -f "$guard" ]; then
-  stdin_needed=1
-  [ "$1" = "--clear" ] && stdin_needed=0
   event=
-  if [ "$stdin_needed" = 1 ]; then
-    while IFS= read -r line || [ -n "$line" ]; do
-      event="$event$line
+  while IFS= read -r line || [ -n "$line" ]; do
+    event="$event$line
 "
-    done
-  fi
+  done
   for candidate in "python3" "python" "py -3"; do
     found=$(command -v "${candidate%% *}" 2>/dev/null) || continue
     case $found in
       *[Ww]indows[Aa]pps*) continue ;; # stub của Microsoft Store (không phải Python thật, mỗi lần gọi tốn ~0,2 s)
     esac
-    if [ "$stdin_needed" = 1 ]; then
-      # shellcheck disable=SC2086 -- `py -3` cần tách từ
-      printf '%s' "$event" | $candidate "$guard" "$@"
-    else
-      # shellcheck disable=SC2086
-      $candidate "$guard" "$@" </dev/null
-    fi
+    # shellcheck disable=SC2086 -- `py -3` cần tách từ
+    printf '%s' "$event" | $candidate "$guard" "$@"
     code=$?
     if [ "$code" = 0 ] || [ "$code" = 2 ]; then
       exit "$code"
     fi
-    # 126/127: không chạy được lệnh; mã khác (traceback, lỗi cú pháp, Python quá cũ, stub của Store): thử ứng viên kế rồi mới dò bằng sh
-    [ "$code" = 126 ] || [ "$code" = 127 ] || reason="agile: guard lỗi — chặn vì đang bật agile"
+    # 126/127: không chạy được lệnh; mã khác (traceback, lỗi cú pháp, Python quá cũ, stub của Store): thử ứng viên kế
+    [ "$code" = 126 ] || [ "$code" = 127 ] || reason="agile: CẢNH BÁO — guard lỗi, rào máy agile KHÔNG hoạt động lần này (không chặn gì)"
   done
 fi
 
-if has_marker "$CLAUDE_PROJECT_DIR" || has_marker "$PWD"; then
-  echo "$reason" >&2
-  exit 2
-fi
+echo "$reason" >&2
 exit 0
