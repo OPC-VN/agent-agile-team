@@ -52,14 +52,16 @@ claude --plugin-dir ~/agent-agile-team                    # macOS, bash
 claude --plugin-dir "$HOME\agent-agile-team"              # Windows PowerShell
 ```
 
-**Hook autopilot.** Plugin kèm `hooks/hooks.json`: hook `PreToolUse` cho `Bash|PowerShell` chạy
-`scripts/autopilot-hook.sh --format claude` (launcher, chạy bằng `sh`; Claude Code trên Windows dùng Git Bash, nên máy Windows cần Git for Windows).
-Launcher gọi `scripts/autopilot_guard.py` bằng `python3`, `python` hoặc `py -3` (cần Python 3.9 trở lên nếu có). Hook chỉ chặn khi có
-`.tmp/autopilot.json` (dấu autopilot đang bật); không có file đó thì thoát 0 và không làm gì. Máy không có Python dùng được, hoặc
-guard vắng hay lỗi: launcher tự dò file dấu bằng `sh` và chỉ chặn khi có file dấu, nên không làm hỏng công cụ shell của dự án chưa bật
-autopilot. Codex và Antigravity chưa có hook này: xem [method/autopilot.md](../../method/autopilot.md).
+**Công tắc agile.** Agile **tắt mặc định**. Người dùng gõ `/agent-agile-team:agile` (hoặc `/agile`) để bật cho phiên này; `always` nhớ cho repo,
+`manual` để người ký hai cổng, `stop` tắt (sprint đang mở nhận một vướng mắc `paused by /agile stop`, hồ sơ giữ nguyên), `status` chỉ xem.
+Hook `UserPromptExpansion` (`scripts/agile_hook.py`) đọc lệnh người gõ và ghi trạng thái vào thư mục state của nền tảng qua
+`scripts/agile_state.py` (không còn file dấu `.tmp/autopilot.json`); hook `SessionStart` đưa dòng trạng thái vào ngữ cảnh. Model không tự bật được.
 
-**Lệnh dừng.** Plugin kèm `commands/stop-autopilot.md`: gõ `/agent-agile-team:stop-autopilot` (kèm `SPR-NN` nếu chỉ thu hồi một sprint) để lấy câu chuẩn `Dừng autopilot.` hoặc `Thu hồi duyệt thay SPR-NN.`; lệnh chỉ in câu, người dùng phải gửi câu đó trong chat.
+**Hook chặn lệnh.** Plugin kèm `hooks/hooks.json`: hook `PreToolUse` cho `Bash|PowerShell` chạy guard khi agile **bật**; agile tắt thì guard thoát 0
+và không làm gì. Tên launcher, cách gọi Python và chi tiết cài hook theo chuỗi luật hiện hành (`method/agile.md` và `hooks/hooks.json`).
+Codex và Antigravity chưa có hook này: xem `method/agile.md`.
+
+**Lệnh mục tiêu.** `/agent-agile-team:agile-goal` (kèm `SPR-NN` nếu cần) in sẵn khối `/goal` để chạy tiếp sprint đang mở; lệnh chỉ in, người dùng phải gửi khối đó trong chat. Dừng agile dùng `/agile stop` (thay cho câu `Dừng autopilot.` và lệnh `stop-autopilot` cũ).
 
 ## 3. Kiểm, cập nhật, gỡ
 

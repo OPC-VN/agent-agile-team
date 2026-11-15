@@ -36,7 +36,7 @@
   nằm dưới thư mục đã theo dõi.
 - Máy canh: luật `root-junk` của `check.py --self` (mức Phải sửa); thêm vào `.gitignore` hoặc xoá.
 - Thư mục tạm của một sprint là `.tmp/<SPR-NN>/`, dọn khi đóng sprint ở mọi nhánh của menu (skill `closing-sprint` mục 6);
-  `.tmp/autopilot.json` là file dấu autopilot — **không xoá**.
+  trạng thái bật/tắt agile không nằm trong repo (thư mục state của nền tảng, do `scripts/agile_state.py` ghi), nên dọn `.tmp/` không đụng tới.
 
 ## 4. Hai dự án mẫu order-desk — giữ cả hai
 
