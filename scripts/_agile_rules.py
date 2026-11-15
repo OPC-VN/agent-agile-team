@@ -14,8 +14,8 @@ DELEGATION_KEYS = ("grant", "grant_at", "scope", "expires", "by", "tier", "files
 DELEGATION_OPTIONAL_KEYS = ("level", "program", "channel", "orchestrator", "sessions_cap")  # khoá agile (method/agile.md): có một khoá là kích luật
 AGILE_PREFIX = "bật autopilot"  # legacy: old records. `grant` bắt đầu bằng chuỗi này (không phân biệt hoa thường) cũng kích luật
 AGILE_LEVELS = ("gate_1", "gate_1_2", "program")
-# Danh sách 13 mục: `agile_guard.py` chỉ dùng khi file dấu hỏng (chặn cả 13) và bản ghim `tests/test_fence_wiring.py` đếm đúng 13; luật `check` không đọc
-# (một chế độ, không `exclusions`). `OPEN_ALWAYS_BLOCKED` mới là tập guard chặn khi file dấu hợp lệ; `OPEN_DEFAULT_OPEN` không còn nơi dùng (chỉ bản ghim).
+# Danh sách 13 mục: `agile_guard.py` chỉ dùng khi trạng thái hỏng (chặn cả 13) và bản ghim `tests/test_fence_wiring.py` đếm đúng 13; luật `check` không đọc
+# (một chế độ, không `exclusions`). `OPEN_ALWAYS_BLOCKED` mới là tập guard chặn khi trạng thái lành; `OPEN_DEFAULT_OPEN` không còn nơi dùng (chỉ bản ghim).
 AGILE_EXCLUSIONS = ("push", "tag", "version", "main_merge", "publish", "license", "irreversible_delete",
                         "rules_unlisted", "user_soul", "secret", "auth", "network_fetch", "branch_merge_local")  # danh sách đóng 13 mục
 OPEN_ALWAYS_BLOCKED = ("network_fetch", "rules_unlisted", "irreversible_delete", "secret", "auth", "user_soul", "license")
@@ -50,6 +50,8 @@ FENCE_FILES: tuple[str, ...] = (
     "skills/closing-sprint/references/agile.md",
     "scripts/_agile_rules.py",
     "scripts/agile_guard.py",
+    "scripts/agile_state.py",  # SPR-32 B5: quyết định khi nào rào bật (SC7.3)
+    "scripts/agile_hook.py",  # SPR-32 B5: ghi công tắc từ lệnh người dùng gõ (SC7.3)
     "scripts/agile-hook.sh",
     "hooks/hooks.json",
 )

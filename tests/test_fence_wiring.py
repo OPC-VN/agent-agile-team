@@ -27,6 +27,8 @@ PINNED_FENCE_FILES = (
     "skills/closing-sprint/references/agile.md",
     "scripts/_agile_rules.py",
     "scripts/agile_guard.py",
+    "scripts/agile_state.py",
+    "scripts/agile_hook.py",
     "scripts/agile-hook.sh",
     "hooks/hooks.json",
 )
