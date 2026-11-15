@@ -26,12 +26,24 @@ import re
 import stat
 import sys
 import time
-import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import _common as c  # noqa: E402
+# Start-up cost (SPR-32 B4): the PreToolUse guard imports this module on every tool call, so `_common` (dataclasses, inspect, shutil: about
+# 20 ms), `uuid` and `datetime` are loaded only when a code path needs them. `c` keeps its name and attribute access; behaviour is unchanged.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+class _LazyCommon:
+    """Stands in for `import _common as c`; the real import happens on first attribute access (open_sprints, main)."""
+
+    def __getattr__(self, name):
+        if _HERE not in sys.path:
+            sys.path.insert(0, _HERE)
+        import _common
+        return getattr(_common, name)
+
+
+c = _LazyCommon()
 
 APP = "agent-agile-team"
 ENV_STATE_DIR = "AGENT_AGILE_STATE_DIR"
@@ -204,6 +216,7 @@ def session_file(session_id, directory: Path | None = None) -> Path | None:
 
 
 def now_iso(now: float | None = None) -> str:
+    from datetime import datetime, timezone
     stamp = time.time() if now is None else now
     return datetime.fromtimestamp(stamp, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -237,6 +250,7 @@ def read_json(path: Path) -> tuple[dict | None, str | None]:
 
 def write_json_atomic(path: Path, data: dict) -> None:
     """Temp file in the same dir + `os.replace`, retried on PermissionError (SC4.7)."""
+    import uuid
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     tmp = path.parent / f".{path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
     payload = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")

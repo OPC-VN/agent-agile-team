@@ -79,7 +79,8 @@ RULES: dict[str, tuple[str, str]] = {
     "delegation-floor-file": (PHAI, "`delegation.files` nêu file thuộc sàn cứng (`FLOOR_FILES`): không duyệt thay được"),
     "gate-signer-independence": (PHAI, "người ký cổng trùng nhãn phiên người làm ở tài liệu cùng sprint, tier người ký thấp hơn tier người làm, hoặc cổng đã kết luận thiếu `evidence/gate-<N>-verdict.md` / dòng đầu lệch quote (khối duyệt thay từ ngày hiệu lực)"),
     "decision-log-missing": (PHAI, "REPORT hoặc SPRINT.md có Cổng 2 duyệt thay mới mà thiếu mục 'Nhật ký quyết định' đủ ai ký · model · bằng chứng · lệnh hoàn tác"),
-    "session-cap-missing": (PHAI, "PLAN hoặc SPRINT.md có Cổng 1 duyệt thay mới mà thiếu 'Trần phiên: <số>', sessions_cap không khớp (null/vắng không hợp lệ) hoặc số vượt công thức cỡ × rủi ro mà không có dòng 'nâng trần' ở Nhật ký quyết định"),
+    "session-cap-missing": (PHAI, "PLAN hoặc SPRINT.md có Cổng 1 duyệt thay mới mà thiếu 'Trần phiên: <số>' hoặc sessions_cap không khớp (null/vắng không hợp lệ)"),
+    "session-cap-over": (GHI, "chỉ báo (không chặn): 'Trần phiên' vượt công thức cỡ × rủi ro mà không có dòng 'nâng trần' ở Nhật ký quyết định"),
     "gate-route-floor": (PHAI, "cổng `delegated` (kể cả còn `pending`) mà bảng 'File luật và file sàn cứng sẽ chạm' khai file sàn cứng, hoặc `risk_tags` có `rules` mà `delegation.files` rỗng: chuyển cổng người, trình lời khuyến nghị"),
     "frontmatter-duplicate-key": (PHAI, "khoá `delegation` lặp trong frontmatter (chỉ một phiên điều phối ghi lời cấp)"),
     "decision-owner-missing": (NEN, "CQ/DN của sprint từ ngày chế độ mở mà bảng thiếu cột hoặc ô 'Người quyết'"),
@@ -1611,18 +1612,14 @@ class Engine:
             problem = self._session_cap_problem(doc, block)
             if problem:
                 self.add(doc.path, doc.key_line("gate_1_mode"), "session-cap-missing", problem)
+            elif (note := self._session_cap_over_note(doc)):
+                self.add(doc.path, doc.key_line("gate_1_mode"), "session-cap-over", note)
 
     def _session_cap_problem(self, doc: Doc, block: dict) -> str | None:
         """Trần phiên của duyệt thay mới (`method/agile.md` mục 2.1): dòng `Trần phiên: <N>` (PLAN: mục 'Ước lượng'; `SPRINT.md`: cả file),
         `delegation.sessions_cap` là số nguyên khớp N (null hay vắng không hợp lệ), N không vượt công thức theo `size`/`risk` — vượt thì
         Nhật ký quyết định (của file này hoặc tài liệu cùng sprint) phải có dòng 'nâng trần'."""
-        cap, inside = None, doc.kind == "sprint"
-        for line in doc.raw:
-            if doc.kind == "plan" and line.startswith("## "):
-                inside = line[3:].strip().casefold() == "ước lượng"
-            elif inside and (m := re.match(r"\s*(?:[-*]\s*)?(?:\*\*)?trần phiên:?(?:\*\*)?:?\s*(\d+)\b", line, re.IGNORECASE)):
-                cap = int(m.group(1))
-                break
+        cap = self._cap_line(doc)
         where = "mục 'Ước lượng' của PLAN" if doc.kind == "plan" else "SPRINT.md"
         if cap is None or cap < 1:
             return f"Cổng 1 duyệt thay mà {where} không có dòng 'Trần phiên: <số nguyên >= 1>'"
@@ -1631,10 +1628,27 @@ class Engine:
             return f"delegation.sessions_cap phải là số nguyên khớp 'Trần phiên: {cap}' (null hay vắng không hợp lệ ở hồ sơ mới)"
         if held != cap:
             return f"'Trần phiên: {cap}' khác delegation.sessions_cap ({held})"
+        return None
+
+    @staticmethod
+    def _cap_line(doc: Doc) -> int | None:
+        """Số ở dòng `Trần phiên: <N>` (PLAN: mục 'Ước lượng'; `SPRINT.md`: cả file); không có dòng thì `None`."""
+        cap, inside = None, doc.kind == "sprint"
+        for line in doc.raw:
+            if doc.kind == "plan" and line.startswith("## "):
+                inside = line[3:].strip().casefold() == "ước lượng"
+            elif inside and (m := re.match(r"\s*(?:[-*]\s*)?(?:\*\*)?trần phiên:?(?:\*\*)?:?\s*(\d+)\b", line, re.IGNORECASE)):
+                cap = int(m.group(1))
+                break
+        return cap
+
+    def _session_cap_over_note(self, doc: Doc) -> str | None:
+        """Chỉ báo (SPR-32 A7, mức Ghi chú, không chặn): số `Trần phiên` vượt công thức theo `size`/`risk` mà Nhật ký quyết định không có dòng 'nâng trần'."""
+        cap = self._cap_line(doc)
         formula = rules.session_cap_formula(doc.data.get("size"), doc.data.get("risk"))
-        if formula is not None and cap > formula and not self._cap_raise_logged(doc):
+        if cap is not None and formula is not None and cap > formula and not self._cap_raise_logged(doc):
             return (f"Trần phiên {cap} vượt công thức {formula} (cỡ {doc.data.get('size')}, rủi ro {doc.data.get('risk')}, method/agile.md mục 2.1) "
-                    "mà Nhật ký quyết định không có dòng 'nâng trần'")
+                    "mà Nhật ký quyết định không có dòng 'nâng trần' — chỉ báo, không chặn")
         return None
 
     def _cap_raise_logged(self, doc: Doc) -> bool:

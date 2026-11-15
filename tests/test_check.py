@@ -2849,25 +2849,30 @@ def test_old_block_with_null_sessions_cap_is_not_flagged(tmp_path):
     ("large", "high", 29, False), ("large", "high", 30, True), ("large", "normal", 23, False), ("large", "normal", 24, True),
 ])
 def test_delegation_session_cap_must_not_exceed_the_formula(tmp_path, size, risk, cap, flagged):
+    """SPR-32 A7: vượt công thức chỉ còn là dòng báo `session-cap-over` (Ghi chú), không còn chặn; `session-cap-missing` im."""
     root = make_sprint(tmp_path)
     _new_delegated_plan(root, cap=cap)
     _rewrite(root / "PLAN.md", "size: medium", f"size: {size}")
     _rewrite(root / "PLAN.md", "risk: normal", f"risk: {risk}")
-    hits = _rule_hits(root, "session-cap-missing")
+    assert _rule_hits(root, "session-cap-missing") == []
+    hits = _rule_hits(root, "session-cap-over")
     assert bool(hits) is flagged, [f.render() for f in hits]
     if flagged:
-        assert len(hits) == 1 and "công thức" in hits[0].message
+        assert len(hits) == 1 and "công thức" in hits[0].message and hits[0].level == "Ghi chú"
+    report = check.check_paths([root])
+    assert [f.render() for f in report.findings if f.level in check.BLOCKING] == [] and report.exit_code == 0
 
 
-def test_session_cap_above_formula_is_allowed_with_a_decision_log_line(tmp_path):
+def test_session_cap_above_formula_is_report_only_and_silenced_by_a_decision_log_line(tmp_path):
     root = make_sprint(tmp_path)
     _new_delegated_plan(root, cap=20)
     _rewrite(root / "PLAN.md", "size: medium", "size: small")
-    assert len(_rule_hits(root, "session-cap-missing")) == 1
+    assert len(_rule_hits(root, "session-cap-over")) == 1 and _rule_hits(root, "session-cap-missing") == []
+    assert check.check_paths([root]).exit_code == 0
     log = ("\n## Nhật ký quyết định\n\n| Quyết định | Ai ký | Bằng chứng | Lệnh hoàn tác |\n|---|---|---|---|\n"
            "| Nâng trần phiên 8 → 20 | agent-d · gate-delegate · T1 · Fable 5.2 | evidence/gate-1-verdict.md | sửa lại Trần phiên và sessions_cap |\n")
     write_lf(root / "PLAN.md", (root / "PLAN.md").read_text(encoding="utf-8") + log)
-    assert _rule_hits(root, "session-cap-missing") == []
+    assert _rule_hits(root, "session-cap-over") == []
 
 
 def test_verdict_file_must_exist_for_a_new_concluded_delegated_gate(tmp_path):
@@ -2937,7 +2942,8 @@ def test_new_sprint_file_cap_must_match_block_and_formula(tmp_path):
     assert len(hits) == 1 and "sessions_cap" in hits[0].message, [f.render() for f in hits]
     (tmp_path / "b").mkdir()
     root2 = _new_two_gate_sprint(tmp_path / "b", cap_line="Trần phiên: 5", block_cap=5, log=SPRINT_LOG_OK)  # rất nhỏ: công thức 4
-    hits = _rule_hits(root2, "session-cap-missing")
+    assert _rule_hits(root2, "session-cap-missing") == []  # SPR-32 A7: vượt công thức chỉ còn báo
+    hits = _rule_hits(root2, "session-cap-over")
     assert len(hits) == 1 and "công thức" in hits[0].message, [f.render() for f in hits]
 
 
@@ -3168,3 +3174,46 @@ def test_cross_file_roles_never_compares_a_document_with_itself(tmp_path):
     _new_doc(root, "PLAN.md")
     assert len(_cross_hits(root, "PLAN.md")) == 1
 
+
+
+# --- SPR-32 B4: công tắc agile TẮT không đòi sổ; hồ sơ cũ mang tên autopilot vẫn hợp lệ (FR10, SC10.1-10.3) --------------------------
+
+
+def test_sc10_1_agile_off_no_ledger_no_config_no_sprint_passes(tmp_path):
+    """SC10.1: dự án không có `.agile.json`, không có sổ, không có thư mục sprint -> `check` đạt, kể cả khi máy đặt mẫu sổ trỏ file không có."""
+    project = tmp_path / "proj"
+    project.mkdir()
+    write_lf(project / "README.md", "# Dự án\n\nKhông có hồ sơ agile.\n")
+    for env in ({}, {LEDGER_ENV: str(tmp_path / "none" / "{project}.md")}):
+        report = check.check_paths([project], env=env)
+        assert report.findings == [] and report.errors == [] and report.exit_code == 0, [f.render() for f in report.findings]
+    cfg_only = tmp_path / "cfg"
+    cfg_only.mkdir()
+    write_lf(cfg_only / ".agile.json", json.dumps({"schema": 1}))  # có cấu hình, không khai sổ, không sprint
+    assert check.check_paths([cfg_only], env={LEDGER_ENV: str(tmp_path / "none" / "{project}.md")}).exit_code == 0
+
+
+def test_sc10_2_open_sprint_and_missing_ledger_still_reports_ledger_findings(tmp_path):
+    """SC10.2: có sprint đang mở và dự án khai sổ mà sổ không có -> vẫn báo `ledger-unreadable` (Phải sửa) như trước, thoát 1."""
+    root, env = ledger_project(tmp_path)
+    (tmp_path / "store" / "order-desk.md").unlink()
+    report = check.check_paths([root], env=env)
+    hit = ledger_rules(report)["ledger-unreadable"]
+    assert hit.level == "Phải sửa" and report.exit_code == 1
+    unconfigured = check.check_paths([root], env={})  # máy chưa đặt mẫu sổ: vẫn là ghi chú cũ, không đổi
+    assert "ledger-unconfigured" in ledger_rules(unconfigured)
+
+
+def test_sc10_3_legacy_autopilot_named_records_still_validate(tmp_path):
+    """SC10.3: hồ sơ cũ (khối `delegation` tám khoá, lời cấp `Bật autopilot …`, mục `Bản tin autopilot`) vẫn hợp lệ."""
+    report = check.check_paths([AGILE_FIXTURES / "legacy-delegation"])
+    assert [f.render() for f in report.findings if f.level in check.BLOCKING] == [] and report.exit_code == 0
+    root = make_sprint(tmp_path / "grant")
+    agile_plan(root)  # lời cấp "Bật autopilot …" + khoá level/channel/orchestrator/sessions_cap
+    assert [f.render() for f in check.check_paths([root]).findings] == []
+    legacy = tmp_path / "bulletin"
+    shutil.copytree(AGILE_FIXTURES / "legacy-delegation", legacy)
+    report_md = legacy / "REPORT.md"
+    write_lf(report_md, report_md.read_text(encoding="utf-8") + "\n## Bản tin autopilot\n\n- **Đã đẩy / PR:** không đẩy.\n")
+    again = check.check_paths([legacy])
+    assert [f.render() for f in again.findings if f.level in check.BLOCKING] == [] and again.exit_code == 0

@@ -52,8 +52,10 @@ import json
 import os
 import re
 import sys
-import traceback
-from typing import TextIO
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # `typing.TextIO` only annotates (SPR-32 B4: not imported per tool call)
+    from typing import TextIO
 
 FORMATS = ("claude", "codex", "antigravity")
 LEGACY_MARKER_PARTS = (".tmp", "autopilot.json")  # chỉ để in dòng nhắc; rào không đọc nó
@@ -1239,10 +1241,12 @@ def main(argv: list[str] | None = None, stdin: TextIO = sys.stdin, stdout: TextI
         reason = _evaluate(raw, notes)
     except _Failed as failed:
         if debug:
+            import traceback  # lazy: debug only (SPR-32 B4 start-up cost)
             traceback.print_exc(file=stderr)
         reason = _unparsed_reason(failed.label, raw, failed.dirs)
     except Exception as exc:  # JSON hỏng, đầu vào không đọc được: vớt session_id bằng biểu thức chính quy
         if debug:
+            import traceback  # lazy: debug only (SPR-32 B4 start-up cost)
             traceback.print_exc(file=stderr)
         reason = _unparsed_reason(type(exc).__name__, raw)
     if reason is None:

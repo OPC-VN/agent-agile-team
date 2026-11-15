@@ -96,6 +96,16 @@ def drop_always_blocked(root: Path) -> None:
 GUARD = "scripts/agile_guard.py"
 
 
+def stash_all_open(root: Path) -> None:
+    """SPR-32 B4: bỏ luật chặn `git stash -a|-u` (luật khôi phục ở B3, trước đó chỉ có test, chưa có đột biến)."""
+    edit(root, GUARD, 'if "--all" in rest or "--include-untracked" in rest or any(_cluster(a, "au") for a in rest):', "if False:")
+
+
+def clean_force_open(root: Path) -> None:
+    """SPR-32 B4: bỏ luật chặn `git clean -f` / `-fx` (khôi phục ở B3)."""
+    edit(root, GUARD, 'return "irreversible_delete" if forced and not dry_run else None', "return None")
+
+
 def state_switch_script_open(root: Path) -> None:
     """SPR-32 B3: bỏ luật chặn `agile_state.py on|off|stop|always|manual` (thay đột biến `stash-all-open` của bảo vệ file dấu đã gỡ)."""
     edit(root, GUARD, 'if script and (script.group(1).lower() == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):', "if False:")
@@ -206,6 +216,8 @@ MUTATIONS = {
     "gc-any-expiry-open": Mutation(gc_any_expiry_open, f"{UNDO}::test_guard_git_config_zero_expiry_blocked", (UNDO,)),
     "cwd-in-git-open": Mutation(cwd_in_git_open, f"{UNDO}::test_guard_delete_or_move_with_cwd_inside_git_blocked", (UNDO,)),
     "gc-config-open": Mutation(gc_config_open, f"{UNDO}::test_guard_git_config_zero_expiry_blocked", (UNDO,)),
+    "stash-all-open": Mutation(stash_all_open, "tests/test_agile_guard.py::test_guard_stash_all_and_clean_x_still_blocked", ("tests/test_agile_guard.py",)),
+    "clean-force-open": Mutation(clean_force_open, f"{UNDO}::test_guard_stash_clean_blocked_in_both_ignore_states", (UNDO,)),
     "session-cap-formula-off": Mutation(session_cap_formula_off, "tests/test_check.py::test_delegation_session_cap_must_not_exceed_the_formula", ("tests/test_check.py",)),
 }
 
