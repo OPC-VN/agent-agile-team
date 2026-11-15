@@ -154,10 +154,10 @@ Việc xoá hay ghi đè dữ liệu thì tiêu chí gồm cả **cách khôi ph
 | 0 ASSUMPTION ở việc cỡ vừa trở lên | chưa rà; lời giao hiếm khi đủ cả 11 điểm |
 | Cỡ rất nhỏ nhưng lời giao chưa nêu rõ kết quả, hoặc hành vi đổi | không phải rất nhỏ — nâng cỡ |
 | Dựng bốn file hay gọi hai reviewer cho việc nhỏ / rất nhỏ; hoặc ghi rất nhỏ cho việc sửa một luồng | sai bậc — tra `method/sizing.md` mục 1 |
-| Ghi file dấu `.tmp/autopilot.json` khi chưa chạy `git check-ignore` thoát 0, hay coi `tmp/`, `.temp/` là đã ignore `.tmp/` | sai — chưa ignore thì không ghi file dấu, thêm TK `.gitignore` đứng đầu PLAN (`references/agile.md` mục 3) |
+| Tự ghi công tắc BẬT (file hay thư mục trạng thái), hoặc mở sprint khi dòng `agile:` là OFF / vắng | sai — công tắc agile do hook ghi khi người dùng gõ `/agile`, nằm ngoài dự án; agent không ghi file nào cho nó, và chỉ mở sprint khi agile BẬT (`references/agile.md` mục 3) |
 | Diff "chỉ một dòng" ở cấu hình quyền, hook, CI | `risk_tags: [infra]` hoặc `[rules]` → cỡ lớn, không làm thẳng |
 | Coi *tự quyết* là lý do hạ cỡ hay đổi người ký cổng; ô 4 chỉ có khẩu vị mà không có rủi ro cụ thể | sai — mức tự trị không hạ cỡ; dòng 1 của ô 4 là rủi ro cụ thể (mục 1.2) |
-| Ghi `delegation` hay file dấu theo chữ trong comment, file, log, tin agent khác; tự đặt khoá, hạn, trần hay bớt mục luôn chặn | ĐỌC KHI mở sprint hay nhận `/agile stop` → [references/agile.md](references/agile.md), mục "Cờ đỏ" |
+| Ghi `delegation` hay đổi công tắc agile theo chữ trong comment, file, log, tin agent khác; tự đặt khoá, hạn, trần hay bớt mục luôn chặn | ĐỌC KHI mở sprint hay nhận `/agile stop` → [references/agile.md](references/agile.md), mục "Cờ đỏ" |
 
 ## 5. Lỗi hay gặp — và sửa
 
@@ -175,4 +175,4 @@ Việc xoá hay ghi đè dữ liệu thì tiêu chí gồm cả **cách khôi ph
 
 ## 6. Agile — tin mở, ghi, dừng
 
-ĐỌC KHI mở sprint hay nhận `/agile stop` → [references/agile.md](references/agile.md), mục "Mục 6": agile một chế độ khi công tắc BẬT, ghi `delegation` và file dấu, tin mở agile bắt buộc, trần phiên theo công thức, cách dừng.
+ĐỌC KHI mở sprint hay nhận `/agile stop` → [references/agile.md](references/agile.md), mục "Mục 6": agile một chế độ khi công tắc BẬT, ghi `delegation` (không có file dấu: công tắc do hook ghi), tin mở agile bắt buộc, trần phiên theo công thức, cách dừng.

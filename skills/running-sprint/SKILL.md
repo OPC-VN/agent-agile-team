@@ -230,4 +230,4 @@ Giữ nguyên sổ, tiền kiểm, bốn điều kiện dừng, phán quyết. K
 
 ## 9. Khi agile đang bật
 
-ĐỌC KHI chạy sprint hay nhận `/agile stop` → [references/agile.md](references/agile.md), mục "Mục 9": file dấu theo phiên con, sổ phiên con, bảy mục luôn chặn, `/agile stop`, `Thu hồi duyệt thay`, brief cấm ghi `delegation`; "Mục 10": tin mở agile.
+ĐỌC KHI chạy sprint hay nhận `/agile stop` → [references/agile.md](references/agile.md), mục "Mục 9": công tắc theo phiên (không chép file cho phiên con), sổ phiên con, bảy mục luôn chặn, `/agile stop`, `Thu hồi duyệt thay`, brief cấm ghi `delegation`; "Mục 10": tin mở agile.

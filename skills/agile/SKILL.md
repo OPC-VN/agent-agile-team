@@ -62,8 +62,7 @@ The hook prints nothing to you; the outcome is recorded in the state and shown b
 
 ## 4. What ON and OFF change for the agent
 
-- **ON:** load the agile process document, `method/agile.md` (plain path, not a link: the file arrives with the law
-  series), and apply the skills `intake`, `running-sprint` and `closing-sprint`. In `manual` mode the human signs Gate 1
+- **ON:** load the agile process document, [method/agile.md](../../method/agile.md), and apply the skills `intake`, `running-sprint` and `closing-sprint`. In `manual` mode the human signs Gate 1
   and Gate 2; the Gate Delegate does not. Floor rules in `AGENTS.md` stay in force in every mode.
 - **OFF:** do not open sprints, do not register `RQ-` items, do not run gates or write sprint documents (the one blocker
   row of section 3 is the only exception), and do not call the process skills on your own. Ordinary work, Git rules,

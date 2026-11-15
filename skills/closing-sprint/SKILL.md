@@ -169,7 +169,7 @@ và `.tmp/<SPR-NN>/` (mục 6), `git branch -D <nhánh>`. Đây là điều ki�
 (quy ước ở `method/conventions.md`). Gộp local → xoá ngay sau khi gộp xanh. Push + PR hay giữ nguyên → chưa xoá được
 (còn có thể sửa theo phản hồi): ghi vào mục *Việc để lại* của REPORT (cỡ nhỏ: phần Kết quả của `SPRINT.md`) một dòng `CO` "dọn `.tmp/<SPR-NN>/` khi PR gộp" (nhánh giữ nguyên: "khi nhánh được gộp hoặc bỏ") kèm tên người làm; như mọi `CO`, nó thành một dòng `RQ-`. `.tmp/`
 nằm trong `.gitignore` nên `git status` không báo; rác ở đây vô hình với mọi cổng, vì vậy phải ghi thành việc có chủ. Chỉ xoá
-thư mục của sprint này: không xoá `.tmp/autopilot.json` (file dấu agile) và không xoá `.tmp/<SPR-khác>/`. Hồ sơ sprint
+thư mục của sprint này: không xoá `.tmp/<SPR-khác>/` và không đụng trạng thái agile (nó nằm ngoài dự án). Hồ sơ sprint
 (SPEC/PLAN/PROGRESS/REPORT) giữ.
 
 ## 7. Cờ đỏ

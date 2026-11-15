@@ -22,7 +22,7 @@ GIỚI HẠN ĐÃ BIẾT (nói thẳng): so khớp chuỗi LUÔN lách được 
 rồi chạy sau, biến chưa biết giá trị, `getattr`, `eval` dựng chuỗi). Luật này là sàn chống TAI NẠN, không phải bằng chứng an ninh; cùng tài
 khoản có Bash thì ghi đè file trạng thái được. Cái bảo vệ thật là lệnh người dùng gõ + cờ `source` + soát transcript.
 
-Không có file dấu: không còn "không có file dấu → cho qua"; xem KÍCH HOẠT. Đầu ra: claude/codex in lý do ở stderr rồi thoát 2; antigravity
+Rào không còn dựa vào file dấu: bật hay ngủ theo trạng thái agile (không phải theo việc có file nào hay không); xem KÍCH HOẠT. Đầu ra: claude/codex in lý do ở stderr rồi thoát 2; antigravity
 in JSON `deny` ở stdout, thoát 0; cho qua: claude/codex thoát 0 không in, antigravity in `{}`.
 Lý do: `agile: '<mục loại>' cần người dùng nói trong chat — lệnh không chạy`.
 
@@ -115,7 +115,7 @@ REDIRECT_INSIDE = re.compile(r">>?\|?")
 LINE_CONTINUATION = re.compile(r"[\\`]\r?\n")
 PIPE = re.compile(r"(?<!\|)\|(?!\|)")
 EVAL_COMMANDS = frozenset({"eval", "iex", "invoke-expression"})
-COPY_COMMANDS = frozenset({"cp", "copy", "copy-item", "cpi"})  # file dấu chỉ là NGUỒN thì được chép (điều phối chép vào thư mục phiên con)
+COPY_COMMANDS = frozenset({"cp", "copy", "copy-item", "cpi"})  # lệnh chép: đích thuộc thư mục trạng thái vẫn bị chặn; nguồn thì không (công tắc không còn là file trong dự án)
 HEREDOC = re.compile(r"<<(?!<)(-?)\s*(?:'([^']+)'|\"([^\"]+)\"|\\?([A-Za-z_][\w.-]*))")
 PIPE_INTO_SHELL = re.compile(r"\|\s*(?:sudo\s+)?(?:bash|sh|zsh|dash|ksh|pwsh|powershell)\b")
 READ_ONLY_COMMANDS = frozenset({
@@ -131,7 +131,7 @@ PYTHON_NAME = re.compile(r"^(?:py|python[0-9.]*)$")
 
 
 def known_exclusions() -> tuple[str, ...]:
-    """Danh sách đóng 13 mục từ `_agile_rules.AGILE_EXCLUSIONS`; nạp muộn để lệnh không có file dấu không trả phí nhập."""
+    """Danh sách đóng 13 mục từ `_agile_rules.AGILE_EXCLUSIONS`; nạp muộn để lệnh khi rào đang ngủ không trả phí nhập."""
     here = os.path.dirname(os.path.abspath(__file__))
     if here not in sys.path:
         sys.path.insert(0, here)
@@ -196,7 +196,7 @@ def activation(payload: dict, projects: tuple[str, ...] = ()) -> tuple[set[str],
     không có file phiên khớp (tác tử con không bao giờ ngủ) · không nạp được `agile_state`. Không có tiến trình con; chỉ đọc vài file nhỏ.
     Khoá repo như `agile_hook`: `cwd` của sự kiện (hay `CLAUDE_PROJECT_DIR`, do `agile_state` đọc). Sự kiện của host không có `cwd` (Codex/
     Antigravity chỉ có thư mục lệnh) thì dùng `projects` (người gọi đưa vào), rồi thư mục tiến trình. Thư mục lệnh khác thư mục phiên thì `always`
-    của repo ở thư mục lệnh cũng tính (như file dấu cũ: thấy ở đâu cũng bật); khi harness đã xuất `CLAUDE_PROJECT_DIR` hai khoá trùng nhau."""
+    của repo ở thư mục lệnh cũng tính (như bản cũ dùng file dấu: thấy ở đâu cũng bật); khi harness đã xuất `CLAUDE_PROJECT_DIR` hai khoá trùng nhau."""
     try:
         st = _state_module()
     except Exception:  # noqa: BLE001 — không nạp được lớp trạng thái: đóng khi lỗi
