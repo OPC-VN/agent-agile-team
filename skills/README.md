@@ -34,7 +34,7 @@ cấp. Nhóm ghi trong frontmatter `metadata.group` và trong mục lục dướ
   để `check` không quét như tài liệu; file chứa khoá, mật khẩu hay token làm mồi thì dòng thứ hai ghi rõ
   chúng là **GIÁ TRỊ GIẢ**.
 
-**Hiện trạng thử:** 38 trong 38 skill đã có tệp thử đã chạy — bảng ở mục 4.
+**Hiện trạng thử:** 37 trong 38 skill có tệp thử đã chạy; `agile` có tệp thử nhưng chưa chạy (0/4 kịch bản, chạy thật ở SPR-32 TK10) — bảng ở mục 4.
 
 ## 3. Mục lục — 38 skill
 

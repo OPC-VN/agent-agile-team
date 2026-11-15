@@ -10,7 +10,7 @@ updated: 2026-10-05
 > **Kết luận:** agent-agile-team là một **phương pháp làm phần mềm cho đội AI agent**: bạn giao việc bằng lời
 > thường, xác nhận **một tin trao đổi** lúc tiếp nhận (mục tiêu, bậc việc, có mở sprint không), rồi trả lời đúng
 > **hai lần** (duyệt kế hoạch, nghiệm thu kết quả), đội agent làm phần còn lại, ghi sổ,
-> và nhờ **agent khác** kiểm. Repo gồm luật lõi, 37 skill, 13 agent, bộ mẫu tài liệu và ba công cụ kiểm; cài
+> và nhờ **agent khác** kiểm. Repo gồm luật lõi, 38 skill, 13 agent, bộ mẫu tài liệu và ba công cụ kiểm; cài
 > được trên Claude Code, Codex và Antigravity. Bản hiện tại `0.4.0`, repo công khai (MIT).
 
 File này là nguồn cho trang giới thiệu <https://ducnguyen.vn/agent-agile-team/>. Số liệu và tên file khớp repo
@@ -90,17 +90,17 @@ Chín vai agent chia ba nhóm; mỗi vai có tier; repo không chứa tên model
 - Cạn hạn mức model: dừng tier đó, ghi vướng mắc, báo bạn — **không tự hạ tier**.
 - Mỗi lần giao việc cho agent con, hồ sơ ghi đủ vai · tier · model · effort thực tế.
 
-### 2.4 Bộ 37 skill và 13 agent
+### 2.4 Bộ 38 skill và 13 agent
 
 Skill là năng lực thường trực: agent rà danh mục trước mỗi hành động và tự gọi skill khớp tình huống.
 
-- **37 skill**, năm nhóm: Quy trình (6: `intake`, `shaping-spec`, `writing-plan`, `running-sprint`,
-  `closing-sprint`, `bug-triage`) · Kỹ thuật (18: `tdd`, `debugging`, `gcp-devops`, `gcp-incident-response` và 14 skill tham chiếu như `python`,
+- **38 skill**, năm nhóm: Quy trình (7: `intake`, `shaping-spec`, `writing-plan`, `running-sprint`,
+  `closing-sprint`, `bug-triage`, `agile`) · Kỹ thuật (18: `tdd`, `debugging`, `gcp-devops`, `gcp-incident-response` và 14 skill tham chiếu như `python`,
   `fastapi`, `postgres`, `react`, `deployment`…) · Kiểm định (7: `verify-before-done`, `code-review`,
   `plan-review`, `security-review`, `security-audit`, `web-qa`, `hooks-guardrails`) · Giao tiếp và tối ưu (4: `response-style`, `explain`,
   `id-convention`, `token-economy`) · Meta (2: `writing-skills`, `eval-harness`).
-- Skill **kỷ luật** (23) có luật sắt và được thử áp lực; skill **tham chiếu** (14) là bảng tra kỹ thuật và được
-  thử truy xuất. Cả 37 skill đều có tệp thử đã chạy.
+- Skill **kỷ luật** (24) có luật sắt và được thử áp lực; skill **tham chiếu** (14) là bảng tra kỹ thuật và được
+  thử truy xuất. 37 trong 38 skill có tệp thử đã chạy; `agile` có tệp thử nhưng chưa chạy (0/4 kịch bản, chạy thật ở SPR-32 TK10).
 - **13 agent** chuyên đề: 12 agent **chỉ đọc** (reviewer theo ngôn ngữ, bảo mật, CSDL, săn lỗi bị nuốt, kiểm
   comment, kiểm test, lần bản đồ code…) và `build-fixer` — agent duy nhất được sửa file, chỉ sửa đúng chỗ lỗi
   build đòi.
@@ -196,7 +196,7 @@ agent-agile-team/
 │   └── standards/       chuẩn code chung và theo ngôn ngữ
 ├── roles/               thẻ vai: executor/ (5) · verifier/ (2 + dual-review + 4 chuyên đề)
 ├── tiers/               ba tier, hợp đồng bảng tier → model và ma trận mẫu (tiers.example.json)
-├── skills/              37 skill, mỗi skill một thư mục skills/<tên>/SKILL.md
+├── skills/              38 skill, mỗi skill một thư mục skills/<tên>/SKILL.md
 ├── agents/              13 agent chuyên đề, mỗi agent một file
 ├── templates/           khuôn hồ sơ: sprint/ (6) · registry/ (5) · project/agile.json
 ├── scripts/             init.py · check.py · index.py (+ _common.py)

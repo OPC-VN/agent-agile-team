@@ -1,12 +1,15 @@
 # agile status: output fields
 
-`python scripts/agile_state.py status --session <id> --project .` prints (add `--json` for the same data as JSON). One
+`python "<plugin root>/scripts/agile_state.py" status --session <id> --project "<project dir>"` prints (`--project` omitted means the current directory) (add `--json` for the same data as JSON). One
 line per field; fields not yet available print `not available yet`.
 
 | Line | Meaning |
 |---|---|
 | `session` | session id, or `unknown (repo-level view; pass --session)` |
+| `project` | the project directory the state was keyed on (`CLAUDE_PROJECT_DIR` wins when it is set); must be the user's project |
 | `agile` | `ON` or `OFF`, with mode (`auto` or `manual`), `always yes/no`, and `source` of the switch (`hook`, `script`, `unknown`, several joined by `+`, or `-` when nothing is set) |
+| `switch set` | printed only when ON: `prompt_id`, `ts` of the write, and a note that `source` is self-declared and not verified |
+| `last command` | the last command the hook or CLI applied to this session: `none`, or `<command> changed=yes\|no prompt_id=.. ts=..`; for `stop`, `changed=no` means already off |
 | `WARNING non-hook ON` | printed only when ON was not written by the hook; report it, never reset it |
 | `secure` | `not available yet` (the secure variant does not exist in this release) |
 | `tier` | `not available yet` |
@@ -18,7 +21,7 @@ line per field; fields not yet available print `not available yet`.
 | `roles/agents/models` | counted from the newest open sprint PROGRESS, or `not measured` |
 | `session cap` | `used / cap` from the newest open sprint (report only, nothing blocks on it), or `n/a` |
 | `hook seen this session` | whether the SessionStart hook has recorded this session |
-| `notice: legacy marker` | an old `.tmp/autopilot.json` exists; it switches nothing and is not deleted |
+| `notice: legacy marker` | a leftover marker file from the former process name exists in `.tmp/`; it switches nothing and is not deleted |
 | `state problem` | the state file is unreadable or invalid; agile counts as OFF and the guard stays active |
 | `note` | a sprint folder whose frontmatter could not be read |
 

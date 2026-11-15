@@ -337,3 +337,19 @@ def test_nested_git_dir_does_not_bypass_repo_always(tmp_path, repo, state):  # R
     p = subprocess.run([sys.executable, str(HOOK)], input=json.dumps(start(nested, "fresh")).encode("utf-8"),
                        capture_output=True, env=env, timeout=60)
     assert context(p).startswith("agile: ON") and "always yes" in context(p)
+
+
+def test_stop_records_whether_it_changed_anything(repo, state):  # R1b MF2
+    fire(expansion(repo, ""), state)
+    fire(expansion(repo, "stop"), state)
+    last = load(repo, state=state)["last_command"]
+    assert last["command"] == "stop" and last["changed"] is True and last["prompt_id"] == "pid-9" and last["ts"]
+    fire(expansion(repo, "stop"), state)
+    last = load(repo, state=state)["last_command"]
+    assert last["command"] == "stop" and last["changed"] is False
+
+
+def test_hook_upper_case_session_id_turns_on(repo, state):  # R1b MF1
+    fire(expansion(repo, "", sid="ABC"), state)
+    assert load(repo, "ABC", state)["effective_on"] is True
+    assert "agile: ON" in context(fire(start(repo, sid="ABC"), state))

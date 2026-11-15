@@ -112,14 +112,12 @@ def effective_project(project) -> str:
 def sanitize_session_id(session_id) -> str | None:
     """File-name-safe form of a session id. `None` for missing/empty. Unsafe ids map to `x-<sha256 prefix>` (no
     separators, no `..`, deterministic, distinct per input) instead of being used raw (SC4.5). An id with upper-case
-    letters gets a short hash of the exact id appended, so `ABC` and `abc` never share a file on a case-insensitive
-    file system (RF7)."""
+    letters is hashed too, so `ABC` and `abc` never share a file on a case-insensitive file system (RF7). Idempotent:
+    the output is lower-case and safe, so a second pass returns it unchanged (R1b MF1); callers still pass the raw id."""
     if not isinstance(session_id, str) or not session_id.strip():
         return None
-    if len(session_id) <= SESSION_ID_MAX and _SAFE_ID.fullmatch(session_id):
-        if session_id == session_id.lower():
-            return session_id
-        return session_id + "-" + hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:8]
+    if len(session_id) <= SESSION_ID_MAX and _SAFE_ID.fullmatch(session_id) and session_id == session_id.lower():
+        return session_id
     digest = hashlib.sha256(session_id.encode("utf-8", "replace")).hexdigest()[:24]
     return "x-" + digest
 
@@ -271,6 +269,14 @@ def _clean_source(value) -> str:
     return value if value in SOURCES else "unknown"
 
 
+def _clean_last_command(value) -> dict | None:
+    """`last_command` is free JSON in a file anyone can write: only a known command and a real bool go further."""
+    if not isinstance(value, dict) or value.get("command") not in COMMANDS or not isinstance(value.get("changed"), bool):
+        return None
+    return {"command": value["command"], "changed": value["changed"],
+            "prompt_id": safe_text(value.get("prompt_id") or "-"), "ts": safe_text(value.get("ts") or "-")}
+
+
 def _dir_problem(directory: Path) -> str | None:
     """A state dir that exists but is not a directory, or cannot be examined, is a problem on every platform (M2)."""
     try:
@@ -329,6 +335,7 @@ def load_state(project, session_id=None, directory: Path | None = None) -> dict:
         "transcript_path": sess.get("transcript_path"),
         "ts": sess.get("ts"),
         "last_hook": sess.get("last_hook"),
+        "last_command": _clean_last_command(sess.get("last_command")),
         "session_file_exists": bool(sess) or (sid is not None and (directory / f"session-{sid}.json").exists()),
     }
 
@@ -363,22 +370,28 @@ def _clear_repo(project, directory: Path, source: str, ts: str) -> None:
                                       "manual_source": None}, f"{ts} stopped by {source}")
 
 
-def count_on_sessions(directory: Path) -> int:
-    """Number of session files in the state dir whose switch is ON (problems are not counted)."""
+def count_on_sessions(directory: Path, key: str | None = None) -> tuple[int, int]:
+    """(ON sessions of the repo `key`, ON sessions whose file has no repo key) in the state dir. Another repo's
+    sessions are not counted (R1b SF3); problems are not counted. Without `key` every ON file counts as this repo's."""
     try:
         names = os.listdir(directory)
     except OSError:
-        return 0
-    total = 0
+        return 0, 0
+    mine = unknown = 0
     for name in names:
         if name.startswith("session-") and name.endswith(".json"):
             data, _problem = read_json(directory / name)
-            if data and data.get("agile") is True:
-                total += 1
-    return total
+            if not data or data.get("agile") is not True:
+                continue
+            stored = data.get("repo_key")
+            if key is None or stored == key:
+                mine += 1
+            elif not isinstance(stored, str):
+                unknown += 1
+    return mine, unknown
 
 
-def touch_session(session_id, directory: Path | None = None, now: float | None = None) -> None:
+def touch_session(session_id, directory: Path | None = None, now: float | None = None, project=None) -> None:
     """Record `last_hook` (a hook ran for this session) without changing the switch. A corrupt file is left alone so
     the problem stays visible (and the guard stays active) until `stop` repairs it."""
     directory = directory or state_dir()
@@ -388,7 +401,10 @@ def touch_session(session_id, directory: Path | None = None, now: float | None =
     _data, problem = read_json(path)
     if problem:
         return
-    _update_session(session_id, directory, {"last_hook": now_iso(now)})
+    changes = {"last_hook": now_iso(now)}
+    if project is not None:
+        changes["repo_key"] = repo_key(project)
+    _update_session(session_id, directory, changes)
 
 
 def apply_command(cmd: str, project, session_id=None, source: str = "script", prompt_id=None,
@@ -400,22 +416,23 @@ def apply_command(cmd: str, project, session_id=None, source: str = "script", pr
     if cmd not in ("on", "off", "always", "manual", "stop"):
         raise ValueError(f"unknown command: {cmd}")
     directory = directory or state_dir()
-    sid = sanitize_session_id(session_id)
+    sid = sanitize_session_id(session_id)  # only to test "is there a session"; the raw id goes on to the writers
     ts = now_iso(now)
-    meta = {"source": source, "prompt_id": prompt_id, "transcript_path": transcript_path, "ts": ts}
+    key = repo_key(project)
+    meta = {"source": source, "prompt_id": prompt_id, "transcript_path": transcript_path, "ts": ts, "repo_key": key}
     before = load_state(project, session_id, directory)
     if cmd in ("on", "off") and sid is None:
         raise ValueError(f"'{cmd}' needs --session (agile is per session)")
     message = ""
     if cmd == "on":
-        _update_session(sid, directory, dict(meta, agile=True, mode="auto"))
+        _update_session(session_id, directory, dict(meta, agile=True, mode="auto"))
         message = "agile ON for this session (mode auto)"
     elif cmd == "off":
-        _update_session(sid, directory, dict(meta, agile=False, mode="auto"))
+        _update_session(session_id, directory, dict(meta, agile=False, mode="auto"))
         message = "agile OFF for this session"
     elif cmd == "manual":
         if sid is not None:
-            _update_session(sid, directory, dict(meta, agile=True, mode="manual"))
+            _update_session(session_id, directory, dict(meta, agile=True, mode="manual"))
             message = "agile ON for this session (mode manual)"
         else:
             _update_repo(project, directory, {"manual": True, "manual_source": source, "manual_ts": ts},
@@ -433,22 +450,30 @@ def apply_command(cmd: str, project, session_id=None, source: str = "script", pr
                 message = "already off"
             else:
                 _clear_repo(project, directory, source, ts)
-                _update_session(sid, directory, dict(meta, agile=False, mode="auto"))
+                _update_session(session_id, directory, dict(meta, agile=False, mode="auto"))
                 message = "agile stopped: session switch, manual mode and always are cleared"
         else:
             if repo_active:
                 _clear_repo(project, directory, source, ts)
-            others = count_on_sessions(directory)
+            others, unknown = count_on_sessions(directory, key)
+            extra = []
+            if others:
+                extra.append(f"{others} session(s) still ON in this repo, pass --session")
+            if unknown:
+                extra.append(f"{unknown} session file(s) of unknown repo are ON (no repo key, cannot be attributed)")
+            tail = "; ".join(extra)
             if repo_active:
-                message = "repo flags cleared (always, manual)"
-                if others:
-                    message += f"; {others} session(s) still ON, pass --session"
-            elif others:
-                message = f"repo flags already clear; {others} session(s) still ON, pass --session"
+                message = "repo flags cleared (always, manual)" + (f"; {tail}" if tail else "")
+            elif tail:
+                message = f"repo flags already clear; {tail}"
             else:
                 message = "already off"
     after = load_state(project, session_id, directory)
     changed = message != "already off" and not message.startswith("repo flags already clear")
+    if sid is not None:  # make the outcome observable: the skill reads it back from `status` (R1b MF2)
+        _update_session(session_id, directory,
+                        {"last_command": {"command": cmd, "changed": changed, "prompt_id": prompt_id, "ts": ts}})
+        after = load_state(project, session_id, directory)
     return {"changed": changed, "message": message, "state": after,
             "open_sprints": open_sprints(project)["sprints"] if cmd == "stop" else None}
 
@@ -604,6 +629,8 @@ def build_status(project, session_id=None, directory: Path | None = None) -> dic
         "agile": {"on": st["effective_on"], "mode": st["mode"], "always": st["always"], "source": st["source"],
                   "session_on": st["session_agile"], "non_hook_on": st["non_hook_on"],
                   "prompt_id": st["prompt_id"], "ts": st["ts"], "transcript_path": st["transcript_path"]},
+        "last_command": st["last_command"],
+        "project": safe_path(effective_project(project)),
         "secure": NOT_YET, "tier": NOT_YET, "team": NOT_YET,
         "open_sprints": [{k: v for k, v in s.items() if k != "frontmatter"} for s in info["sprints"]],
         "ledger": info["ledger"],
@@ -625,11 +652,18 @@ def render_status(status: dict) -> str:
     lines = ["agile status"]
     session = status["session"] if status["session"] != "unknown" else "unknown (repo-level view; pass --session)"
     lines.append(f"  session: {session}")
+    lines.append(f"  project: {status['project']}")
     lines.append(f"  agile: {'ON' if a['on'] else 'OFF'} (mode {a['mode']}, always {'yes' if a['always'] else 'no'},"
                  f" source {a['source']})")
     if a["on"]:
         lines.append(f"  switch set: prompt_id={safe_text(a.get('prompt_id') or '-')} ts={safe_text(a.get('ts') or '-')}"
                      " (source is self-declared, not verified)")
+    last = status["last_command"]
+    if last:
+        lines.append(f"  last command: {last['command']} changed={'yes' if last['changed'] else 'no'}"
+                     f" prompt_id={last['prompt_id']} ts={last['ts']}")
+    else:
+        lines.append("  last command: none")
     if a["non_hook_on"]:
         lines.append("  WARNING non-hook ON: the switch was set by a script, not by the human-typed command hook")
     lines.append(f"  secure: {status['secure']}")

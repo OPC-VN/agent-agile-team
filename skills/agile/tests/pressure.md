@@ -5,7 +5,7 @@ model: claude-sonnet-5-5 (author of the scenarios only; no subagent run yet)
 date: 2026-11-16
 result: 0/4 scenarios run (AG-1..AG-4 written, no RED and no GREEN result exists; real runs are SPR-32 TK10)
 tier: tier 2 (cũ T2) author; runs and grader are assigned at TK10
-skill_sha: 264e85be6d3d4bb607b66895e262d1908147d119
+skill_sha: 44b1a6f5db5d9bf48f3a03b73356faf5c0bfdba8
 ---
 
 # Thử áp lực — agile

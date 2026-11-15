@@ -95,7 +95,7 @@ def handle_session_start(payload: dict, directory=None) -> str | None:
     context = state_line(project, session_id, _text(payload.get("source")) or "", directory)  # before touching
     if session_id:
         try:
-            st.touch_session(session_id, directory)
+            st.touch_session(session_id, directory, project=project)
         except OSError as exc:
             failure = exc.__class__.__name__
     if failure:  # the context line is the model's only view: always print it, say what failed

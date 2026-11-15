@@ -239,7 +239,11 @@ def test_stop_clears_session_manual_and_always(repo):  # SC2.1
 def test_stop_when_off_says_already_off(repo, capsys, state):  # SC2.3
     r = st.apply_command("stop", repo, "s1")
     assert r["message"] == "already off" and r["changed"] is False
-    assert not state.exists() or not list(state.glob("session-*.json"))
+    # only the bookkeeping record `last_command` is written (R1b MF2); the switch itself stays off
+    for f in state.glob("session-*.json"):
+        data = json.loads(f.read_text(encoding="utf-8"))
+        assert data.get("agile") is not True and data["last_command"]["changed"] is False
+    assert not list(state.glob("repo-*.json"))
     p = run_script("agile_state.py", "stop", "--session", "s1", "--project", str(repo), env={st.ENV_STATE_DIR: str(state)})
     assert p.returncode == 0 and p.stdout.splitlines()[0] == "already off"
 
@@ -698,3 +702,124 @@ def test_session_ids_differing_only_in_case_get_distinct_files(repo, state):  # 
 def test_state_dir_created_private(repo, state):  # RF8
     st.apply_command("on", repo, "s1")
     assert (state.stat().st_mode & 0o777) == 0o700
+
+
+# --- TK3c: fixes for review round R1b -----------------------------------------------------------------------
+
+ODD_IDS = ["ABC", "abc", "aBc-1_Z", "Session ID", "../Evil", "x" * 300, "UPPER" * 40, "é", "x-" + "a" * 24]
+
+
+@pytest.mark.parametrize("raw", ODD_IDS)
+def test_sanitizer_is_idempotent(raw):  # R1b MF1
+    once = st.sanitize_session_id(raw)
+    assert st.sanitize_session_id(once) == once
+
+
+def test_upper_case_session_id_round_trips(repo, state):  # R1b MF1
+    st.apply_command("on", repo, "ABC")
+    assert st.load_state(repo, "ABC")["effective_on"] is True
+    shown = st.load_state(repo, "ABC")["session"]  # the printed session_id fed back through --session
+    assert st.load_state(repo, shown)["effective_on"] is True
+    assert st.load_state(repo, "abc")["effective_on"] is False
+    assert len(list(state.glob("session-*.json"))) == 1
+    env = {st.ENV_STATE_DIR: str(state)}
+    on = run_script("agile_state.py", "on", "--session", "MiXed", "--project", str(repo), env=env)
+    got = run_script("agile_state.py", "get", "--session", "MiXed", "--project", str(repo), "--json", env=env)
+    assert on.returncode == 0 and json.loads(got.stdout)["effective_on"] is True
+
+
+def test_stop_and_manual_work_for_upper_case_id(repo):  # R1b MF1
+    st.apply_command("manual", repo, "ABC")
+    assert st.load_state(repo, "ABC")["mode"] == "manual"
+    assert st.apply_command("stop", repo, "ABC")["changed"] is True
+    assert st.load_state(repo, "ABC")["effective_on"] is False
+
+
+def test_last_command_recorded_by_stop(repo):  # R1b MF2
+    st.apply_command("on", repo, "s1", source="hook", prompt_id="p1")
+    st.apply_command("stop", repo, "s1", source="hook", prompt_id="p2")
+    last = st.load_state(repo, "s1")["last_command"]
+    assert last["command"] == "stop" and last["changed"] is True and last["prompt_id"] == "p2" and last["ts"]
+    st.apply_command("stop", repo, "s1", source="hook", prompt_id="p3")
+    last = st.load_state(repo, "s1")["last_command"]
+    assert last["command"] == "stop" and last["changed"] is False and last["prompt_id"] == "p3"
+
+
+def test_status_prints_last_command(repo):  # R1b MF2
+    assert "last command: none" in st.render_status(st.build_status(repo, "s1"))
+    st.apply_command("stop", repo, "s1", source="hook", prompt_id="p9")
+    text = st.render_status(st.build_status(repo, "s1"))
+    assert "last command: stop changed=no prompt_id=p9" in text
+    status = st.build_status(repo, "s1")
+    assert status["last_command"]["command"] == "stop" and status["last_command"]["changed"] is False
+    out = run_script("agile_state.py", "status", "--session", "s1", "--project", str(repo), "--json")
+    assert json.loads(out.stdout)["last_command"]["changed"] is False
+
+
+def test_last_command_ignores_garbage_in_the_file(repo, state):  # R1b MF2
+    state.mkdir(parents=True)
+    bad = {"last_command": {"command": "rm -rf", "changed": "yes"}}
+    (state / "session-s1.json").write_text(json.dumps(bad), encoding="utf-8")
+    assert st.load_state(repo, "s1")["last_command"] is None
+
+
+def test_cli_without_project_uses_cwd(repo, state):  # R1b MF3
+    env = {st.ENV_STATE_DIR: str(state), "CLAUDE_PROJECT_DIR": ""}
+    out = run_script("agile_state.py", "status", "--session", "s1", env=env, cwd=repo)
+    assert out.returncode == 0, out.stderr
+    assert "project:" in out.stdout
+    stop = run_script("agile_state.py", "stop", "--session", "s1", env=env, cwd=repo)
+    assert stop.returncode == 0 and "already off" in stop.stdout
+
+
+def test_status_prints_effective_project(repo, monkeypatch):  # R1b N1
+    text = st.render_status(st.build_status(repo, "s1"))
+    assert any(line.strip().startswith("project:") for line in text.splitlines())
+    other = repo.parent / "from-env"
+    other.mkdir()
+    monkeypatch.setenv(st.ENV_PROJECT_DIR, str(other))
+    assert st.build_status(repo, "s1")["project"] == st.safe_path(other)
+
+
+def test_stop_without_session_counts_only_this_repo(tmp_path, repo):  # R1b SF3
+    other = tmp_path / "repo-b"
+    (other / ".git").mkdir(parents=True)
+    st.apply_command("on", other, "elsewhere")
+    r = st.apply_command("stop", repo, None)
+    assert r["message"] == "already off" and r["changed"] is False
+    st.apply_command("on", repo, "mine")
+    r = st.apply_command("stop", repo, None)
+    assert "1 session(s) still ON" in r["message"] and "unknown" not in r["message"]
+
+
+def test_stop_without_session_reports_unknown_repo_files_separately(repo, state):  # R1b SF3
+    state.mkdir(parents=True)
+    (state / "session-old.json").write_text(json.dumps({"agile": True}), encoding="utf-8")  # no repo_key (old file)
+    r = st.apply_command("stop", repo, None)
+    assert "already off" not in r["message"] and "1 session file(s) of unknown repo" in r["message"]
+    assert "session(s) still ON" not in r["message"]
+    assert r["changed"] is False
+
+
+def test_session_file_stores_repo_key(repo, state):  # R1b SF3
+    st.apply_command("on", repo, "s1")
+    data = json.loads((state / "session-s1.json").read_text(encoding="utf-8"))
+    assert data["repo_key"] == st.repo_key(repo)
+    st.touch_session("s2", project=repo)
+    assert json.loads((state / "session-s2.json").read_text(encoding="utf-8"))["repo_key"] == st.repo_key(repo)
+
+
+def test_symlink_in_place_of_state_file_is_a_problem(repo, state, tmp_path):  # R1b SF4
+    target = tmp_path / "real.json"
+    target.write_text(json.dumps({"agile": True}), encoding="utf-8")
+    state.mkdir(parents=True)
+    link = state / "session-s1.json"
+    try:
+        os.symlink(target, link)
+        kind = "symlink"
+    except (OSError, NotImplementedError, AttributeError):
+        link.mkdir()  # symlink creation not permitted here: a directory in its place still must not be read as state
+        kind = "directory"
+    s = st.load_state(repo, "s1")
+    assert s["state_problem"], kind
+    assert s["effective_on"] is False and s["guard_must_stay_active"] is True
