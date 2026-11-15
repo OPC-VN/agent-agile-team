@@ -9,6 +9,10 @@ Reads one JSON payload on stdin:
   `source: hook`, `prompt_id` and `transcript_path`. `stop` is never refused.
 - Any other event or malformed payload: exit 0, no change, no stdout.
 
+`source: hook` is self-declared and not verified: this script is reachable from a shell, so a piped payload can
+write it. Treat it as a hint. When a write fails the human sees a visible message (SessionStart context line, or
+`systemMessage` for the command), not stderr only.
+
 Exit code is always 0 (SPEC FR5: no blocking hook). On an internal error a short line goes to stderr.
 """
 
@@ -36,7 +40,7 @@ def _read_payload() -> dict | None:
     return data if isinstance(data, dict) else None
 
 
-def state_line(project, session_id, source_event: str, directory=None) -> str:
+def state_line(project, session_id, source_event: str, directory=None, write_failed: str | None = None) -> str:
     import agile_state as st
 
     state = st.load_state(project, session_id, directory)
@@ -46,15 +50,23 @@ def state_line(project, session_id, source_event: str, directory=None) -> str:
     if state["effective_on"]:
         parts.append(f"source {state['source']}")
     text = f"agile: {flavor} ({', '.join(parts)}) session_id={state['session']}"
+    if os.environ.get(st.ENV_STATE_DIR):
+        shown = st.state_dir_override()
+        text += f" state_dir={st.safe_path(shown) if shown else '(override ignored)'}"
     if info["sprints"]:
         top = info["sprints"][0]
         extra = f" +{len(info['sprints']) - 1} more" if len(info["sprints"]) > 1 else ""
-        text += f" open sprint: {top['sprint']} [{top['status']}] {top['title']}{extra}"
+        text += f" open sprint: {top['sprint']} [{top['status']}] {st.safe_text(top['title'])}{extra}"
     else:
         text += " open sprint: none"
     notices = []
     if state["state_problem"]:
-        notices.append(f"state problem ({state['state_problem']}): agile is OFF, the guard stays active")
+        notices.append(f"state problem ({st.safe_text(state['state_problem'], 300)}): agile is OFF, the guard stays active")
+    if write_failed:
+        notices.append(f"state write failed ({st.safe_text(write_failed, 60)}): the switch could not be recorded, "
+                       "the guard stays active")
+    if state["effective_on"]:
+        notices.append("source is self-declared, not verified")
     if state["non_hook_on"]:
         notices.append("non-hook ON: the switch was set by a script, not by a human-typed command")
     if source_event == "resume" and state["session_known"] and not state["session_file_exists"] and not state["always"]:
@@ -75,35 +87,52 @@ def handle_session_start(payload: dict, directory=None) -> str | None:
     project = _text(payload.get("cwd")) or os.getcwd()
     session_id = _text(payload.get("session_id"))
     directory = directory or st.state_dir()
-    st.cleanup_stale(directory)
+    failure = None
+    try:
+        st.cleanup_stale(directory)
+    except OSError as exc:
+        failure = exc.__class__.__name__
     context = state_line(project, session_id, _text(payload.get("source")) or "", directory)  # before touching
     if session_id:
-        st.touch_session(session_id, directory)
+        try:
+            st.touch_session(session_id, directory)
+        except OSError as exc:
+            failure = exc.__class__.__name__
+    if failure:  # the context line is the model's only view: always print it, say what failed
+        context = state_line(project, session_id, _text(payload.get("source")) or "", directory, write_failed=failure)
     return json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}},
                       ensure_ascii=False)
 
 
-def handle_prompt_expansion(payload: dict, directory=None) -> None:
+def handle_prompt_expansion(payload: dict, directory=None) -> str | None:
+    """Apply the whitelisted command. Returns a `systemMessage` JSON line only when the write failed (RF6)."""
     import agile_state as st
 
     if payload.get("hook_event_name") != "UserPromptExpansion" or payload.get("command_name") != COMMAND_NAME:
-        return
+        return None
     args = payload.get("command_args")
     args = "" if args is None else args
     if not isinstance(args, str):
-        return
+        return None
     key = args.strip().lower()
     if key not in ARG_TO_COMMAND:
-        return
+        return None
     cmd = ARG_TO_COMMAND[key]
     if cmd is None:  # status: read-only, the skill prints it
-        return
+        return None
     session_id = _text(payload.get("session_id"))
     if not session_id:
-        return
+        return None
     project = _text(payload.get("cwd")) or os.getcwd()
-    st.apply_command(cmd, project, session_id, source="hook", prompt_id=_text(payload.get("prompt_id")),
-                     transcript_path=_text(payload.get("transcript_path")), directory=directory)
+    try:
+        st.apply_command(cmd, project, session_id, source="hook", prompt_id=_text(payload.get("prompt_id")),
+                         transcript_path=_text(payload.get("transcript_path")), directory=directory)
+    except OSError as exc:
+        sys.stderr.write(f"agile_hook: write failed ({exc.__class__.__name__})\n")
+        message = (f"agile: switch NOT applied (state write failed: {exc.__class__.__name__}); the state is unchanged "
+                   "and the guard stays active")
+        return json.dumps({"systemMessage": message}, ensure_ascii=False)
+    return None
 
 
 def run(payload: dict, directory=None) -> str | None:
@@ -111,7 +140,7 @@ def run(payload: dict, directory=None) -> str | None:
     if event == "SessionStart":
         return handle_session_start(payload, directory)
     if event == "UserPromptExpansion":
-        handle_prompt_expansion(payload, directory)
+        return handle_prompt_expansion(payload, directory)
     return None
 
 

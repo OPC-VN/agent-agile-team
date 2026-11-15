@@ -8,8 +8,10 @@ State lives OUTSIDE the project (SPEC A9): Windows `%LOCALAPPDATA%\\agent-agile-
 `$XDG_STATE_HOME/agent-agile-team` or `~/.local/state/agent-agile-team`; override `AGENT_AGILE_STATE_DIR`.
 Files: `repo-<key>.json` (always, manual, notes) and `session-<id>.json` (agile, mode, source, ...).
 
-The CLI always writes `source: script`; only `scripts/agile_hook.py` passes `source: hook` (SC1.8). Anyone able to
-write the same fields can still forge it; `status` flags a non-hook ON instead of claiming it is impossible.
+The CLI always writes `source: script`; only `scripts/agile_hook.py` passes `source: hook` (SC1.8). `source` is
+self-declared and not verified: anyone who can write the state file, or pipe a payload into `agile_hook.py`
+(reachable from a shell), can set `source: hook`. `status` flags a non-hook ON as a hint, never as a proof.
+Last writer wins; there is no lock around read-modify-write.
 
 Exit codes: 0 ok, 1 I/O failure, 2 bad usage. A hook importing this module must never let an exception through.
 """
@@ -21,6 +23,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import sys
 import time
 import uuid
@@ -33,6 +36,12 @@ import _common as c  # noqa: E402
 APP = "agent-agile-team"
 ENV_STATE_DIR = "AGENT_AGILE_STATE_DIR"
 STALE_DAYS = 14
+STALE_ON_DAYS = 90  # a session whose switch is ON is only dropped after this horizon (RF1)
+ENV_PROJECT_DIR = "CLAUDE_PROJECT_DIR"
+MAX_FILE_BYTES = 64 * 1024
+TEXT_CAP = 120
+SOURCES = ("hook", "script", "unknown")
+_TMP_NAME = re.compile(r"\.(session|repo)-[A-Za-z0-9_-]+\.json\.\d+\.[0-9a-f]{8}\.tmp")
 OPEN_STATUSES = ("drafting", "awaiting_gate_1", "in_progress", "verifying", "blocked", "awaiting_gate_2")
 COMMANDS = ("get", "on", "off", "always", "manual", "stop", "status")
 SESSION_ID_MAX = 128
@@ -56,21 +65,61 @@ def platform_state_dir(environ=None, os_name=None, home=None) -> Path:
     return Path(base) / APP
 
 
-def state_dir(environ=None) -> Path:
+def state_dir_override(environ=None) -> Path | None:
+    """The override directory, only when it is an absolute path (RF2); a relative one is ignored."""
     env = os.environ if environ is None else environ
     override = env.get(ENV_STATE_DIR)
-    if override:
+    if override and Path(override).is_absolute():
         return Path(override)
-    return platform_state_dir(env)
+    return None
+
+
+def state_dir_problem(environ=None) -> str | None:
+    env = os.environ if environ is None else environ
+    override = env.get(ENV_STATE_DIR)
+    if override and state_dir_override(env) is None:
+        return f"{ENV_STATE_DIR} is not an absolute path (ignored)"
+    return None
+
+
+def state_dir(environ=None) -> Path:
+    env = os.environ if environ is None else environ
+    return state_dir_override(env) or platform_state_dir(env)
+
+
+def safe_text(value, cap: int = TEXT_CAP) -> str:
+    """One line of plain text for a context line: control characters and newlines become spaces, capped (RF4)."""
+    text = "".join(" " if (ord(ch) < 32 or ord(ch) == 127 or 0x80 <= ord(ch) < 0xA0) else ch for ch in str(value))
+    text = " ".join(text.split())
+    return text if len(text) <= cap else text[: cap - 3] + "..."
+
+
+def safe_path(value, cap: int = TEXT_CAP) -> str:
+    """Like `safe_text` for a path: when too long the tail (the file name) is kept."""
+    text = safe_text(value, cap=10**6)
+    return text if len(text) <= cap else "..." + text[-(cap - 3):]
+
+
+def effective_project(project) -> str:
+    """When the harness exported `CLAUDE_PROJECT_DIR` (absolute), the repo key and the project root derive from it,
+    not from the live cwd, so `git init sub; cd sub` cannot change the key (RF3)."""
+    env = os.environ.get(ENV_PROJECT_DIR)
+    if env and Path(env).is_absolute():
+        return env
+    return str(project)
 
 
 def sanitize_session_id(session_id) -> str | None:
     """File-name-safe form of a session id. `None` for missing/empty. Unsafe ids map to `x-<sha256 prefix>` (no
-    separators, no `..`, deterministic, distinct per input) instead of being used raw (SC4.5)."""
+    separators, no `..`, deterministic, distinct per input) instead of being used raw (SC4.5). An id with upper-case
+    letters gets a short hash of the exact id appended, so `ABC` and `abc` never share a file on a case-insensitive
+    file system (RF7)."""
     if not isinstance(session_id, str) or not session_id.strip():
         return None
     if len(session_id) <= SESSION_ID_MAX and _SAFE_ID.fullmatch(session_id):
-        return session_id
+        if session_id == session_id.lower():
+            return session_id
+        return session_id + "-" + hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:8]
     digest = hashlib.sha256(session_id.encode("utf-8", "replace")).hexdigest()[:24]
     return "x-" + digest
 
@@ -79,9 +128,27 @@ def _norm(path) -> str:
     return os.path.normcase(os.path.realpath(str(path)))
 
 
+def _read_capped(path: Path) -> tuple[bytes | None, str | None]:
+    """(bytes, problem): only a regular file (never a link, FIFO, directory), at most MAX_FILE_BYTES (RF5).
+    `FileNotFoundError` propagates to the caller; the open itself never blocks on a non-regular file."""
+    info = os.lstat(path)
+    if not stat.S_ISREG(info.st_mode):
+        return None, f"{path.name}: not a regular file"
+    if info.st_size > MAX_FILE_BYTES:
+        return None, f"{path.name}: too large (over {MAX_FILE_BYTES} bytes)"
+    with open(path, "rb") as handle:
+        raw = handle.read(MAX_FILE_BYTES + 1)
+    if len(raw) > MAX_FILE_BYTES:
+        return None, f"{path.name}: too large (over {MAX_FILE_BYTES} bytes)"
+    return raw, None
+
+
 def _read_small(path: Path) -> str | None:
     try:
-        return path.read_text(encoding="utf-8").strip()
+        raw, problem = _read_capped(path)
+        if raw is None:
+            return None
+        return raw.decode("utf-8").strip()
     except (OSError, UnicodeDecodeError):
         return None
 
@@ -115,6 +182,7 @@ def find_git_common_dir(project) -> Path | None:
 def repo_key(project) -> str:
     """Stable key of the repository: sha256 prefix of the normalised absolute git common dir; a non-git directory
     falls back to its normalised absolute path (SC4.2). A repo and its linked worktrees share the key (SC4.1)."""
+    project = effective_project(project)
     common = find_git_common_dir(project)
     if common is not None:
         material = "git:" + _norm(common)
@@ -148,7 +216,9 @@ def read_json(path: Path) -> tuple[dict | None, str | None]:
     last = None
     for attempt in range(20):
         try:
-            raw = path.read_bytes()
+            raw, problem = _read_capped(path)
+            if raw is None:
+                return None, problem
         except FileNotFoundError:
             return None, None
         except PermissionError as exc:  # a writer is replacing the file right now (Windows)
@@ -169,7 +239,7 @@ def read_json(path: Path) -> tuple[dict | None, str | None]:
 
 def write_json_atomic(path: Path, data: dict) -> None:
     """Temp file in the same dir + `os.replace`, retried on PermissionError (SC4.7)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     tmp = path.parent / f".{path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
     payload = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
     try:
@@ -196,11 +266,30 @@ def write_json_atomic(path: Path, data: dict) -> None:
 # --- State -----------------------------------------------------------------------------------------------
 
 
+def _clean_source(value) -> str:
+    """`source` is free text in a file anyone can write; only the known words go further (RF4)."""
+    return value if value in SOURCES else "unknown"
+
+
+def _dir_problem(directory: Path) -> str | None:
+    """A state dir that exists but is not a directory, or cannot be examined, is a problem on every platform (M2)."""
+    try:
+        info = os.stat(directory)
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        return f"state dir unreadable ({exc.__class__.__name__})"
+    return None if stat.S_ISDIR(info.st_mode) else "state dir is not a directory"
+
+
 def load_state(project, session_id=None, directory: Path | None = None) -> dict:
     """Current switch state. Corrupt/unreadable state => agile OFF, `state_problem` set and
     `guard_must_stay_active` True (SC4.3). Never raises for file problems."""
     directory = directory or state_dir()
     problems = []
+    for found in (state_dir_problem(), _dir_problem(directory)):
+        if found:
+            problems.append(found)
     repo, p1 = read_json(repo_file(project, directory))
     if p1:
         problems.append(p1)
@@ -220,9 +309,9 @@ def load_state(project, session_id=None, directory: Path | None = None) -> dict:
     non_hook = bool((session_on and sess.get("source") != "hook") or (always and repo.get("always_source") != "hook"))
     sources = []
     if session_on:
-        sources.append(sess.get("source") or "unknown")
+        sources.append(_clean_source(sess.get("source")))
     if always:
-        sources.append(repo.get("always_source") or "unknown")
+        sources.append(_clean_source(repo.get("always_source")))
     return {
         "repo_key": repo_key(project),
         "session": sid if sid is not None else "unknown",
@@ -267,6 +356,26 @@ def _update_session(session_id, directory: Path, changes: dict) -> None:
     data["schema"] = 1
     data["session_id"] = sanitize_session_id(session_id)
     write_json_atomic(path, data)
+
+
+def _clear_repo(project, directory: Path, source: str, ts: str) -> None:
+    _update_repo(project, directory, {"always": False, "manual": False, "always_source": None,
+                                      "manual_source": None}, f"{ts} stopped by {source}")
+
+
+def count_on_sessions(directory: Path) -> int:
+    """Number of session files in the state dir whose switch is ON (problems are not counted)."""
+    try:
+        names = os.listdir(directory)
+    except OSError:
+        return 0
+    total = 0
+    for name in names:
+        if name.startswith("session-") and name.endswith(".json"):
+            data, _problem = read_json(directory / name)
+            if data and data.get("agile") is True:
+                total += 1
+    return total
 
 
 def touch_session(session_id, directory: Path | None = None, now: float | None = None) -> None:
@@ -317,25 +426,41 @@ def apply_command(cmd: str, project, session_id=None, source: str = "script", pr
                      f"{ts} always set by {source}")
         message = "agile ON now and in later sessions of this repo (always)"
     else:  # stop: never refused
-        already = not (before["effective_on"] or before["mode"] == "manual") and not before["state_problem"]
-        if already:
-            message = "already off"
-        else:
-            _update_repo(project, directory, {"always": False, "manual": False, "always_source": None,
-                                              "manual_source": None}, f"{ts} stopped by {source}")
-            if sid is not None:
+        repo_active = bool(before["always"] or before["manual_flag"] or before["state_problem"])
+        if sid is not None:
+            already = not (before["effective_on"] or before["mode"] == "manual") and not before["state_problem"]
+            if already:
+                message = "already off"
+            else:
+                _clear_repo(project, directory, source, ts)
                 _update_session(sid, directory, dict(meta, agile=False, mode="auto"))
-            message = "agile stopped: session switch, manual mode and always are cleared"
+                message = "agile stopped: session switch, manual mode and always are cleared"
+        else:
+            if repo_active:
+                _clear_repo(project, directory, source, ts)
+            others = count_on_sessions(directory)
+            if repo_active:
+                message = "repo flags cleared (always, manual)"
+                if others:
+                    message += f"; {others} session(s) still ON, pass --session"
+            elif others:
+                message = f"repo flags already clear; {others} session(s) still ON, pass --session"
+            else:
+                message = "already off"
     after = load_state(project, session_id, directory)
-    return {"changed": message != "already off", "message": message, "state": after,
+    changed = message != "already off" and not message.startswith("repo flags already clear")
+    return {"changed": changed, "message": message, "state": after,
             "open_sprints": open_sprints(project)["sprints"] if cmd == "stop" else None}
 
 
-def cleanup_stale(directory: Path | None = None, days: int = STALE_DAYS, now: float | None = None) -> list:
-    """Delete `session-*.json` (and orphan temp files) older than `days` directly inside the state dir.
-    Never `repo-*.json`, never anything else, never recursive, never a link. Returns removed names."""
+def cleanup_stale(directory: Path | None = None, days: int = STALE_DAYS, now: float | None = None,
+                  on_days: int = STALE_ON_DAYS) -> list:
+    """Delete stale files directly inside the state dir: `session-*.json` whose switch is not ON after `days`
+    (ON sessions only after `on_days`, RF1) and orphan temp files made by this module (S1). Never `repo-*.json`,
+    never anything else, never recursive, never a link. The mtime is re-checked right before the unlink and any
+    race is tolerated. Returns removed names."""
     directory = directory or state_dir()
-    cutoff = (time.time() if now is None else now) - days * 86400
+    clock = time.time() if now is None else now
     removed = []
     try:
         names = os.listdir(directory)
@@ -343,12 +468,23 @@ def cleanup_stale(directory: Path | None = None, days: int = STALE_DAYS, now: fl
         return removed
     for name in names:
         is_session = name.startswith("session-") and name.endswith(".json")
-        is_tmp = name.startswith(".") and name.endswith(".tmp")
+        is_tmp = _TMP_NAME.fullmatch(name) is not None
         if not (is_session or is_tmp):
             continue
         path = directory / name
         try:
-            if path.is_symlink() or not path.is_file() or os.path.getmtime(path) >= cutoff:
+            first = os.lstat(path)
+            if not stat.S_ISREG(first.st_mode):
+                continue
+            horizon = days
+            if is_session:
+                data, _problem = read_json(path)
+                if data is None or data.get("agile") is True:
+                    horizon = on_days  # ON or not provably OFF: long horizon
+            if first.st_mtime >= clock - horizon * 86400:
+                continue
+            again = os.lstat(path)  # a writer may have touched it since
+            if again.st_mtime_ns != first.st_mtime_ns or not stat.S_ISREG(again.st_mode):
                 continue
             path.unlink()
             removed.append(name)
@@ -361,7 +497,7 @@ def cleanup_stale(directory: Path | None = None, days: int = STALE_DAYS, now: fl
 
 
 def _find_root(project) -> Path | None:
-    start = Path(os.path.abspath(str(project)))
+    start = Path(os.path.abspath(effective_project(project)))
     for folder in [start, *start.parents]:
         if (folder / c.CONFIG_NAME).is_file():
             return folder
@@ -411,7 +547,7 @@ def open_sprints(project) -> dict:
         except ValueError:
             shown = folder.name
         out["sprints"].append({"sprint": data.get("sprint"), "status": data.get("status"),
-                               "title": str(data.get("title", "")), "folder": shown, "frontmatter": data})
+                               "title": safe_text(data.get("title", "")), "folder": safe_path(shown), "frontmatter": data})
     out["sprints"].sort(key=lambda s: (c.parse_id(s["sprint"]) or ("", -1))[1], reverse=True)
     return out
 
@@ -431,7 +567,7 @@ def role_counts(sprint: dict | None):
 def legacy_markers(project) -> list:
     found = []
     seen = set()
-    start = Path(os.path.abspath(str(project)))
+    start = Path(os.path.abspath(effective_project(project)))
     candidates = [start]
     common = find_git_common_dir(start)
     if common is not None:
@@ -441,7 +577,7 @@ def legacy_markers(project) -> list:
         key = _norm(marker)
         if key not in seen and marker.is_file():
             seen.add(key)
-            found.append(marker.as_posix())
+            found.append(safe_path(marker.as_posix()))
     return found
 
 
@@ -466,7 +602,8 @@ def build_status(project, session_id=None, directory: Path | None = None) -> dic
     return {
         "session": st["session"],
         "agile": {"on": st["effective_on"], "mode": st["mode"], "always": st["always"], "source": st["source"],
-                  "session_on": st["session_agile"], "non_hook_on": st["non_hook_on"]},
+                  "session_on": st["session_agile"], "non_hook_on": st["non_hook_on"],
+                  "prompt_id": st["prompt_id"], "ts": st["ts"], "transcript_path": st["transcript_path"]},
         "secure": NOT_YET, "tier": NOT_YET, "team": NOT_YET,
         "open_sprints": [{k: v for k, v in s.items() if k != "frontmatter"} for s in info["sprints"]],
         "ledger": info["ledger"],
@@ -490,6 +627,9 @@ def render_status(status: dict) -> str:
     lines.append(f"  session: {session}")
     lines.append(f"  agile: {'ON' if a['on'] else 'OFF'} (mode {a['mode']}, always {'yes' if a['always'] else 'no'},"
                  f" source {a['source']})")
+    if a["on"]:
+        lines.append(f"  switch set: prompt_id={safe_text(a.get('prompt_id') or '-')} ts={safe_text(a.get('ts') or '-')}"
+                     " (source is self-declared, not verified)")
     if a["non_hook_on"]:
         lines.append("  WARNING non-hook ON: the switch was set by a script, not by the human-typed command hook")
     lines.append(f"  secure: {status['secure']}")
