@@ -1,0 +1,502 @@
+"""`agile_state.py`: switch state, repo key, atomic files, status view (SPR-32 TK3; SC1.x, SC2.x, SC3.x, SC4.x)."""
+
+import json
+import os
+import shutil
+import subprocess
+import threading
+import time
+from pathlib import Path
+
+import pytest
+
+from conftest import run_script, write_lf
+import agile_state as st
+import index
+
+REAL_DIR = st.platform_state_dir()
+
+
+def snapshot(path: Path):
+    if not path.exists():
+        return None
+    return sorted((p.name, p.stat().st_mtime_ns) for p in path.iterdir())
+
+
+@pytest.fixture(autouse=True)
+def state(tmp_path, monkeypatch):
+    """Every test uses a temp state dir; the real platform dir is asserted untouched afterwards (SC4.4)."""
+    before = snapshot(REAL_DIR)
+    d = tmp_path / "state-dir"
+    monkeypatch.setenv(st.ENV_STATE_DIR, str(d))
+    yield d
+    assert snapshot(REAL_DIR) == before
+
+
+@pytest.fixture
+def repo(tmp_path):
+    root = tmp_path / "repo-a"
+    (root / ".git").mkdir(parents=True)
+    return root
+
+
+def make_worktree(main: Path, name: str, where: Path) -> Path:
+    gitdir = main / ".git" / "worktrees" / name
+    gitdir.mkdir(parents=True)
+    (gitdir / "commondir").write_text("../..\n", encoding="utf-8")
+    where.mkdir(parents=True)
+    (where / ".git").write_text(f"gitdir: {gitdir}\n", encoding="utf-8")
+    return where
+
+
+# --- locations ----------------------------------------------------------------------------------------------
+
+
+def test_platform_dirs_by_os(tmp_path):
+    home = tmp_path / "h"
+    assert st.platform_state_dir({"LOCALAPPDATA": "C:/L"}, "nt", home) == Path("C:/L") / "agent-agile-team" / "state"
+    assert st.platform_state_dir({}, "nt", home) == home / "AppData" / "Local" / "agent-agile-team" / "state"
+    assert st.platform_state_dir({"XDG_STATE_HOME": "/x"}, "posix", home) == Path("/x") / "agent-agile-team"
+    assert st.platform_state_dir({}, "posix", home) == home / ".local" / "state" / "agent-agile-team"
+
+
+def test_override_env(state):
+    assert st.state_dir() == state
+    assert st.state_dir({}) == st.platform_state_dir({})
+
+
+def test_real_platform_dir_untouched_by_writes(repo, state):
+    st.apply_command("on", repo, "s1")
+    st.apply_command("always", repo, "s1")
+    st.apply_command("stop", repo, "s1")
+    run_script("agile_state.py", "status", "--session", "s1", "--project", str(repo), env={st.ENV_STATE_DIR: str(state)})
+    assert state.is_dir() and any(state.iterdir())
+    # the autouse fixture compares the real dir snapshot after the test
+
+
+# --- sanitize -----------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad", ["../evil", "..", "a/b", "a\\b", "C:\\x", "x" * 500, "a b", "a\x00b", "..\\..\\z"])
+def test_session_id_unsafe_is_replaced(bad, repo, state):
+    safe = st.sanitize_session_id(bad)
+    assert safe.startswith("x-") and ".." not in safe and "/" not in safe and "\\" not in safe
+    assert safe == st.sanitize_session_id(bad) and len(safe) < 40
+    st.apply_command("on", repo, bad)
+    files = [p.name for p in state.iterdir()]
+    assert files == [f"session-{safe}.json"]
+    assert not list(state.parent.glob("*evil*"))
+
+
+def test_session_id_ok_and_empty():
+    assert st.sanitize_session_id("8b8c1b0b-1234_AB") == "8b8c1b0b-1234_AB"
+    assert st.sanitize_session_id("") is None and st.sanitize_session_id(None) is None and st.sanitize_session_id(5) is None
+    assert st.sanitize_session_id("a/b") != st.sanitize_session_id("a\\b")
+
+
+def test_traversal_creates_nothing_outside_state_dir(tmp_path, repo, state):
+    before = {p for p in tmp_path.rglob("*")}
+    st.apply_command("on", repo, "../../escape")
+    new = {p for p in tmp_path.rglob("*")} - before
+    assert all(state == p or state in p.parents for p in new)
+
+
+# --- repo key -----------------------------------------------------------------------------------------------
+
+
+def test_two_repos_differ(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    (a / ".git").mkdir(parents=True)
+    (b / ".git").mkdir(parents=True)
+    assert st.repo_key(a) != st.repo_key(b)
+    assert len(st.repo_key(a)) == 16
+
+
+def test_repo_and_linked_worktree_share_key(tmp_path, repo):
+    wt = make_worktree(repo, "wt1", tmp_path / "wt-elsewhere")
+    assert st.repo_key(wt) == st.repo_key(repo)
+    st.apply_command("always", repo, None)
+    assert st.load_state(wt, None)["always"] is True  # SC4.1
+
+
+def test_subdirectory_shares_key(repo):
+    sub = repo / "x" / "y"
+    sub.mkdir(parents=True)
+    assert st.repo_key(sub) == st.repo_key(repo)
+
+
+def test_relative_git_path_is_never_hashed_raw(repo, monkeypatch):
+    monkeypatch.chdir(repo)
+    assert st.repo_key(".") == st.repo_key(repo)
+    other = repo.parent / "repo-b"
+    (other / ".git").mkdir(parents=True)
+    monkeypatch.chdir(other)
+    assert st.repo_key(".") != st.repo_key(repo)
+
+
+def test_non_git_falls_back_to_path_key(tmp_path, monkeypatch):
+    a, b = tmp_path / "plain-a", tmp_path / "plain-b"
+    a.mkdir(), b.mkdir()
+    monkeypatch.setattr(st, "find_git_common_dir", lambda project: None)  # temp dirs may sit under a user-level .git
+    assert st.repo_key(a) != st.repo_key(b)
+    assert st.repo_key(a) == st.repo_key(a / ".." / "plain-a")  # SC4.2
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_key_matches_real_git_worktree(tmp_path):
+    main = tmp_path / "real"
+    main.mkdir()
+    env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull}
+
+    def git(*args, cwd=main):
+        subprocess.run(["git", *args], cwd=str(cwd), check=True, capture_output=True, env=env)
+
+    git("init", "-q")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-qm", "x")
+    wt = tmp_path / "real-wt"
+    git("worktree", "add", "-q", str(wt))
+    assert st.repo_key(wt) == st.repo_key(main)
+    out = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=str(wt), capture_output=True, text=True, env=env)
+    assert os.path.normcase(os.path.realpath(st.find_git_common_dir(wt))) == os.path.normcase(
+        os.path.realpath(os.path.join(str(wt), out.stdout.strip())))
+
+
+# --- switch semantics ---------------------------------------------------------------------------------------
+
+
+def test_default_is_off(repo):
+    s = st.load_state(repo, "s1")
+    assert s["effective_on"] is False and s["state_problem"] is None and s["guard_must_stay_active"] is False
+    assert s["mode"] == "auto" and s["source"] == "-"
+
+
+def test_on_is_per_session_and_records_hook_fields(repo, state):
+    st.apply_command("on", repo, "s1", source="hook", prompt_id="p-1", transcript_path="/t/x.jsonl")
+    assert st.load_state(repo, "s1")["effective_on"] is True
+    assert st.load_state(repo, "other")["effective_on"] is False  # new session = OFF unless always
+    data = json.loads((state / "session-s1.json").read_text(encoding="utf-8"))
+    assert data["agile"] is True and data["mode"] == "auto" and data["source"] == "hook"
+    assert data["prompt_id"] == "p-1" and data["transcript_path"] == "/t/x.jsonl" and data["ts"]
+    assert st.load_state(repo, "s1")["non_hook_on"] is False
+
+
+def test_cli_on_writes_source_script_and_is_flagged(repo, state):
+    p = run_script("agile_state.py", "on", "--session", "s1", "--project", str(repo), env={st.ENV_STATE_DIR: str(state)})
+    assert p.returncode == 0, p.stderr
+    data = json.loads((state / "session-s1.json").read_text(encoding="utf-8"))
+    assert data["source"] == "script"
+    s = st.load_state(repo, "s1")
+    assert s["non_hook_on"] is True and s["source"] == "script"
+    assert "non-hook ON" in st.render_status(st.build_status(repo, "s1"))
+
+
+def test_cli_has_no_source_flag(repo, state):
+    p = run_script("agile_state.py", "on", "--session", "s1", "--source", "hook", "--project", str(repo),
+                   env={st.ENV_STATE_DIR: str(state)})
+    assert p.returncode == 2 and not state.exists()
+
+
+def test_always_applies_to_all_sessions_and_worktrees(repo):
+    st.apply_command("always", repo, "s1", source="hook")
+    assert st.load_state(repo, "brand-new")["effective_on"] is True
+    assert st.load_state(repo, None)["effective_on"] is True
+
+
+def test_manual_sets_mode_and_on(repo):
+    st.apply_command("manual", repo, "s1", source="hook")
+    s = st.load_state(repo, "s1")
+    assert s["effective_on"] and s["mode"] == "manual"
+    assert st.load_state(repo, "s2")["mode"] == "auto"
+
+
+def test_manual_without_session_sets_repo_flag(repo):
+    r = st.apply_command("manual", repo, None)
+    assert "session unknown" in r["message"]
+    assert st.load_state(repo, "s9")["mode"] == "manual"
+    assert st.load_state(repo, "s9")["effective_on"] is False
+
+
+def test_on_and_off_without_session_are_usage_errors(repo, state):
+    for cmd in ("on", "off"):
+        p = run_script("agile_state.py", cmd, "--project", str(repo), env={st.ENV_STATE_DIR: str(state)})
+        assert p.returncode == 2 and "--session" in p.stderr
+    with pytest.raises(ValueError):
+        st.apply_command("on", repo, None)
+
+
+def test_off_keeps_always(repo):
+    st.apply_command("always", repo, "s1")
+    st.apply_command("off", repo, "s1")
+    assert st.load_state(repo, "s1")["effective_on"] is True
+
+
+def test_stop_clears_session_manual_and_always(repo):  # SC2.1
+    st.apply_command("on", repo, "s1")
+    st.apply_command("manual", repo, "s1")
+    st.apply_command("always", repo, "s1")
+    r = st.apply_command("stop", repo, "s1")
+    s = st.load_state(repo, "s1")
+    assert not s["effective_on"] and not s["always"] and s["mode"] == "auto" and not s["manual_flag"]
+    assert r["changed"] is True and r["open_sprints"] == []
+
+
+def test_stop_when_off_says_already_off(repo, capsys, state):  # SC2.3
+    r = st.apply_command("stop", repo, "s1")
+    assert r["message"] == "already off" and r["changed"] is False
+    assert not state.exists() or not list(state.glob("session-*.json"))
+    p = run_script("agile_state.py", "stop", "--session", "s1", "--project", str(repo), env={st.ENV_STATE_DIR: str(state)})
+    assert p.returncode == 0 and p.stdout.splitlines()[0] == "already off"
+
+
+def test_stop_without_session_clears_repo_level(repo):
+    st.apply_command("always", repo, None)
+    st.apply_command("stop", repo, None)
+    assert not st.load_state(repo, None)["effective_on"]
+
+
+def test_stop_prints_open_sprints_as_json_and_never_writes_progress(tmp_path, state):
+    root = project_with_sprint(tmp_path / "proj", "SPR-07", "in_progress", "Seven")
+    before = (root / "docs/plans/2026-01-01-seven/PROGRESS.md").read_bytes()
+    st.apply_command("on", root, "s1")
+    p = run_script("agile_state.py", "stop", "--session", "s1", "--project", str(root), env={st.ENV_STATE_DIR: str(state)})
+    assert p.returncode == 0, p.stderr
+    lines = p.stdout.strip().splitlines()
+    listed = json.loads(lines[-1])
+    assert listed[0]["sprint"] == "SPR-07" and listed[0]["status"] == "in_progress"
+    assert (root / "docs/plans/2026-01-01-seven/PROGRESS.md").read_bytes() == before
+    j = run_script("agile_state.py", "stop", "--session", "s1", "--json", "--project", str(root),
+                   env={st.ENV_STATE_DIR: str(state)})
+    assert json.loads(j.stdout)["open_sprints"][0]["sprint"] == "SPR-07"
+
+
+# --- fail guarded -------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("junk", [b"{not json", b"[1,2]", b"\xff\xfe\x00", b""])
+def test_corrupt_session_file_is_off_but_guard_stays_active(repo, state, junk):  # SC4.3
+    st.apply_command("on", repo, "s1")
+    (state / "session-s1.json").write_bytes(junk)
+    s = st.load_state(repo, "s1")
+    assert s["effective_on"] is False and s["session_agile"] is False
+    assert s["state_problem"] and "session-s1.json" in s["state_problem"]
+    assert s["guard_must_stay_active"] is True
+    assert "state problem" in st.render_status(st.build_status(repo, "s1"))
+
+
+def test_corrupt_repo_file_is_off_and_guarded(repo, state):
+    st.apply_command("always", repo, "s1")
+    for p in state.glob("repo-*.json"):
+        p.write_text("{", encoding="utf-8")
+    s = st.load_state(repo, "s1")
+    assert s["effective_on"] is False and s["guard_must_stay_active"] is True and s["state_problem"]
+
+
+def test_unreadable_state_dir_never_raises(repo, state):
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text("i am a file, not a directory", encoding="utf-8")
+    s = st.load_state(repo, "s1")
+    assert s["effective_on"] is False
+    p = run_script("agile_state.py", "get", "--session", "s1", "--project", str(repo), env={st.ENV_STATE_DIR: str(state)})
+    assert p.returncode == 0 and "OFF" in p.stdout
+    w = run_script("agile_state.py", "always", "--project", str(repo), env={st.ENV_STATE_DIR: str(state)})
+    assert w.returncode == 1 and "I/O failure" in w.stderr
+
+
+def test_stop_repairs_corrupt_state(repo, state):
+    st.apply_command("on", repo, "s1")
+    (state / "session-s1.json").write_text("{", encoding="utf-8")
+    st.apply_command("stop", repo, "s1")
+    s = st.load_state(repo, "s1")
+    assert s["state_problem"] is None and not s["effective_on"]
+
+
+# --- atomic writes ------------------------------------------------------------------------------------------
+
+
+def test_no_temp_files_left(repo, state):
+    for i in range(5):
+        st.apply_command("on", repo, f"s{i}")
+    assert not [p for p in state.iterdir() if p.name.endswith(".tmp")]
+
+
+def test_replace_retries_on_permission_error(tmp_path, monkeypatch):
+    real = os.replace
+    calls = {"n": 0}
+
+    def flaky(src, dst):
+        calls["n"] += 1
+        if calls["n"] < 4:
+            raise PermissionError("busy")
+        return real(src, dst)
+
+    monkeypatch.setattr(st.os, "replace", flaky)
+    target = tmp_path / "x.json"
+    st.write_json_atomic(target, {"a": 1})
+    assert json.loads(target.read_text(encoding="utf-8")) == {"a": 1} and calls["n"] == 4
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_concurrent_writer_and_readers_never_see_corruption(repo, state):  # SC4.7
+    st.apply_command("on", repo, "s1")
+    stop = threading.Event()
+    problems, errors = [], []
+
+    def writer():
+        i = 0
+        try:
+            while not stop.is_set():
+                st.apply_command("on" if i % 2 else "off", repo, "s1")
+                i += 1
+        except Exception as exc:  # pragma: no cover - would fail the assertion below
+            errors.append(repr(exc))
+
+    def reader():
+        while not stop.is_set():
+            s = st.load_state(repo, "s1")
+            if s["state_problem"]:
+                problems.append(s["state_problem"])
+
+    threads = [threading.Thread(target=writer)] + [threading.Thread(target=reader) for _ in range(3)]
+    for t in threads:
+        t.start()
+    time.sleep(1.5)
+    stop.set()
+    for t in threads:
+        t.join(10)
+    assert not errors and not problems
+
+
+# --- stale cleanup ------------------------------------------------------------------------------------------
+
+
+def test_cleanup_deletes_only_old_session_files(tmp_path, repo, state):
+    st.apply_command("always", repo, "keep-repo")
+    for name in ("old", "new"):
+        st.apply_command("on", repo, name)
+    old_ts = time.time() - 15 * 86400
+    old_file = state / "session-old.json"
+    os.utime(old_file, (old_ts, old_ts))
+    for p in state.glob("repo-*.json"):
+        os.utime(p, (old_ts, old_ts))  # even an ancient repo file is kept
+    (state / "notes.txt").write_text("not ours", encoding="utf-8")
+    os.utime(state / "notes.txt", (old_ts, old_ts))
+    outside = tmp_path / "session-outside.json"
+    outside.write_text("{}", encoding="utf-8")
+    os.utime(outside, (old_ts, old_ts))
+    removed = st.cleanup_stale()
+    assert removed == ["session-old.json"]
+    assert (state / "session-new.json").exists() and (state / "notes.txt").exists() and outside.exists()
+    assert list(state.glob("repo-*.json"))
+
+
+def test_cleanup_missing_dir_is_noop(tmp_path):
+    assert st.cleanup_stale(tmp_path / "nope") == []
+
+
+# --- status -------------------------------------------------------------------------------------------------
+
+
+def project_with_sprint(root: Path, sid: str, status: str, title: str, extra: str = "", roles: str = "") -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    write_lf(root / ".agile.json", json.dumps({"schema": 1}))
+    folder = root / "docs" / "plans" / f"2026-01-01-{title.lower()}"
+    folder.mkdir(parents=True)
+    fm = f"---\nid: {sid}-progress\ndoc: progress\ntitle: {title}\nsprint: {sid}\nstatus: {status}\n{roles}{extra}---\n\n# x\n"
+    write_lf(folder / "PROGRESS.md", fm)
+    return root
+
+
+def test_status_without_config_or_ledger(repo):  # SC3.2
+    status = st.build_status(repo, "s1")
+    text = st.render_status(status)
+    assert status["open_sprints"] == [] and "no .agile.json" in status["ledger"]
+    assert status["routing_mode"] == "-" and status["locale"] == "vi (default)"
+    assert status["counts"] == "not measured" and status["session_cap"] == "n/a"
+    for line in ("secure: not available yet", "tier: not available yet", "team: not available yet",
+                 "open sprint: none", "routing.mode: -", "locale: vi (default)", "roles/agents/models: not measured",
+                 "session cap: n/a", "agile: OFF"):
+        assert line in text
+    assert "hook seen this session: no" in text
+
+
+def test_status_reads_open_sprint_counts_and_cap(tmp_path):
+    roles = "roles:\n  analyst: [T1, sonnet]\n  implementer: [T2, sonnet]\n  qa: [T3, haiku]\n"
+    root = project_with_sprint(tmp_path / "p", "SPR-03", "in_progress", "Three", extra="session_cap: 29\nsession_used: 11\n",
+                               roles=roles)
+    done = root / "docs" / "plans" / "2025-12-01-old"
+    done.mkdir()
+    write_lf(done / "PROGRESS.md", "---\nid: SPR-02-progress\ndoc: progress\ntitle: Old\nsprint: SPR-02\nstatus: done\n---\n")
+    status = st.build_status(root, "s1")
+    assert [s["sprint"] for s in status["open_sprints"]] == ["SPR-03"]
+    assert status["counts"] == {"roles": 3, "agents": 3, "models": 2}
+    assert "11 / 29" in status["session_cap"]
+    text = st.render_status(status)
+    assert "open sprint: SPR-03 [in_progress] Three" in text and "roles/agents/models: 3/3/2" in text
+
+
+def test_open_status_set_matches_index():
+    assert set(st.OPEN_STATUSES) == set(index.SPRINT_LABEL)
+
+
+def test_status_routing_and_locale_from_config(tmp_path):
+    root = project_with_sprint(tmp_path / "p", "SPR-01", "drafting", "One")
+    (root / ".agile.json").write_text(json.dumps({"schema": 1, "routing": {"mode": "manual"}, "locale": "en"}), encoding="utf-8")
+    status = st.build_status(root, None)
+    assert status["routing_mode"] == "manual" and status["locale"] == "en"
+    assert status["session"] == "unknown" and "unknown" in status["hook_seen"]
+    assert "session: unknown" in st.render_status(status)
+
+
+def test_status_broken_config_does_not_fail(tmp_path):
+    root = tmp_path / "p"
+    root.mkdir()
+    (root / ".agile.json").write_text("{", encoding="utf-8")
+    status = st.build_status(root, "s1")
+    assert "unreadable" in status["ledger"] and status["open_sprints"] == []
+
+
+def test_status_hook_seen_and_layers(repo):
+    st.touch_session("s1")
+    st.apply_command("always", repo, "s1", source="hook")
+    status = st.build_status(repo, "s1")
+    assert status["hook_seen"].startswith("yes") and status["agile"]["on"] and status["agile"]["always"]
+    assert status["agile"]["non_hook_on"] is False
+
+
+def test_status_reports_legacy_marker_without_deleting(repo):
+    marker = repo / ".tmp" / "autopilot.json"
+    marker.parent.mkdir()
+    marker.write_text("{}", encoding="utf-8")
+    status = st.build_status(repo, "s1")
+    assert status["legacy_markers"] and "autopilot.json" in st.render_status(status)
+    assert marker.exists()
+
+
+def test_cli_status_json_and_text(repo, state):
+    env = {st.ENV_STATE_DIR: str(state)}
+    j = run_script("agile_state.py", "status", "--json", "--session", "s1", "--project", str(repo), env=env)
+    assert j.returncode == 0 and json.loads(j.stdout)["agile"]["on"] is False
+    t = run_script("agile_state.py", "status", "--project", str(repo), env=env)
+    assert t.returncode == 0 and "session: unknown" in t.stdout
+    assert not state.exists()  # status writes nothing
+
+
+def test_cli_get_json(repo, state):
+    env = {st.ENV_STATE_DIR: str(state)}
+    run_script("agile_state.py", "always", "--project", str(repo), env=env)
+    g = json.loads(run_script("agile_state.py", "get", "--json", "--project", str(repo), env=env).stdout)
+    assert g["effective_on"] is True and g["session"] == "unknown"
+
+
+def test_cli_bad_usage_exit_2(repo, state):
+    env = {st.ENV_STATE_DIR: str(state)}
+    assert run_script("agile_state.py", "bogus", env=env).returncode == 2
+    assert run_script("agile_state.py", "on", "--session", "", "--project", str(repo), env=env).returncode == 2
+
+
+def test_touch_leaves_corrupt_file_alone(repo, state):
+    st.apply_command("on", repo, "s1")
+    (state / "session-s1.json").write_text("{", encoding="utf-8")
+    st.touch_session("s1")
+    assert (state / "session-s1.json").read_text(encoding="utf-8") == "{"
+    assert st.load_state(repo, "s1")["guard_must_stay_active"] is True
