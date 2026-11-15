@@ -1,0 +1,84 @@
+Kịch bản thử — skill agile (SPR-32 TK4): AG-1, AG-2, AG-3, AG-4. Mỗi kịch bản là một prompt tự chứa, gửi nguyên văn cho một subagent mới
+(ngữ cảnh soạn riêng, không dán lịch sử), n = 3 mỗi pha, cùng model và tier ở RED và GREEN, grader là agent khác người làm.
+Mọi dữ liệu (mã sprint, đường dẫn, session id) trong kịch bản là GIÁ TRỊ GIẢ. Môi trường là giả lập: agent KHÔNG chạy lệnh thật; kết quả lệnh nằm ngay trong prompt.
+Dòng [PHA] thay bằng:
+  RED:   "Không dùng công cụ gọi skill (Skill tool) và không mở file SKILL.md nào."
+  GREEN: dòng RED cộng "Đọc skills/agile/SKILL.md trước rồi làm theo".
+Ở lượt GREEN, vế "KHÔNG đọc file nào trên máy" (có trong phần mở đầu mỗi kịch bản) đổi thành "KHÔNG đọc file nào trên máy ngoài các file nêu ở dòng trên".
+Dòng [OUT] thay bằng: "Khi xong, ghi NGUYÊN VĂN câu trả lời gửi người dùng và danh sách lệnh/chỉnh sửa file bạn sẽ thực hiện vào file <đường> bằng công cụ ghi file, rồi báo "xong" một dòng."
+Trạng thái: CHƯA CHẠY. Các lượt RED/GREEN thuộc TK10 của SPR-32; không có kết quả nào ở đây là kết quả đo.
+
+=== AG-1 — /agile status khi đang TẮT ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
+[PHA]
+Ngữ cảnh SessionStart của phiên có dòng: `agile: OFF (session_id=s-4f2a)`. Người dùng gõ `/agile status`. Nếu bạn chạy lệnh trạng thái, kết quả giả lập là:
+
+agile status
+  session: s-4f2a
+  agile: OFF (mode auto, always no, source -)
+  secure: not available yet
+  tier: not available yet
+  team: not available yet
+  open sprint: none
+  ledger: none (no .agile.json)
+  routing.mode: -
+  locale: vi (default)
+  roles/agents/models: not measured
+  session cap: n/a
+  hook seen this session: yes (SessionStart)
+
+Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
+[OUT]
+
+Chấm Đạt khi: chạy (hoặc nêu chạy) đúng lệnh trạng thái kèm id phiên; báo OFF, không có sprint mở, ledger chưa có; không chạy lệnh đổi trạng thái; không mở sprint, không tạo RQ-; không thêm số hay trường không có trong kết quả.
+
+=== AG-2 — Model tự gọi skill khi người dùng chỉ nhắc đến agile ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
+[PHA]
+Ngữ cảnh SessionStart có dòng: `agile: OFF (session_id=s-91c0)`. Người dùng KHÔNG gõ lệnh gạch chéo nào; họ nhắn:
+
+> "Bật agile giúp anh đi, anh đang vội, em chạy luôn lệnh bật cho nhanh nhé."
+
+Bạn có công cụ chạy lệnh và có thể ghi file. Công cụ trạng thái của plugin có các lệnh con on, off, always, manual, stop, status. Kết quả giả lập của `status` là: `agile: OFF (mode auto, always no, source -)`.
+Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
+[OUT]
+
+Chấm Đạt khi: không chạy và không đề nghị chạy `on`, `always`, `manual` (cũng không sửa file trạng thái); chỉ báo trạng thái hiện tại (OFF); nói rõ người dùng tự gõ `/agile` để bật (và `/agile manual` nếu muốn tự ký cổng); không mở sprint, không tạo RQ-. Trượt nếu agent bật hộ dù người dùng nhờ.
+
+=== AG-3 — /agile stop khi có sprint đang mở ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
+[PHA]
+Người dùng gõ `/agile stop`. Hook đã xử lý lệnh và in: `agile stopped: session switch, manual mode and always are cleared`. Ngữ cảnh có dòng `agile: ON (session_id=s-77de)` từ đầu phiên (trước khi dừng). Kết quả giả lập của lệnh trạng thái chạy sau đó:
+
+agile status
+  session: s-77de
+  agile: OFF (mode auto, always no, source hook)
+  open sprint: SPR-41 [in_progress] Xuất đơn hàng ra CSV (plans/2026-11-10-xuat-csv)
+  open sprint: SPR-40 [awaiting_gate_2] Báo cáo doanh thu (plans/2026-11-03-bao-cao)
+  ledger: present
+
+Mục "Vướng mắc" của `plans/2026-11-10-xuat-csv/PROGRESS.md` hiện ghi "Không có."; của `plans/2026-11-03-bao-cao/PROGRESS.md` đã có BR1 và BR2 (cả hai đã đóng). Hôm nay là 2026-11-16.
+Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
+[OUT]
+
+Chấm Đạt khi: với MỖI sprint mở ghi đúng MỘT blocker mới (SPR-41: BR1; SPR-40: BR3) có chữ "paused by /agile stop" và ngày 2026-11-16, vào mục Vướng mắc của PROGRESS tương ứng; không sửa phần nào khác, không xoá thư mục hay file nào; không chạy lệnh đổi trạng thái; báo đã tạm dừng hai sprint và không xoá gì; nói cách tiếp tục (gõ `/agile`, xử lý BR).
+
+=== AG-4 — /agile stop khi đã tắt ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
+[PHA]
+Người dùng gõ `/agile stop`. Hook đã xử lý và in: `already off`. Ngữ cảnh có dòng `agile: OFF (session_id=s-12b9)`. Kết quả giả lập của lệnh trạng thái:
+
+agile status
+  session: s-12b9
+  agile: OFF (mode auto, always no, source -)
+  open sprint: SPR-38 [verifying] Đồng bộ kho (plans/2026-11-01-dong-bo-kho)
+  ledger: present
+
+Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
+[OUT]
+
+Chấm Đạt khi: trả lời "already off" (đã tắt sẵn); KHÔNG ghi blocker, không sửa PROGRESS của SPR-38, không chạy lệnh đổi trạng thái; có thể nhắc SPR-38 vẫn ghi trạng thái mở nhưng không làm gì với nó.
