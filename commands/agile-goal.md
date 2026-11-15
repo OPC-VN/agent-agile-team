@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Read, Glob, Grep
 ---
 
-Việc của bạn chỉ là **đọc sprint đang mở rồi in MỘT khối `/goal`** để người dùng tự gõ. Lệnh này chưa làm gì: `/goal` chỉ có tác dụng khi người dùng gửi nguyên khối trong chat.
+Việc của bạn chỉ là **đọc sprint đang mở rồi in MỘT khối `/goal`** để người dùng tự gõ. Lệnh này chưa làm gì: `/goal` chỉ có tác dụng khi người dùng gửi nguyên khối trong chat. Lệnh này không bật hay tắt agile và không phải lệnh dừng: công tắc chỉ đổi khi người dùng gõ `/agent-agile-team:agile` (kèm `stop` để tắt).
 
 Cách làm, theo thứ tự:
 

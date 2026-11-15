@@ -236,16 +236,16 @@ PINNED_FLOOR_FILES_EXTRA = (
 # Sửa chữ trong vùng sàn thì đổi cả băm ở đây trong cùng commit, có lý do và có 5 ý Đức gật cho file luật đó.
 PINNED_ZONE_HASHES = {
     ("AGENTS.md", 0): (
-        "aa564c3ad37a33d14a861e499bad8e140d5394dbe6c73ad83888dc331edc5d2f",  # TK27b: Gate Delegate không quyết thay ở (a), (b), bảy mục luôn chặn (Sec RF1)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
-        "1b674c5981eda2acbc3b340bec29f1730fce0513d8061f11383ce0d60d4a3f4c"),
+        "d6c9164b5de57f9ad7261b043ee5f8e6a5f82039a14feb742e0beb15d526e6c7",  # SPR-32 B5: vùng 1 chỉ thêm tiền tố "Khi agile BẬT (người dùng đã gõ lệnh…)" cho đúng với công tắc người dùng tự bật; TK27b: Gate Delegate không quyết thay ở (a), (b), bảy mục luôn chặn (Sec RF1)  # SPR-32 B1: re-pin, chỉ đổi tên cũ sang agile trong vùng
+        "4b323c11af8e6565233ac641e959baa920cf9faec3e1a57044959c4dcbfedb8c"),  # SPR-32 B5: chữ quanh mốc đổi vì AGENTS.md dời mục (dòng trước mốc là tiêu đề mới, dòng sau là "## Văn phong phản hồi")
     ("AGENTS.md", 1): (
-        "5a3271b6e1305a17ee5b28c58b95d7bd17239eecb2987615cd043e1a4ac84203",  # TK27b: lệnh phá hoàn tác + đẩy chỉ khi có lời cấp, kiểm ruleset, quét secret (Sec RF3, RF4)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
+        "5a3271b6e1305a17ee5b28c58b95d7bd17239eecb2987615cd043e1a4ac84203",  # TK27b: lệnh phá hoàn tác + đẩy chỉ khi có lời cấp, kiểm ruleset, quét secret (Sec RF3, RF4)  # SPR-32 B1: re-pin, chỉ đổi tên cũ sang agile trong vùng
         "5d18f5eaed17becce2a26b0381cb1a0576ec05b6d3d5948bcef94a80abe411bf"),
     ("method/process.md", 0): (
-        "11f7e87d86d96458b281e5cad6aa099fe65efb371cc4a2022462cc997ca8c2e5",  # SPR-20 TK8: Khuyến nghị có sẵn khi agile bật + câu mẫu `Mở SPR-NN` (vùng sàn đã duyệt ở PLAN); TK27b: lời cấp thật trích nguyên văn từ chat, câu mẫu chỉ là ví dụ (QA lệch 1)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
+        "5672f963bec3c4be84d1e4e9052801f2c2fe4637ab2d9c888eea3b3d840a947d",  # SPR-32 B5: bullet "Agile:" đổi từ "mặc định bật cho mọi sprint / Dừng agile." sang công tắc người dùng gõ + /agile stop; SPR-20 TK8: Khuyến nghị có sẵn khi agile bật + câu mẫu `Mở SPR-NN` (vùng sàn đã duyệt ở PLAN); TK27b: lời cấp thật trích nguyên văn từ chat, câu mẫu chỉ là ví dụ (QA lệch 1)  # SPR-32 B1: re-pin, chỉ đổi tên cũ sang agile trong vùng
         "ecb48ff6109d5b11438be3eef55f7e9c5d7af45c98a2cf48cf4dea2efc4f1029"),
     ("method/process.md", 1): (
-        "a8c65a14369925f813cdee80e3eac0307449c5a38f55634caebc8f8a5d8988e4",  # TK27b: điều kiện dừng (a), (b) vào "Việc cần người" (Sec RF1)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
+        "a8c65a14369925f813cdee80e3eac0307449c5a38f55634caebc8f8a5d8988e4",  # TK27b: điều kiện dừng (a), (b) vào "Việc cần người" (Sec RF1)  # SPR-32 B1: re-pin, chỉ đổi tên cũ sang agile trong vùng
         "2a61b772d7d11e70c57623ef3447b2dc001d4218b8c2aaa09c181ac31d436c5f"),
     ("method/process.md", 2): (
         "a4d227e219acf81466e07c74745e0dee15f9e82a48e34b41030c3abdeb028cd2",
@@ -254,8 +254,8 @@ PINNED_ZONE_HASHES = {
         "dc327e76921c81fcf4266a5285b617b74cb55af89e71eca950067b4d9018acba",
         "47c90f9685ed7aecfe4ca66bc4e10a217a68813484e3d1eb920f085e292b85d3"),
     ("method/agile.md", 0): (
-        "3213819d68adbbe2cc19e29d3b30dabc70ab2cbaef4a43ccd70fbb5aa02d7a59",  # TK28b (Đức 13/11): quét secret bằng công cụ sẵn có hoặc skill security-review/agent security-reviewer + dò mẫu khoá, không cần công cụ chuyên dụng; TK27d: dạng dính `-Destination:x`, cwd trong `.git`, `git -c gc.*=now`, không có công cụ quét secret thì không đẩy (soát hẹp RF1-RF4, RF7); TK7 (DN3 a): hàng `push` mục 5 thêm "trừ đúng hợp đồng đích"; TK27b (đã thay hàng `push` cũ ở TK21): bảy mục luôn chặn, mẫu hook mới, lệnh phá hoàn tác, đẩy chỉ khi có lời cấp (Sec RF1-RF4)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
-        "55283740743d60f43bb66242f9133c4ff732b4617fe81bdf07ad8ad37098fc56"),
+        "c6a174a963075b01283158b2684b3ee7b0a3e343a0b29b4a6c901429a5065833",  # SPR-32 B5: mục 5.1 viết lại cho rào kích hoạt bằng trạng thái agile (không còn file dấu/--clear), năm hook, chống phá công tắc, giới hạn chưa đo; TK28b (Đức 13/11): quét secret bằng công cụ sẵn có hoặc skill security-review/agent security-reviewer + dò mẫu khoá, không cần công cụ chuyên dụng; TK27d: dạng dính `-Destination:x`, cwd trong `.git`, `git -c gc.*=now`, không có công cụ quét secret thì không đẩy (soát hẹp RF1-RF4, RF7); TK7 (DN3 a): hàng `push` mục 5 thêm "trừ đúng hợp đồng đích"; TK27b (đã thay hàng `push` cũ ở TK21): bảy mục luôn chặn, mẫu hook mới, lệnh phá hoàn tác, đẩy chỉ khi có lời cấp (Sec RF1-RF4)  # SPR-32 B1: re-pin, chỉ đổi tên cũ sang agile trong vùng
+        "7d8fee0a3928b5fcae7baa486ae54a4e5aae573cf205f0c0aec97e991ce9b299"),  # SPR-32 B5: chữ quanh mốc đổi vì mục sau vùng là "5.2 Trạng thái agile"
 }
 
 

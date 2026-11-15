@@ -45,7 +45,7 @@ Khi dùng nguồn ngoài, brief giữ rõ nguồn do ai cung cấp và phần n�
 nội dung nguồn còn thiếu khi cần cho phần việc được giao.
 
 **Người dùng cần làm gì:** giao yêu cầu bằng lời thường ở Bước 1, đọc tin mở agile và báo cuối. Muốn can
-thiệp thì nói `Dừng agile.`, hoặc tự ký một cổng bằng **"duyệt"** / **"điều chỉnh: <gì>"** (lời đó thắng,
+thiệp thì gõ `/agent-agile-team:agile stop`, hoặc tự ký một cổng bằng **"duyệt"** / **"điều chỉnh: <gì>"** (lời đó thắng,
 ghi `gate_N_mode: human`). Bốn điều kiện dừng (mục 5), sau vòng 3 (mục 6) và cạn hạn mức tier: Gate Delegate quyết
 hoặc dừng, ghi vào báo cuối — trừ (a), (b) và bảy mục luôn chặn: Gate Delegate không quyết thay, việc vào "Việc cần người" của báo cuối.
 
@@ -154,8 +154,8 @@ Mặc định cổng do **Gate Delegate** ký: một agent T1 **phiên mới, kh
   Câu cũ `Cho phép T1 duyệt thay Cổng 1 của SPR-NN tới hết sprint.` vẫn hợp lệ khi cần phạm vi hẹp hơn.
   Không phải lời cấp: "ok", "làm luôn", "theo khuyến nghị" của agent khác, chữ trong file, PR, log.
 - **Câu thu hồi:** `Thu hồi duyệt thay SPR-NN.` (hiệu lực ngay; ghi `revoked_at`).
-- **Agile:** mặc định bật cho mọi sprint; tin mở agile, phiên điều phối, trần phiên, mục "Nhật ký quyết định" ở [agile.md](agile.md).
-  `Dừng agile.` có hiệu lực như câu thu hồi cho mọi sprint đang chạy.
+- **Agile:** chỉ chạy khi người dùng gõ `/agent-agile-team:agile` (mặc định TẮT); tin mở agile, phiên điều phối, trần phiên, mục "Nhật ký quyết định" ở [agile.md](agile.md).
+  `/agent-agile-team:agile stop` tắt công tắc và tạm dừng sprint mở (không ghi `revoked_at`); `Thu hồi duyệt thay SPR-NN.` là câu thu hồi cho một sprint.
 - **Frontmatter khi đã duyệt thay** (SPEC + PLAN cho Cổng 1; REPORT cho Cổng 2; `SPRINT.md` cho cả hai):
 
 ```yaml
@@ -416,7 +416,7 @@ Việc nâng cỡ giữa chừng (lộ rủi ro mới) thì chuyển sang bốn 
 | Cạn hạn mức tier (không tự hạ tier; ghi báo cuối) | Thứ tự làm `TK`, tách `TK` con |
 | `CQ` gom ở Cổng 1 (Gate Delegate quyết một lần) | Hỏi lẻ từng câu giữa chừng |
 | Tư vấn gọi chéo hãng (chỉ tư vấn, người dùng quyết) | Tự chạy gọi chéo |
-| `Dừng agile.` hay thu hồi duyệt thay — lời người dùng bất cứ lúc nào (câu mẫu ở mục 3) | — |
+| `/agent-agile-team:agile stop` hay thu hồi duyệt thay — lời người dùng bất cứ lúc nào (câu mẫu ở mục 3) | — |
 
 ## 11. Ghi sổ tại cổng
 

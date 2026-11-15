@@ -1,36 +1,38 @@
 # agent-agile-team — luật lõi
 
-Chi tiết: `method/`, `roles/`,
-`tiers/`, `skills/`, `templates/`. Khi file này khác chi tiết, chi tiết thắng.
+File này nạp ở MỌI phiên nên giữ ngắn. Chi tiết: `method/`, `roles/`, `tiers/`, `skills/`, `templates/`. Khi file này khác chi tiết, chi tiết thắng.
+
+## Quy trình agile: chỉ khi người dùng bật
+
+- Mặc định agile **TẮT**: việc thường làm như bình thường, không mở sprint, không sổ, không cổng.
+- Chỉ khi **người dùng gõ** `/agent-agile-team:agile` (kèm `always`, `manual`, `stop` hoặc `status`) công tắc mới đổi; model không tự bật. Hook `SessionStart` đưa dòng `agile: ON|OFF` vào ngữ cảnh.
+- Khi BẬT: nạp `method/agile.md` (sáu bước, vai và tier, cổng, rào) và skill `agile`, rồi theo skill quy trình `intake`, `running-sprint`, `closing-sprint`. Tắt bằng `/agent-agile-team:agile stop`.
+
+## Luật dừng (luôn áp, agile BẬT hay TẮT)
+
+Gặp một trong năm việc sau thì **dừng đúng bước đó và hỏi người dùng**; khi agile BẬT thì theo vùng sàn bên dưới và `method/agile.md` mục 5:
+
+- đọc, ghi, in **secret**, hay đổi **xác thực/quyền** (`.env*`, khoá, token);
+- ghi dữ liệu hồ sơ người dùng (**USER**, **SOUL**, đời tư, tài chính, sức khoẻ) vào bộ nhớ hay tài liệu;
+- **xoá không đảo ngược** (xoá đệ quy, xoá `.git`, dữ liệu ngoài vùng tạm);
+- git **phá lịch sử** (force-push, `reset --hard`, `clean -fd[x]`, `filter-branch`, `reflog expire`, xoá nhánh chưa gộp).
+
+Hook máy chỉ là lưới phụ, chạy khi agile BẬT và lách được bằng gián tiếp; luật chữ này vẫn áp khi hook không chạy.
 
 ## Dùng skill
 
 - Trước khi trả lời hay hành động — kể cả câu hỏi làm rõ, kể cả "chỉ xem file" — rà danh mục skill. Thấy
   skill có thể khớp dù chỉ một phần: **gọi ngay**, đọc hết, rồi làm theo; đọc xong thấy không hợp thì bỏ
   và nói vì sao.
-- Thứ tự: skill **quy trình** trước (spec, plan, sprint, debug, review), **kỹ thuật** sau; "làm X" → spec trước, "sửa lỗi" → debug trước.
+- Thứ tự: skill **quy trình** trước (spec, plan, sprint, debug, review), **kỹ thuật** sau; "sửa lỗi" → debug trước; "làm X" → spec trước chỉ khi agile BẬT.
 - Skill đã đọc ở phiên trước không tính: đọc lại bản hiện tại.
 - Lệnh trực tiếp của người dùng thắng skill; skill thắng thói quen mặc định.
 - Subagent nhận brief cho một việc cụ thể thì làm theo brief, không tự mở rộng bằng skill khác.
 
-## Quy trình sáu bước
-
-1. **Tiếp nhận** (T1, **một tin gom**): đọc đầu bài, phân tích, rồi gửi **tin mở agile** (mẫu: `method/agile.md` mục 2; có khuyến nghị bậc làm thẳng / rất nhỏ / nhỏ / vừa / lớn). Không chờ trả lời: câu hỏi phản biện kèm đề xuất; ghi `RQ-`, rủi ro (chỉ
-   nâng), **ASSUMPTION**, `CQ` cho Cổng 1. Không hỏi lẻ. Bỏ tin này khi "không cần sprint" hoặc làm thẳng không mơ hồ.
-2. **SPEC rồi PLAN** → **Cổng 1**, Gate Delegate (phiên mới, T1) ký. Từ cỡ vừa, Tech Reviewer/Advisor review PLAN
-   trước. Hồ sơ: kết luận, `CQ`, `DN`, rủi ro, ước lượng, trần phiên. Ký thì ghi
-   `gate_1: approved` + `gate_1_quote` nguyên văn. **Không code trước Cổng 1.** Lời cấp, người ký — `method/agile.md`.
-3. **Thực thi** theo `TK`, cập nhật PROGRESS sau mỗi việc (trạng thái + bằng chứng). Điều chỉnh trong
-   phạm vi đã duyệt: Analyst tự quyết, ghi `Phán quyết: <gì> — <vì sao> — <sai thì tốn gì>`, không hỏi.
-4. **Kiểm định** bởi agent khác người làm: `RF` có mức + bằng chứng. Còn Chặn/Phải sửa → quay lại 3
-   (một vòng). Khuyến nghị 3 vòng, không trần cứng: hết vòng 3 còn Chặn/Phải sửa → Gate Delegate quyết làm tiếp
-   hay dừng & bàn giao, ghi vào báo cuối, không báo người giữa chừng. Nên sửa được hoãn thành `CO`.
-5. **REPORT** → **Cổng 2** (Đạt / Đạt có điều kiện / Không đạt), Gate Delegate phiên mới ký; Đạt có điều kiện
-   không mở gộp `main`. Sau đó mới cập nhật spec sống, đóng sprint. Dừng: `Dừng agile.` — `method/agile.md`.
-6. **Bài học** `LN` ghi nơi lớp riêng quy định; quan trọng thì **đề xuất** nâng thành luật/skill, không tự nâng.
+## Điều kiện dừng và làm thẳng (khi agile BẬT)
 
 <!-- san-cung:start -->
-**Dừng chỉ khi:** (a) hành động không đảo ngược, (b) chạm bảo mật/secret, (c) tác động ra ngoài
+**Khi agile BẬT** (người dùng đã gõ `/agent-agile-team:agile`; tắt thì không có sprint, cổng hay sổ nào), **dừng chỉ khi:** (a) hành động không đảo ngược, (b) chạm bảo mật/secret, (c) tác động ra ngoài
 phạm vi/worktree đã giao, (d) PLAN hỏng — giả định sai làm đổi tiêu chí thành công. Ghi `BR`, không hỏi người giữa
 chừng. (a), (b), bảy mục luôn chặn (`method/agile.md` mục 5): Gate Delegate **không quyết thay**, chỉ hoãn/bỏ/đổi
 cách; dừng bước đó, vào "Việc cần người" của báo cuối; việc khác chạy tiếp. (c), (d), câu hỏi nghiệp
@@ -43,18 +45,6 @@ chỉ Kế hoạch + Kết quả, Cổng 1 = "đạt theo lời giao" + trích l
 và hai cổng. Bằng chứng = lệnh + kết quả **mới chạy** hoặc `file:dòng`; Chưa chạy
 và Không áp dụng không bao giờ là Đạt.
 <!-- san-cung:end -->
-
-## Vai và tier
-
-Thực thi: **Analyst** (T1; điều phối, Distiller; tiếp nhận, SPEC, điều phối, phán quyết, REPORT, bài học) · **Architect** (T1; PLAN, ADR) · **Implementer** (T2; mã, test, tài liệu theo `TK`) · **QA** (T3; chạy test, coverage, kiểm trình duyệt, ghi `VR`) · **Researcher** (T3; dossier có nguồn, không kết luận).
-Kiểm định: **Business Reviewer** (T1; `US`/`FR`/`SC`) · **Tech Reviewer** (T1; code, test, bảo mật, dữ liệu; + security, data, backend, frontend khi rủi ro cao) · **Gate Delegate** (T1; ký Cổng 1 và 2 mặc định; phiên mới, khác người làm, tier ≥). Tư vấn: **Advisor** (T1; phản biện SPEC/PLAN trước Cổng 1; không viết, không duyệt). Thẻ vai: `roles/README.md`.
-
-- **Người làm không tự chấm.** Kiểm định do agent khác (phiên/subagent mới, ngữ cảnh soạn riêng, không dán
-  lịch sử). Reviewer được trả 0 phát hiện, phải ghi phần không đánh giá. Việc nhỏ: một agent giữ nhiều
-  vai thực thi, Analyst luôn điều phối.
-- Giao việc theo **tier**, không theo tên model; bảng tier → model đọc từ `AGENT_AGILE_TIERS` (ngoài repo); thiếu bảng thì hỏi, không đoán. **Luôn ghi vai · tier · model · effort** vào PROGRESS khi giao subagent (effort: số 1–5, `method/effort-scale.md`).
-- Cạn hạn mức: dừng tier đó, ghi `BR`, báo — **không tự hạ tier**. Người dùng chỉ định đè → làm theo,
-  ghi `"note"` trong `roles`. Muốn hãng khác → chỉ **tư vấn**, người dùng quyết.
 
 ## Văn phong phản hồi
 
@@ -72,7 +62,7 @@ Kiểm định: **Business Reviewer** (T1; `US`/`FR`/`SC`) · **Tech Reviewer** 
 
 - Tiền tố hai chữ cái từ tên tiếng Anh (hai từ → chữ đầu mỗi từ; một từ → đầu + cuối), thuộc đúng một
   tài liệu: SPEC `US` `FR` (`FR3.2` kịch bản) `SC` `CQ` · PLAN `TK` (`TK2.3` việc con) `RK` `DN` ·
-  PROGRESS `BR` · REPORT `VR` `RF` `LN` `CO`. Sổ gốc: `RQ-014` `FS-007` `SPR-12`, tăng dần, không tái dùng.
+  PROGRESS `BR` · REPORT `VR` `RF` `LN` `CO`. Sổ gốc (yêu cầu, tính năng, sprint) tăng dần, không tái dùng; mẫu mã ở skill `id-convention`.
 - Mã luôn kèm tên ngắn (mọi lần trong chat). Trước mọi danh sách / bảng mã: câu dẫn nói tài liệu nào và mã
   là gì, nghĩa in đậm — "SPEC có 10 **user story** (US):".
   Không đánh số lại; mục bỏ giữ mã, trạng thái `bỏ`. Nhắc chéo, mã hệ khác: skill `id-convention`.
