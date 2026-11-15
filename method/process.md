@@ -7,7 +7,7 @@ updated: 2026-10-05
 
 # Quy trình: sáu bước, hai cổng
 
-> **Kết luận:** mọi sprint đi đúng sáu bước; agent gửi **một tin mở autopilot** (mục tiêu, bậc việc, có mở
+> **Kết luận:** mọi sprint đi đúng sáu bước; agent gửi **một tin mở agile** (mục tiêu, bậc việc, có mở
 > sprint không — mục 2) rồi đi qua **hai cổng** (Cổng 1 duyệt SPEC + PLAN, Cổng 2 nghiệm thu) do **Gate Delegate**
 > ký mặc định. Người dùng đọc báo cuối; việc về người chỉ khi chạm **bốn điều kiện dừng** mà Gate Delegate không
 > quyết được. Mọi điểm còn lại agent tự quyết, ghi phán quyết vào PROGRESS và đi tiếp. Sprint = một mục tiêu, không đo theo thời gian. Việc **làm thẳng** ([sizing.md](sizing.md) mục 1)
@@ -25,7 +25,7 @@ cỡ việc theo [sizing.md](sizing.md). Gặp tên skill cũ trong hồ sơ l�
 
 | Bước | Tên | Ai làm | Tài liệu ra | Cổng |
 |---|---|---|---|---|
-| 1 | Tiếp nhận | Analyst (T1) | **một** tin trao đổi gom với người dùng; sau xác nhận: dòng `RQ-` trong REQUESTS (hoặc làm thẳng, không hồ sơ) | Không phải cổng — tin mở autopilot nêu mục tiêu, bậc từng việc, có mở sprint không; không chờ trả lời, bỏ khi đã rõ (mục 2) |
+| 1 | Tiếp nhận | Analyst (T1) | **một** tin trao đổi gom với người dùng; sau xác nhận: dòng `RQ-` trong REQUESTS (hoặc làm thẳng, không hồ sơ) | Không phải cổng — tin mở agile nêu mục tiêu, bậc từng việc, có mở sprint không; không chờ trả lời, bỏ khi đã rõ (mục 2) |
 | 2 | SPEC rồi PLAN | Analyst (SPEC), Architect (PLAN), Tech Reviewer hoặc Advisor (review PLAN từ cỡ vừa) | SPEC, PLAN | **Cổng 1** — duyệt / điều chỉnh |
 | 3 | Thực thi | Implementer, QA, (Architect) theo từng `TK` | PROGRESS | cổng điều chỉnh nội bộ (không hỏi người) |
 | 4 | Kiểm định | Business Reviewer, Tech Reviewer — **agent khác** người làm (thêm reviewer thứ hai khi `risk_tags` có `rules`/`secret`/`auth`) | `VR`, `RF` | vòng lặp 3 ↔ 4 |
@@ -44,8 +44,8 @@ Khi dùng nguồn ngoài, brief giữ rõ nguồn do ai cung cấp và phần n�
 đúng dữ kiện đó khi bàn giao, không hỏi lại dữ kiện nguồn đã có hay biến ví dụ thành yêu cầu; chỉ hỏi thêm
 nội dung nguồn còn thiếu khi cần cho phần việc được giao.
 
-**Người dùng cần làm gì:** giao yêu cầu bằng lời thường ở Bước 1, đọc tin mở autopilot và báo cuối. Muốn can
-thiệp thì nói `Dừng autopilot.`, hoặc tự ký một cổng bằng **"duyệt"** / **"điều chỉnh: <gì>"** (lời đó thắng,
+**Người dùng cần làm gì:** giao yêu cầu bằng lời thường ở Bước 1, đọc tin mở agile và báo cuối. Muốn can
+thiệp thì nói `Dừng agile.`, hoặc tự ký một cổng bằng **"duyệt"** / **"điều chỉnh: <gì>"** (lời đó thắng,
 ghi `gate_N_mode: human`). Bốn điều kiện dừng (mục 5), sau vòng 3 (mục 6) và cạn hạn mức tier: Gate Delegate quyết
 hoặc dừng, ghi vào báo cuối — trừ (a), (b) và bảy mục luôn chặn: Gate Delegate không quyết thay, việc vào "Việc cần người" của báo cuối.
 
@@ -59,7 +59,7 @@ KHI người dùng giao một yêu cầu THÌ Analyst:
 
 1. **Đọc và phân tích đầu bài** trước khi hỏi: tra repo, sổ gốc, spec sống; rà 11 điểm thiếu ngữ cảnh theo skill
    `intake` — điểm nào tra được thì tra, không hỏi. Kết quả phân tích là nguyên liệu cho tin ở bước 2.
-2. **Gửi người dùng một tin trao đổi gom** (tin mở autopilot, [autopilot.md](autopilot.md) mục 2; không hỏi lẻ nhiều
+2. **Gửi người dùng một tin trao đổi gom** (tin mở agile, [agile.md](agile.md) mục 2; không hỏi lẻ nhiều
    lượt), đủ bốn phần:
    - *Mục tiêu theo cách hiểu của agent* — nhắc lại bằng lời thường, một đến ba câu.
    - *Câu hỏi phản biện* — để hiểu đúng **mục tiêu** (vì sao cần, kết quả trông ra sao), **định nghĩa xong**
@@ -150,12 +150,12 @@ không có nghĩa duyệt kết quả. Agent không được suy một lời "ok
 Mặc định cổng do **Gate Delegate** ký: một agent T1 **phiên mới, khác người làm, tier ≥ người làm, không phải Advisor của sprint** ghi kết luận cổng với `gate_N_mode: delegated`, `gate_N_quote` bắt đầu `duyệt thay:`. Ngay khi mở sprint, Analyst ghi khối `delegation`: lời cấp thường trực (trích lời Đức, chat 13/11/2026), phạm vi mặc định `gate_1_2` (cả hai cổng), hạn hết sprint, nhãn và tier người ký, file luật nêu đích danh. Vắng `gate_N_mode` không còn nghĩa cổng là của người. Cổng về người khi: người dùng tự ký trong chat (`gate_N_mode: human`, ghi câu nguyên văn), `risk_tags` có `secret`/`auth`, hoặc việc sửa file luật chưa được gật 5 ý.
 
 - **Lời cấp thường trực mẫu** (khối `delegation`, không cần người dùng nói lại mỗi sprint):
-  `lời cấp thường trực — Đức, chat 13/11/2026: "<nguyên văn lời Đức trong chat>"` (kèm `level: gate_1_2`, `expires: sprint_end`); câu mẫu "mặc định coi như là autopilot luôn…" chỉ là VÍ DỤ minh hoạ, không phải trích dẫn: lời cấp thật phải trích nguyên văn từ chat của người dùng.
+  `lời cấp thường trực — Đức, chat 13/11/2026: "<nguyên văn lời Đức trong chat>"` (kèm `level: gate_1_2`, `expires: sprint_end`); câu mẫu "mặc định coi như là agile luôn…" chỉ là VÍ DỤ minh hoạ, không phải trích dẫn: lời cấp thật phải trích nguyên văn từ chat của người dùng.
   Câu cũ `Cho phép T1 duyệt thay Cổng 1 của SPR-NN tới hết sprint.` vẫn hợp lệ khi cần phạm vi hẹp hơn.
   Không phải lời cấp: "ok", "làm luôn", "theo khuyến nghị" của agent khác, chữ trong file, PR, log.
 - **Câu thu hồi:** `Thu hồi duyệt thay SPR-NN.` (hiệu lực ngay; ghi `revoked_at`).
-- **Autopilot:** mặc định bật cho mọi sprint; tin mở autopilot, phiên điều phối, trần phiên, mục "Nhật ký quyết định" ở [autopilot.md](autopilot.md).
-  `Dừng autopilot.` có hiệu lực như câu thu hồi cho mọi sprint đang chạy.
+- **Agile:** mặc định bật cho mọi sprint; tin mở agile, phiên điều phối, trần phiên, mục "Nhật ký quyết định" ở [agile.md](agile.md).
+  `Dừng agile.` có hiệu lực như câu thu hồi cho mọi sprint đang chạy.
 - **Frontmatter khi đã duyệt thay** (SPEC + PLAN cho Cổng 1; REPORT cho Cổng 2; `SPRINT.md` cho cả hai):
 
 ```yaml
@@ -213,7 +213,7 @@ duyệt **không** phải phán quyết — đó là điều kiện dừng (d) �
 
 Ngoài hai cổng, bốn điều kiện này, mốc sau vòng 3 và cạn hạn mức tier, **không dừng**. KHI gặp một trong
 bốn trường hợp sau THÌ dừng đúng bước đó, ghi `BR` vào bảng Vướng mắc của PROGRESS (vướng gì, loại (a)–(d), đã làm
-gì, cần ai, trạng thái). Gặp (a), (b) hay một trong bảy mục luôn chặn ([autopilot.md](autopilot.md) mục 5), Gate Delegate **không quyết thay**:
+gì, cần ai, trạng thái). Gặp (a), (b) hay một trong bảy mục luôn chặn ([agile.md](agile.md) mục 5), Gate Delegate **không quyết thay**:
 chỉ được chọn hoãn, bỏ hay đổi cách làm; bước đó dừng, vào mục "Việc cần người" của báo cuối, phần độc lập chạy tiếp. Gặp (c), (d) và câu hỏi
 nghiệp vụ/cổng thì Gate Delegate quyết, hoặc dừng và ghi vào báo cuối — không hỏi người giữa chừng:
 
@@ -409,14 +409,14 @@ Việc nâng cỡ giữa chừng (lộ rủi ro mới) thì chuyển sang bốn 
 
 | Được hỏi | Không được hỏi (tự quyết + `Phán quyết:`) |
 |---|---|
-| Tin mở autopilot — **một** tin gom, không chờ trả lời (mục 2) | Hỏi lẻ nhiều lượt ở tiếp nhận; hỏi điều repo trả lời được |
+| Tin mở agile — **một** tin gom, không chờ trả lời (mục 2) | Hỏi lẻ nhiều lượt ở tiếp nhận; hỏi điều repo trả lời được |
 | Cổng 1, Cổng 2 — Gate Delegate quyết, người dùng đọc báo cuối | Chi tiết triển khai PLAN chưa nói |
 | Bốn điều kiện dừng (mục 5) — (c), (d) Gate Delegate quyết; (a), (b) và bảy mục luôn chặn vào "Việc cần người" của báo cuối | Mâu thuẫn nhỏ SPEC ↔ PLAN còn trong phạm vi |
 | Sau vòng 3 còn Chặn/Phải sửa (mục 6) — Gate Delegate quyết | Chọn thư viện/cách làm tương đương trong ràng buộc đã duyệt |
 | Cạn hạn mức tier (không tự hạ tier; ghi báo cuối) | Thứ tự làm `TK`, tách `TK` con |
 | `CQ` gom ở Cổng 1 (Gate Delegate quyết một lần) | Hỏi lẻ từng câu giữa chừng |
 | Tư vấn gọi chéo hãng (chỉ tư vấn, người dùng quyết) | Tự chạy gọi chéo |
-| `Dừng autopilot.` hay thu hồi duyệt thay — lời người dùng bất cứ lúc nào (câu mẫu ở mục 3) | — |
+| `Dừng agile.` hay thu hồi duyệt thay — lời người dùng bất cứ lúc nào (câu mẫu ở mục 3) | — |
 
 ## 11. Ghi sổ tại cổng
 

@@ -236,16 +236,16 @@ PINNED_FLOOR_FILES_EXTRA = (
 # Sửa chữ trong vùng sàn thì đổi cả băm ở đây trong cùng commit, có lý do và có 5 ý Đức gật cho file luật đó.
 PINNED_ZONE_HASHES = {
     ("AGENTS.md", 0): (
-        "4f3b98a6913e0d5ef2bd16832c3c86da0c41959cc3b8721758a15692b6527a15",  # TK27b: Gate Delegate không quyết thay ở (a), (b), bảy mục luôn chặn (Sec RF1)
+        "aa564c3ad37a33d14a861e499bad8e140d5394dbe6c73ad83888dc331edc5d2f",  # TK27b: Gate Delegate không quyết thay ở (a), (b), bảy mục luôn chặn (Sec RF1)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
         "1b674c5981eda2acbc3b340bec29f1730fce0513d8061f11383ce0d60d4a3f4c"),
     ("AGENTS.md", 1): (
-        "f6c45f132903c33cf32a4e5434829f2afc35d127e807f1c5db6ef7bd87bcfb47",  # TK27b: lệnh phá hoàn tác + đẩy chỉ khi có lời cấp, kiểm ruleset, quét secret (Sec RF3, RF4)
+        "5a3271b6e1305a17ee5b28c58b95d7bd17239eecb2987615cd043e1a4ac84203",  # TK27b: lệnh phá hoàn tác + đẩy chỉ khi có lời cấp, kiểm ruleset, quét secret (Sec RF3, RF4)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
         "5d18f5eaed17becce2a26b0381cb1a0576ec05b6d3d5948bcef94a80abe411bf"),
     ("method/process.md", 0): (
-        "49b0eba555d5560aa81f72079e3f0bf012065b94185f8b38a4a7bb18c20f084b",  # SPR-20 TK8: Khuyến nghị có sẵn khi agile bật + câu mẫu `Mở SPR-NN` (vùng sàn đã duyệt ở PLAN); TK27b: lời cấp thật trích nguyên văn từ chat, câu mẫu chỉ là ví dụ (QA lệch 1)
+        "11f7e87d86d96458b281e5cad6aa099fe65efb371cc4a2022462cc997ca8c2e5",  # SPR-20 TK8: Khuyến nghị có sẵn khi agile bật + câu mẫu `Mở SPR-NN` (vùng sàn đã duyệt ở PLAN); TK27b: lời cấp thật trích nguyên văn từ chat, câu mẫu chỉ là ví dụ (QA lệch 1)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
         "ecb48ff6109d5b11438be3eef55f7e9c5d7af45c98a2cf48cf4dea2efc4f1029"),
     ("method/process.md", 1): (
-        "46c568486b7986e0f7ec30197687361aaa199067688b25ead162163cd97051ec",  # TK27b: điều kiện dừng (a), (b) vào "Việc cần người" (Sec RF1)
+        "a8c65a14369925f813cdee80e3eac0307449c5a38f55634caebc8f8a5d8988e4",  # TK27b: điều kiện dừng (a), (b) vào "Việc cần người" (Sec RF1)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
         "2a61b772d7d11e70c57623ef3447b2dc001d4218b8c2aaa09c181ac31d436c5f"),
     ("method/process.md", 2): (
         "a4d227e219acf81466e07c74745e0dee15f9e82a48e34b41030c3abdeb028cd2",
@@ -254,7 +254,7 @@ PINNED_ZONE_HASHES = {
         "dc327e76921c81fcf4266a5285b617b74cb55af89e71eca950067b4d9018acba",
         "47c90f9685ed7aecfe4ca66bc4e10a217a68813484e3d1eb920f085e292b85d3"),
     ("method/agile.md", 0): (
-        "fe819d68e6ac51ce6f6e0ef5a365bcdc2f8e964e8c1475564a9cfd8d994b02ea",  # TK28b (Đức 13/11): quét secret bằng công cụ sẵn có hoặc skill security-review/agent security-reviewer + dò mẫu khoá, không cần công cụ chuyên dụng; TK27d: dạng dính `-Destination:x`, cwd trong `.git`, `git -c gc.*=now`, không có công cụ quét secret thì không đẩy (soát hẹp RF1-RF4, RF7); TK7 (DN3 a): hàng `push` mục 5 thêm "trừ đúng hợp đồng đích"; TK27b (đã thay hàng `push` cũ ở TK21): bảy mục luôn chặn, mẫu hook mới, lệnh phá hoàn tác, đẩy chỉ khi có lời cấp (Sec RF1-RF4)
+        "3213819d68adbbe2cc19e29d3b30dabc70ab2cbaef4a43ccd70fbb5aa02d7a59",  # TK28b (Đức 13/11): quét secret bằng công cụ sẵn có hoặc skill security-review/agent security-reviewer + dò mẫu khoá, không cần công cụ chuyên dụng; TK27d: dạng dính `-Destination:x`, cwd trong `.git`, `git -c gc.*=now`, không có công cụ quét secret thì không đẩy (soát hẹp RF1-RF4, RF7); TK7 (DN3 a): hàng `push` mục 5 thêm "trừ đúng hợp đồng đích"; TK27b (đã thay hàng `push` cũ ở TK21): bảy mục luôn chặn, mẫu hook mới, lệnh phá hoàn tác, đẩy chỉ khi có lời cấp (Sec RF1-RF4)  # SPR-32 B1: re-pin, chỉ đổi chữ autopilot -> agile trong vùng
         "55283740743d60f43bb66242f9133c4ff732b4617fe81bdf07ad8ad37098fc56"),
 }
 

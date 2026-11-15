@@ -159,9 +159,9 @@ REPORT có 1 **carry-over** (CO), đã ghi thành dòng mới trong sổ REQUEST
   attempt so với số manifest yêu cầu, trạng thái đối chiếu ledger, unknown còn lại và việc đổi criteria có
   re-evaluate cả baseline/candidate hay mở experiment mới. Không coi thiếu record là 100% coverage.
 
-## Bản tin autopilot
+## Bản tin agile
 
-<!-- Tên mục giữ nguyên chữ cũ vì `check` còn đọc tiêu đề này; nội dung là bản tin cuối khi agile bật. Tin cuối sprint (một tin gom cùng Cổng 2), người dùng đọc sau, không chặn việc. Ghi theo `method/agile.md`
+<!-- `check` đọc cả tên mục cũ `Bản tin autopilot` (hồ sơ cũ) lẫn tên này; nội dung là bản tin cuối khi agile bật. Tin cuối sprint (một tin gom cùng Cổng 2), người dùng đọc sau, không chặn việc. Ghi theo `method/agile.md`
      mục 8: dòng đầu cảnh báo nếu `main` chưa có ruleset · một câu kết luận (là dòng đầu khi không có cảnh báo) · một dòng mỗi cổng duyệt thay (cổng · kết luận · người ký · đường
      tới file kết luận) · hàng chờ người (`BR` chờ người) · nhánh chờ gộp · số phiên đã dùng / trần · mọi lần dừng và lý do.
      Luôn ghi dòng "số lượt Đức phải trả lời" (`check` báo thiếu ở REPORT sprint mới); việc không xảy ra thì ghi "không có". Ghi thật những gì đã làm; không ghi đã gộp `main` khi Cổng 2 là Đạt có điều kiện (`check` báo Phải sửa). -->

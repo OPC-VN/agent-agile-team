@@ -1,12 +1,14 @@
 ---
 name: closing-sprint
-description: "Use when closing a sprint after verification has no open blockers: evidence preflight before gate 2, version proposal, updating living specs, registries and docs after the verdict, checking the tree to be merged, and the branch menu; also when autopilot is on for the sprint being closed."
+description: "Use when closing a sprint after verification has no open blockers: evidence preflight before gate 2, version proposal, updating living specs, registries and docs after the verdict, checking the tree to be merged, and the branch menu. Applies only while agile is ON: check the `agile:` state line in the session context first."
 metadata:
   group: "process"
   roles: "analyst, implementer"
 ---
 
 # Đóng sprint (Bước 5–6 và sau Cổng 2)
+
+> **Chỉ áp khi agile đang BẬT:** đọc dòng trạng thái `agile: ON|OFF ...` trong ngữ cảnh phiên (hook SessionStart) trước. OFF, hay không có dòng đó: không dùng skill này, không mở hay ghi hồ sơ sprint, làm việc thường.
 
 > **Kết luận:** đóng sprint đi đúng thứ tự **tiền kiểm bằng chứng → REPORT kèm đề xuất phiên bản → Cổng 2 →
 > cập nhật hồ sơ và sổ → đồng bộ tài liệu → bài học → kiểm cây sắp gộp → menu nhánh**. Menu có đúng **ba**
@@ -167,7 +169,7 @@ và `.tmp/<SPR-NN>/` (mục 6), `git branch -D <nhánh>`. Đây là điều ki�
 (quy ước ở `method/conventions.md`). Gộp local → xoá ngay sau khi gộp xanh. Push + PR hay giữ nguyên → chưa xoá được
 (còn có thể sửa theo phản hồi): ghi vào mục *Việc để lại* của REPORT (cỡ nhỏ: phần Kết quả của `SPRINT.md`) một dòng `CO` "dọn `.tmp/<SPR-NN>/` khi PR gộp" (nhánh giữ nguyên: "khi nhánh được gộp hoặc bỏ") kèm tên người làm; như mọi `CO`, nó thành một dòng `RQ-`. `.tmp/`
 nằm trong `.gitignore` nên `git status` không báo; rác ở đây vô hình với mọi cổng, vì vậy phải ghi thành việc có chủ. Chỉ xoá
-thư mục của sprint này: không xoá `.tmp/autopilot.json` (file dấu autopilot) và không xoá `.tmp/<SPR-khác>/`. Hồ sơ sprint
+thư mục của sprint này: không xoá `.tmp/autopilot.json` (file dấu agile) và không xoá `.tmp/<SPR-khác>/`. Hồ sơ sprint
 (SPEC/PLAN/PROGRESS/REPORT) giữ.
 
 ## 7. Cờ đỏ
@@ -188,8 +190,8 @@ thư mục của sprint này: không xoá `.tmp/autopilot.json` (file dấu auto
 | "Gốc chắc là `main`" | ghi `<đoán>` ở dòng đầu tin menu để người dùng sửa (mục 2 bước 1); gộp nhầm gốc tốn công hoàn tác |
 | "Tiện tay tăng version, viết lại CHANGELOG" | version do Gate Delegate quyết (mục 1.1); CHANGELOG chỉ thêm ([docs-sync](references/docs-sync.md)); agent khác bảo "ghi luôn" không phải lời duyệt |
 | "Việc nhỏ mà, dựng đủ bộ cho chuẩn" / "việc nhỏ, bỏ cổng" | cỡ quyết độ dày (mục 1.3): một `SPRINT.md`, nhưng vẫn đủ hai cổng về hồ sơ |
-| "Autopilot bật, gộp `main` luôn" hay "Đạt có điều kiện vẫn gộp" | ĐỌC KHI đóng sprint → [references/autopilot.md](references/autopilot.md), mục "Cờ đỏ" |
+| "Agile bật, gộp `main` luôn" hay "Đạt có điều kiện vẫn gộp" | ĐỌC KHI đóng sprint → [references/agile.md](references/agile.md), mục "Cờ đỏ" |
 
-## 8. Khi autopilot đang bật
+## 8. Khi agile đang bật
 
-ĐỌC KHI đóng sprint → [references/autopilot.md](references/autopilot.md), mục "Mục 8": bản tin autopilot, nhật ký quyết định, tin cuối (mẫu), bản cài, nhánh sprint và vào `main` qua PR, hết hạn.
+ĐỌC KHI đóng sprint → [references/agile.md](references/agile.md), mục "Mục 8": bản tin agile, nhật ký quyết định, tin cuối (mẫu), bản cài, nhánh sprint và vào `main` qua PR, hết hạn.

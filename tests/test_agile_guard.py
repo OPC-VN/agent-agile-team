@@ -450,7 +450,7 @@ def test_guard_marker_name_case_insensitive(tmp_path):
     """S-RF7: tên file dấu so không phân biệt hoa thường trên mọi hệ."""
     repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
     assert_blocked(repo, "rm -rf .tmp/Autopilot.JSON", "irreversible_delete")
-    assert_blocked(repo, "rm -rf .tmp/AGILE*", "irreversible_delete")
+    assert_blocked(repo, "rm -rf .tmp/AUTOPILOT*", "irreversible_delete")
     assert_blocked(repo, "rm -rf .tmp/autopilot.js?n", "irreversible_delete")
 
 

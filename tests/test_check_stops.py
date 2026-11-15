@@ -108,3 +108,15 @@ def test_conditional_pass_merged_main_applies_to_old_sprint(tmp_path):
     bulletin = BULLETIN.format(ask=ASK_LINE, merged="đã gộp vào `main`.")
     root = _report(tmp_path, created="2026-11-12", bulletin=bulletin, conditional=True)
     assert len(_hits(root, "conditional-pass-merged-main")) == 1
+
+
+def test_conditional_pass_merged_main_with_new_agile_heading_flags(tmp_path):
+    """SPR-32 B1: mục mới "Bản tin agile" được đọc như mục cũ "Bản tin autopilot" (hồ sơ cũ vẫn đọc được: cặp trên)."""
+    bulletin = BULLETIN.replace("Bản tin autopilot", "Bản tin agile").format(ask=ASK_LINE, merged="đã gộp vào `main`.")
+    root = _report(tmp_path, created="2026-11-13", bulletin=bulletin, conditional=True)
+    assert len(_hits(root, "conditional-pass-merged-main")) == 1
+
+
+def test_conditional_pass_merged_in_sprint_inline_agile_bulletin_flags(tmp_path):
+    root = _report(tmp_path, created="2026-11-13", bulletin="\n- **Bản tin agile:** đã gộp nhánh vào `main`.\n", conditional=True)
+    assert len(_hits(root, "conditional-pass-merged-main")) == 1

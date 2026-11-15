@@ -93,7 +93,7 @@ phức tạp kỹ thuật nhưng vẫn lớn/high. Human model/effort override k
 ### 3.1 Ngưỡng nhỏ ↔ vừa (đo được)
 
 Bảng ở mục 1 nói "một `FR`", "một luồng có sẵn" nhưng không nói đếm thế nào; ngưỡng dưới đây là **cách đo** định nghĩa đó (điều 1–3) cộng hai số **mới** (điều 4–5) áp **vô điều kiện**,
-dùng để chọn giữa nhỏ và vừa (và để tính trần phiên ở [autopilot.md](autopilot.md) mục 2.1). Việc chỉ là **nhỏ khi cả năm
+dùng để chọn giữa nhỏ và vừa (và để tính trần phiên ở [agile.md](agile.md) mục 2.1). Việc chỉ là **nhỏ khi cả năm
 điều đúng**; một điều sai thì **ít nhất là vừa** (điều 3 sai ở hợp đồng ra ngoài là lớn, mục 1; đổi giao diện nội bộ giữa mô-đun là vừa, mục 5). Năm điều là **điều kiện cần, chưa đủ**: các dấu hiệu khác của hàng Nhỏ ở mục 1 (kể cả "không có quyết định kiến trúc") và vùng rủi ro ở mục 2 vẫn áp. Rất nhỏ, làm thẳng và lớn không đổi.
 
 | # | Điều kiện của nhỏ | Cách đo | Sai khi |
@@ -127,7 +127,7 @@ frontmatter; nó chỉ xuất hiện trong lời trả lời.
 Cỡ ghi ở Bước 1 (Tiếp nhận) sau khi người dùng xác nhận bậc trong lượt trao đổi, có thể **nâng** ở bất kỳ bước nào
 khi lộ rủi ro mới (ghi `Phán quyết:` kèm lý do); **hạ** cỡ chỉ được ở Cổng 1 do người dùng quyết. Việc đang làm
 thẳng mà lộ ra cần hơn 2 thao tác, chạm vùng rủi ro hay kết quả không còn rõ → dừng, mở lượt trao đổi tiếp nhận.
-Mức tự trị ở Brief, chế độ duyệt thay và autopilot không hạ cỡ hay rủi ro.
+Mức tự trị ở Brief, chế độ duyệt thay và agile không hạ cỡ hay rủi ro.
 
 ## 5. Đối chiếu luồng orch
 

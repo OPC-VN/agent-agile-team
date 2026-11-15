@@ -58,10 +58,10 @@ Hook `UserPromptExpansion` (`scripts/agile_hook.py`) đọc lệnh người gõ 
 `scripts/agile_state.py` (không còn file dấu `.tmp/autopilot.json`); hook `SessionStart` đưa dòng trạng thái vào ngữ cảnh. Model không tự bật được.
 
 **Hook chặn lệnh.** Plugin kèm `hooks/hooks.json`: hook `PreToolUse` cho `Bash|PowerShell` chạy guard khi agile **bật**; agile tắt thì guard thoát 0
-và không làm gì. Tên launcher, cách gọi Python và chi tiết cài hook theo chuỗi luật hiện hành (`method/agile.md` và `hooks/hooks.json`).
-Codex và Antigravity chưa có hook này: xem `method/agile.md`.
+và không làm gì. Tên launcher, cách gọi Python và chi tiết cài hook theo chuỗi luật hiện hành ([method/agile.md](../../method/agile.md) và [hooks/hooks.json](../../hooks/hooks.json)).
+Codex và Antigravity chưa có hook này: xem [method/agile.md](../../method/agile.md).
 
-**Lệnh mục tiêu.** `/agent-agile-team:agile-goal` (kèm `SPR-NN` nếu cần) in sẵn khối `/goal` để chạy tiếp sprint đang mở; lệnh chỉ in, người dùng phải gửi khối đó trong chat. Dừng agile dùng `/agile stop` (thay cho câu `Dừng autopilot.` và lệnh `stop-autopilot` cũ).
+**Lệnh mục tiêu.** `/agent-agile-team:agile-goal` (kèm `SPR-NN` nếu cần) in sẵn khối `/goal` để chạy tiếp sprint đang mở; lệnh chỉ in, người dùng phải gửi khối đó trong chat. Dừng agile dùng `/agile stop` (thay cho câu `Dừng agile.` và lệnh `stop-agile` cũ).
 
 ## 3. Kiểm, cập nhật, gỡ
 

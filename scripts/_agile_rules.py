@@ -93,11 +93,11 @@ def parse_moment(value) -> tuple | None:
 
 
 def _stated_level(grant: str) -> str | None:
-    """Mức mà câu lệnh `Bật autopilot …` nêu (`gate_1`, `gate_1_2`, `program`; vắng chữ mức = `gate_1`; mức lạ → `None`);
+    """legacy: old records. Mức mà câu lệnh `Bật autopilot …` nêu (`gate_1`, `gate_1_2`, `program`; vắng chữ mức = `gate_1`; mức lạ → `None`);
     câu không mở đầu bằng tiền tố → `ValueError`."""
     text = unicodedata.normalize("NFC", grant).casefold().strip() if isinstance(grant, str) else ""
     if not text.startswith(AGILE_PREFIX):
-        raise ValueError(f"lời cấp phải mở đầu bằng '{AGILE_PREFIX}' (ví dụ: 'Bật autopilot cổng 1+2 cho SPR-9 tới hết sprint.')")
+        raise ValueError(f"lời cấp phải mở đầu bằng '{AGILE_PREFIX}' (ví dụ: 'Bật autopilot cổng 1+2 cho SPR-9 tới hết sprint.')")  # legacy: old records (ví dụ câu cấp cũ)
     rest = text[len(AGILE_PREFIX):].lstrip()
     if rest.startswith("chương trình"):
         return "program"

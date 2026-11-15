@@ -1,5 +1,5 @@
 ---
-description: In sẵn câu /goal để autopilot tự chạy tiếp tới khi xong sprint (lệnh này không chạy /goal)
+description: In sẵn câu /goal để agile tự chạy tiếp tới khi xong sprint (lệnh này không chạy /goal)
 argument-hint: "[SPR-NN]"
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep
@@ -10,7 +10,7 @@ Việc của bạn chỉ là **đọc sprint đang mở rồi in MỘT khối `/
 Cách làm, theo thứ tự:
 
 1. **Chọn sprint.** Toàn bộ đối số có dạng `SPR-` kèm số (ví dụ `SPR-27`): lấy sprint đó. Không có đối số: lấy sprint ở khối "Đang mở" của sổ `SPRINTS.md` (sổ gốc nằm cạnh `.agile.json`). Có đúng một sprint mở thì đọc `SPRINT.md` (hoặc `PLAN.md`) trong thư mục của nó. Không có sprint nào, có nhiều hơn một, hoặc không đọc được: nói một dòng là không xác định được sprint, rồi vẫn in khối với trần mặc định ở bước 2.
-2. **Điền `{N}` (trần lượt).** Đọc dòng `Trần phiên: <số>` trong PLAN (hoặc mục Ước lượng của `SPRINT.md`) và dùng số đó. Không có dòng ấy thì tính từ cỡ và rủi ro của sprint theo bảng dưới đây (`method/autopilot.md` mục 2.1), không tự đặt số khác. Không đọc được cả hai thì dùng 30 và ghi rõ "30 là mặc định, không đọc được trần của sprint".
+2. **Điền `{N}` (trần lượt).** Đọc dòng `Trần phiên: <số>` trong PLAN (hoặc mục Ước lượng của `SPRINT.md`) và dùng số đó. Không có dòng ấy thì tính từ cỡ và rủi ro của sprint theo bảng dưới đây (`method/agile.md` mục 2.1), không tự đặt số khác. Không đọc được cả hai thì dùng 30 và ghi rõ "30 là mặc định, không đọc được trần của sprint".
 
    | Cỡ | Rủi ro thường | Rủi ro cao |
    |---|---|---|
@@ -23,7 +23,7 @@ Cách làm, theo thứ tự:
 4. **In** đúng một khối dưới đây với `{N}` đã điền (và câu ở bước 3 nếu đổi). Khối không được vượt 4.000 ký tự.
 
 ```text
-/goal Hoàn thành sprint đang mở theo đúng kế hoạch đã qua Cổng 1, không dừng để hỏi những việc không phải điều kiện dừng. Xong khi MỘT trong các điều sau được ghi trong chat, kèm bằng chứng dán nguyên văn (lệnh và dòng kết quả mới chạy, hoặc file:dòng): (A) mọi việc trong PLAN ở trạng thái Xong, bằng chứng từng việc, REPORT đã ghi verdict Đạt hoặc Đạt có điều kiện và `check` thư mục sprint báo 0 Chặn, 0 Phải sửa; hoặc (B) agent đã dừng đúng một điều kiện dừng và nêu rõ: việc không đảo ngược, chạm bảo mật hoặc secret, tác động ra ngoài phạm vi đã giao, hay PLAN hỏng vì giả định sai. Trong lúc làm: gặp lựa chọn mà người dùng chưa trả lời thì chọn phương án khuyến nghị, ghi một dòng 'Phán quyết: <gì> — <vì sao> — <sai thì tốn gì>', rồi làm tiếp; không kết lượt bằng câu hỏi hay khuyến nghị chờ người bấm. Không push, không gộp main, không tag, không sửa file luật hay hai file sàn cứng của autopilot nếu PLAN chưa có lời cấp rõ; việc đó ghi vào 'Việc cần người' của báo cuối và làm các việc khác. Dừng ngay và báo nếu đã chạy {N} lượt mà chưa đạt (A) hoặc (B), hoặc cùng một lỗi lặp lại 3 lần.
+/goal Hoàn thành sprint đang mở theo đúng kế hoạch đã qua Cổng 1, không dừng để hỏi những việc không phải điều kiện dừng. Xong khi MỘT trong các điều sau được ghi trong chat, kèm bằng chứng dán nguyên văn (lệnh và dòng kết quả mới chạy, hoặc file:dòng): (A) mọi việc trong PLAN ở trạng thái Xong, bằng chứng từng việc, REPORT đã ghi verdict Đạt hoặc Đạt có điều kiện và `check` thư mục sprint báo 0 Chặn, 0 Phải sửa; hoặc (B) agent đã dừng đúng một điều kiện dừng và nêu rõ: việc không đảo ngược, chạm bảo mật hoặc secret, tác động ra ngoài phạm vi đã giao, hay PLAN hỏng vì giả định sai. Trong lúc làm: gặp lựa chọn mà người dùng chưa trả lời thì chọn phương án khuyến nghị, ghi một dòng 'Phán quyết: <gì> — <vì sao> — <sai thì tốn gì>', rồi làm tiếp; không kết lượt bằng câu hỏi hay khuyến nghị chờ người bấm. Không push, không gộp main, không tag, không sửa file luật hay hai file sàn cứng của agile nếu PLAN chưa có lời cấp rõ; việc đó ghi vào 'Việc cần người' của báo cuối và làm các việc khác. Dừng ngay và báo nếu đã chạy {N} lượt mà chưa đạt (A) hoặc (B), hoặc cùng một lỗi lặp lại 3 lần.
 ```
 
 Sau khối, in thêm các dòng sau (chữ của bạn, ngắn):

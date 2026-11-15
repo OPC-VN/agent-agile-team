@@ -1,12 +1,14 @@
 ---
 name: running-sprint
-description: "Use when a PLAN has passed gate 1 and tasks must now be executed, by a fresh subagent per task with a review after each or by one agent inline, keeping PROGRESS as the ledger and stopping only for the four stop conditions; also when autopilot is on for the sprint, or `Dừng autopilot.` / `Thu hồi duyệt thay SPR-NN.` arrives mid-run."
+description: "Use when a PLAN has passed gate 1 and tasks must now be executed, by a fresh subagent per task with a review after each or by one agent inline, keeping PROGRESS as the ledger and stopping only for the four stop conditions. Applies only while agile is ON: check the `agile:` state line in the session context first. Also when `/agile stop` / `Thu hồi duyệt thay SPR-NN.` arrives mid-run."
 metadata:
   group: "process"
   roles: "analyst, implementer"
 ---
 
 # Chạy sprint (Bước 3)
+
+> **Chỉ áp khi agile đang BẬT:** đọc dòng trạng thái `agile: ON|OFF ...` trong ngữ cảnh phiên (hook SessionStart) trước. OFF, hay không có dòng đó: không dùng skill này, không mở hay ghi hồ sơ sprint, làm việc thường.
 
 > **Kết luận:** sau Cổng 1, sprint chạy **liên tục** tới việc cuối: mỗi `TK` được giao bằng brief soạn
 > riêng (không dán lịch sử phiên), ghi **vai · tier · model** vào PROGRESS, được agent khác kiểm (`VR`)
@@ -224,8 +226,8 @@ Giữ nguyên sổ, tiền kiểm, bốn điều kiện dừng, phán quyết. K
 | "Implementer tự gọi reviewer — thêm bảo đảm miễn phí" | ghế review trùng, toàn chi phí; đó là lỗi cần ghi, không phải sự kỹ |
 | "Hỏi anh ấy một câu cho chắc" | sau Cổng 1, ngoài bốn điều kiện, hỏi là lỗi (lượt trao đổi tiếp nhận thuộc Bước 1, đã qua); phán quyết và ghi sổ |
 | "Nhớ `TK4` nói gì rồi" | nhớ là bản tóm tắt; brief có giá trị chính xác — đọc lại |
-| "Phiên con báo xong" hay "xin thêm quyền một lần" (autopilot) | ĐỌC KHI nhận hoặc ghi lệnh autopilot → [references/autopilot.md](references/autopilot.md), mục "Cờ đỏ" |
+| "Phiên con báo xong" hay "xin thêm quyền một lần" (agile) | ĐỌC KHI nhận hoặc ghi lệnh agile → [references/agile.md](references/agile.md), mục "Cờ đỏ" |
 
-## 9. Khi autopilot đang bật (mặc định mọi sprint)
+## 9. Khi agile đang bật
 
-ĐỌC KHI chạy sprint hay nhận `Dừng autopilot.` → [references/autopilot.md](references/autopilot.md), mục "Mục 9": file dấu theo phiên con, sổ phiên con, bảy mục luôn chặn, `Dừng autopilot.`, `Thu hồi duyệt thay`, brief cấm ghi `delegation`; "Mục 10": tin mở autopilot.
+ĐỌC KHI chạy sprint hay nhận `/agile stop` → [references/agile.md](references/agile.md), mục "Mục 9": file dấu theo phiên con, sổ phiên con, bảy mục luôn chặn, `/agile stop`, `Thu hồi duyệt thay`, brief cấm ghi `delegation`; "Mục 10": tin mở agile.

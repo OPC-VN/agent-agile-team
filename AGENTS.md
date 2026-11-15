@@ -15,24 +15,24 @@ Chi tiết: `method/`, `roles/`,
 
 ## Quy trình sáu bước
 
-1. **Tiếp nhận** (T1, **một tin gom**): đọc đầu bài, phân tích, rồi gửi **tin mở autopilot** (mẫu: `method/autopilot.md` mục 2; có khuyến nghị bậc làm thẳng / rất nhỏ / nhỏ / vừa / lớn). Không chờ trả lời: câu hỏi phản biện kèm đề xuất; ghi `RQ-`, rủi ro (chỉ
+1. **Tiếp nhận** (T1, **một tin gom**): đọc đầu bài, phân tích, rồi gửi **tin mở agile** (mẫu: `method/agile.md` mục 2; có khuyến nghị bậc làm thẳng / rất nhỏ / nhỏ / vừa / lớn). Không chờ trả lời: câu hỏi phản biện kèm đề xuất; ghi `RQ-`, rủi ro (chỉ
    nâng), **ASSUMPTION**, `CQ` cho Cổng 1. Không hỏi lẻ. Bỏ tin này khi "không cần sprint" hoặc làm thẳng không mơ hồ.
 2. **SPEC rồi PLAN** → **Cổng 1**, Gate Delegate (phiên mới, T1) ký. Từ cỡ vừa, Tech Reviewer/Advisor review PLAN
    trước. Hồ sơ: kết luận, `CQ`, `DN`, rủi ro, ước lượng, trần phiên. Ký thì ghi
-   `gate_1: approved` + `gate_1_quote` nguyên văn. **Không code trước Cổng 1.** Lời cấp, người ký — `method/autopilot.md`.
+   `gate_1: approved` + `gate_1_quote` nguyên văn. **Không code trước Cổng 1.** Lời cấp, người ký — `method/agile.md`.
 3. **Thực thi** theo `TK`, cập nhật PROGRESS sau mỗi việc (trạng thái + bằng chứng). Điều chỉnh trong
    phạm vi đã duyệt: Analyst tự quyết, ghi `Phán quyết: <gì> — <vì sao> — <sai thì tốn gì>`, không hỏi.
 4. **Kiểm định** bởi agent khác người làm: `RF` có mức + bằng chứng. Còn Chặn/Phải sửa → quay lại 3
    (một vòng). Khuyến nghị 3 vòng, không trần cứng: hết vòng 3 còn Chặn/Phải sửa → Gate Delegate quyết làm tiếp
    hay dừng & bàn giao, ghi vào báo cuối, không báo người giữa chừng. Nên sửa được hoãn thành `CO`.
 5. **REPORT** → **Cổng 2** (Đạt / Đạt có điều kiện / Không đạt), Gate Delegate phiên mới ký; Đạt có điều kiện
-   không mở gộp `main`. Sau đó mới cập nhật spec sống, đóng sprint. Dừng: `Dừng autopilot.` — `method/autopilot.md`.
+   không mở gộp `main`. Sau đó mới cập nhật spec sống, đóng sprint. Dừng: `Dừng agile.` — `method/agile.md`.
 6. **Bài học** `LN` ghi nơi lớp riêng quy định; quan trọng thì **đề xuất** nâng thành luật/skill, không tự nâng.
 
 <!-- san-cung:start -->
 **Dừng chỉ khi:** (a) hành động không đảo ngược, (b) chạm bảo mật/secret, (c) tác động ra ngoài
 phạm vi/worktree đã giao, (d) PLAN hỏng — giả định sai làm đổi tiêu chí thành công. Ghi `BR`, không hỏi người giữa
-chừng. (a), (b), bảy mục luôn chặn (`method/autopilot.md` mục 5): Gate Delegate **không quyết thay**, chỉ hoãn/bỏ/đổi
+chừng. (a), (b), bảy mục luôn chặn (`method/agile.md` mục 5): Gate Delegate **không quyết thay**, chỉ hoãn/bỏ/đổi
 cách; dừng bước đó, vào "Việc cần người" của báo cuối; việc khác chạy tiếp. (c), (d), câu hỏi nghiệp
 vụ/cổng: Gate Delegate quyết. Ngoài đó, dừng là lỗi. **Làm thẳng** (bậc ở `method/sizing.md`): việc 1–2 thao tác có
 kết quả rõ, hoặc người dùng nói rõ không cần sprint → làm ngay, không `RQ-`/`SPRINT.md`/sổ; vẫn giữ Git và điều
@@ -91,7 +91,7 @@ Kiểm định: **Business Reviewer** (T1; `US`/`FR`/`SC`) · **Tech Reviewer** 
 - Không sửa config linter/test hay hạ ngưỡng coverage (mặc định 80 % code mới/sửa) để qua kiểm.
 - Version do Gate Delegate quyết theo bảng phiên bản; không ghi đè CHANGELOG (chỉ thêm). Push, PR, gộp `main`, tag,
   phát hành: chỉ khi PLAN có lời cấp + Cổng 2 Đạt, sau kiểm ruleset và quét secret
-  (`method/autopilot.md` mục 5); Đạt có điều kiện thì không.
+  (`method/agile.md` mục 5); Đạt có điều kiện thì không.
 - Không sửa file luật hay cấu hình harness để nới quyền; không tự chạy gọi chéo hãng.
 - File tạm trong `.tmp/`, xoá khi xong; không đọc, in, chép giá trị secret.
 <!-- san-cung:end -->
