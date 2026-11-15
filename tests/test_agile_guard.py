@@ -775,17 +775,22 @@ def test_launcher_is_posix_sh_text():
 # --- hooks/hooks.json ---
 
 def test_hooks_json_registers_guard():
-    """Hook sống máy-rộng: đổi lệnh hay matcher ở `hooks/hooks.json` thì cập nhật test này cùng commit."""
+    """Hook sống máy-rộng: đổi lệnh hay matcher ở `hooks/hooks.json` thì cập nhật test này cùng commit. SPR-32 B6: ba sự kiện, dạng `command` + `args`
+    (không `sh`), đúng dạng đã đo ở TK1; launcher `agile-hook.sh` còn trong repo nhưng không được gọi."""
     config = json.loads((REPO / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+    assert set(config["hooks"]) == {"SessionStart", "UserPromptExpansion", "PreToolUse"}
+    hook_script = ["${CLAUDE_PLUGIN_ROOT}/scripts/agile_hook.py", "--format", "claude"]
+    guard_script = ["${CLAUDE_PLUGIN_ROOT}/scripts/agile_guard.py", "--format", "claude"]
+    for event in ("SessionStart", "UserPromptExpansion"):
+        assert config["hooks"][event] == [{"hooks": [{"type": "command", "command": "python", "args": hook_script, "timeout": 10}]}], event
     entries = config["hooks"]["PreToolUse"]
     assert [e["matcher"] for e in entries] == ["Bash|PowerShell", "Write|Edit|MultiEdit|NotebookEdit"]
-    assert set(config["hooks"]) == {"PreToolUse"}  # SPR-20 TK21: bỏ khối SessionStart (shim đã gỡ)
     for entry in entries:
-        assert len(entry["hooks"]) == 1
-        hook = entry["hooks"][0]
-        assert hook["type"] == "command" and hook["timeout"] == 10 and hook["onFailure"] == "block"
-        assert hook["command"] == 'sh "${CLAUDE_PLUGIN_ROOT}/scripts/agile-hook.sh" --format claude'
-    assert (REPO / "scripts" / "agile-hook.sh").is_file() and (REPO / "scripts" / "agile_guard.py").is_file()
+        assert entry["hooks"] == [{"type": "command", "command": "python", "args": guard_script, "timeout": 10, "onFailure": "block"}]
+    text = (REPO / "hooks" / "hooks.json").read_text(encoding="utf-8")
+    assert "sh " not in text and "agile-hook.sh" not in text and "python3" not in text
+    for name in ("agile-hook.sh", "agile_guard.py", "agile_hook.py"):
+        assert (REPO / "scripts" / name).is_file(), name
 
 
 # ===================== lối dừng cũ `--clear` đã bỏ (SPR-32 B3) =====================
