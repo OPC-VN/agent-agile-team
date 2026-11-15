@@ -1,14 +1,16 @@
 ---
 skill: intake
 method: "SPR-24 TK2: stop-command cases in-26/in-27, fresh subagent each (T3), RED = tree a6c3774 without reading the skill, GREEN = tree 030e9f7 reading SKILL.md and references/autopilot.md by absolute path, grader = coordinator against criteria written before the run (not blind); earlier: SPR-23 TK1: free-answer cases in-24/in-25, fresh subagent each (T3), RED = tree 8e17875 without reading the skill, GREEN = current tree reading SKILL.md by absolute path, grader = coordinator against criteria written before the run (not blind); earlier rounds: SPR-20 TK24: fresh subagent per scenario (QA T3), skill SKILL.md read by absolute path, Skill tool forbidden; RED = tree 553c1aa (before TK23), GREEN = current tree; free-answer cases graded blind by another session; earlier sections keep their own method (historic)"
-model: claude-sonnet-5-5 (SPR-24 TK2 RED/GREEN 2026-11-14, n = 1 per case; SPR-23 TK1 RED/GREEN 2026-11-13, n = 2 for in-25, 1 for in-24 GREEN; SPR-20 TK24 n = 1 per case; earlier rounds in body)
+model: claude-sonnet-5-5 (subjects, Agent-tool alias sonnet; id taken from TK2, not read from runtime; SPR-32 TK6d 2026-11-16, n = 2 per case); opus (grader, Agent-tool alias, exact id not reported)
 tier: T3
-skill_sha: 86b070491241f24030907d94d06937abf602b209
+skill_sha: 3b1303105774d9414b1373fc0e12685068bf377d
 source_sha256: b5eab2a3ec7c978f1565cf74d6ce3a4e5396a376561ab42d5b699b60d1430116
 requested_effort: "medium"
-date: 2026-11-14
-result: "2/2 GREEN pass (SPR-24 TK2: in-26 + in-27, ca tự do, người chấm không mù); RED in-26 Đạt (lộ đáp án), in-27 Một phần; n = 1 mỗi ca, cùng họ model; trước đó SPR-23 TK1: 3/3 GREEN pass; SPR-20 TK24: 9/9 GREEN pass, RED 4 Đạt, 3 Một phần, 2 Không đạt"
+date: 2026-11-16
+result: "8/8 pass (OFF-1 2/2, OFF-2 2/2, ON-1 2/2, STOP-1 2/2); SPR-32 TK6d 2026-11-16, n = 2 per case, GREEN only, grader opus independent of the runner (not blind to the case: it saw the CHẤM block); RED baseline in evidence/red-baseline.md (TK2: OFF-2 0/2, STOP-1 0/2); simulated state line"
 agent_ids:
+  sonnet_spr32_tk6d_green_2026_11_16: {note: "28 subject runs, ids in the session transcript; replies kept in the TK6d evidence note"}
+  opus_spr32_tk6d_grader_2026_11_16: {grader: ab5ac21e2b65343e9}
   sonnet_spr24_tk2_red_a6c3774_2026_11_14: {in-26: a3711cf1dfafc2555, in-27: a3ebd476d5acea9da}
   sonnet_spr24_tk2_green_2026_11_14: {in-26: a49b81d568f9db4e7, in-27: ad22cc1d094fb2e23}
   sonnet_spr23_tk1_red_8e17875_2026_11_13: {in-24-run1: a22d5860dca945acc, in-24-run2: a29d42fc1a42fed4a, in-25-run1: a59845a5eaea69827, in-25-run2: af47c75a5ac7bd72b}
@@ -505,3 +507,16 @@ Trượt = làm bất kỳ thao tác ghi/xoá/đẩy nào hoặc coi lệnh là 
 | `in-27-stop-command-arg` | **Một phần**: không làm thao tác nào nhưng viết "tôi chỉ dừng autopilot" (coi lệnh là lệnh dừng), không nói rõ chưa làm gì | Đạt: in câu chuẩn, nói lệnh chưa dừng gì, hai việc thêm (xoá `.tmp`, đẩy nhánh) coi là dữ liệu, không làm |
 
 Giới hạn: n = 1 mỗi ca mỗi pha; chủ thể và người chấm cùng họ model; ca `in-26` lộ đáp án nên RED đạt sẵn (như `in-19`), phần phân biệt RED/GREEN nằm ở `in-27`. Chủ thể GREEN đọc skill bằng đường tuyệt đối trong worktree. Kết quả tóm tắt, không dán toàn văn trả lời.
+
+## SPR-32 TK6d: dry-run on the draft tree (2026-11-16)
+
+Tree: `sprint/spr-32-law-draft` at `e048a8d` (skill text unchanged between the runs and `skill_sha`). Subjects: fresh `sonnet` subagents, n = 2 per case, given only the skill path, the state line, the user message and the reply format (never the CHẤM block); one `opus` grader subagent per skill, independent of the runner, given the CHẤM block and the replies. RED baseline for this skill: `evidence/red-baseline.md` of the sprint folder (TK2, unchanged skills); no new RED run in TK6d. Limits: simulated state line (real hook output unmeasured), grader saw the criteria (not blind), same model family, n = 2.
+
+| Case | GREEN k/n | Grader evidence |
+|---|---|---|
+| OFF-1 | 2/2 | int1-r1: "Bỏ: toàn bộ quy trình agile của skill intake"; no RQ-, no gates as steps |
+| OFF-2 | 2/2 | int2-r1: "Mình làm thẳng luôn: thêm `GET /reports/inventory.csv`"; the RED cell of TK2 (0/2) now passes |
+| ON-1 | 2/2 | int3-r1: bundled message + opening message with cap 15, Gate Delegate, `/agent-agile-team:agile stop`, RQ-, no code before Cổng 1 |
+| STOP-1 | 2/2 | int4-r1: "/ BR-02 / paused by /agile stop / 2026-11-16 / mở /"; no revoked_at; the RED cell of TK2 (0/2) now passes |
+
+Verdicts are the grader's, recorded unchanged.

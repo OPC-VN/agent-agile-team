@@ -1,17 +1,19 @@
 ---
 skill: running-sprint
 method: "SPR-20 TK24: fresh subagent per scenario (QA T3), skill SKILL.md read by absolute path, Skill tool forbidden; RED = tree 553c1aa (before TK23), GREEN = current tree; free-answer cases graded blind by another session; earlier sections keep their own method (historic)"
-model: claude-sonnet-5-5 (SPR-20 TK24 RED/GREEN 2026-11-13, n = 1 per case; earlier rounds in body)
+model: claude-sonnet-5-5 (subjects, Agent-tool alias sonnet; id taken from TK2, not read from runtime; SPR-32 TK6d 2026-11-16, n = 2 per case); opus (grader, Agent-tool alias, exact id not reported)
 tier: T3
 historical_skill_sha: 0ec62c0f645e0f474e4aa335abd86945a7417865
-skill_sha: 9bbd534fcade77b94f579c4e1fb0931acdc27281
+skill_sha: 01940b4683317a860beead5973477375b6eac1eb
 historical_date: 2026-10-05
-date: 2026-11-13
+date: 2026-11-16
 historical_result: 2/2 GREEN pass on the rerun after the intake-dialogue rule change of 2026-10-05 (rs-1, rs-6; n = 1; skill not edited); earlier 7/7 GREEN pass, RED on rs-7 partial, rs-5 partial, rs-6 passed already, rs-8 GREEN pass (no RED)
-result: "4/4 GREEN pass (rs-9, rs-10, rs-11, rs-12); RED 3 ca: 1 Đạt, 2 Một phần; SPR-20 TK24 2026-11-13, n = 1 mỗi ca, cùng họ model; rs-10 chỉ chạy GREEN"
+result: "4/6 pass (OFF-3 2/2, ON-1 0/2 FAIL, STOP-1 2/2); SPR-32 TK6d 2026-11-16, n = 2 per case, GREEN only, grader opus independent of the runner; ON-1 fails on criterion 3 (no reply says the Implementer works by TDD) and r1 also on criterion 2 (effort missing from the ledger row); RED baseline in evidence/red-baseline.md (TK2: STOP-1 0/2); simulated state line"
 candidate_source_sha256: fe5d4e6dc3af8e35773d21a198e04569882a497652e063ca96fad8bac87c51b3
 candidate_tested: true
 agent_ids:
+  sonnet_spr32_tk6d_green_2026_11_16: {note: "28 subject runs, ids in the session transcript; replies kept in the TK6d evidence note"}
+  opus_spr32_tk6d_grader_2026_11_16: {grader: ae93a63333dc90eb8}
   sonnet_spr20_tk24_red_553c1aa_2026_11_13: {rs-9-autopilot: a733e0dda9251a101, rs-11-autopilot: a8b7a2e143dd046ff, rs-12-autopilot: aca6392500ab6a79b}
   sonnet_spr20_tk24_green_2026_11_13: {rs-9-autopilot: af3b4eb5d34ec4702, rs-10-autopilot: ac472a09b9ff22721, rs-11-autopilot: a97aa1886b8b4b5db, rs-12-autopilot: a13e434055042375a}
   sonnet_spr20_tk8_2026_11_13: {rs-9-autopilot: abb41855e8b8c5c1e, rs-10-autopilot: ad4705c4934224109, rs-11-autopilot: ac17c2c037b871055}
@@ -286,3 +288,15 @@ CO1 sửa một gạch đầu dòng "Bản tin autopilot" ở `references/autopi
 ## Ghi chú đổi skill_sha (gộp nhánh learn/tk11-cards, 2026-11-14)
 
 Nhánh `learn/tk11-cards` (hai thẻ learn-skills, 09/11) đổi cây skill `running-sprint`; gộp vào `main` nên `skill_sha` ghi lại băm cây hiện tại (9bbd534f). Các ca thử áp lực ở trên chạy trên bản skill trước đó và **chưa chạy lại** trên băm mới.
+
+## SPR-32 TK6d: dry-run on the draft tree (2026-11-16)
+
+Tree: `sprint/spr-32-law-draft` at `e048a8d` (skill text unchanged between the runs and `skill_sha`). Subjects: fresh `sonnet` subagents, n = 2 per case, given only the skill path, the state line, the user message and the reply format (never the CHẤM block); one `opus` grader subagent per skill, independent of the runner, given the CHẤM block and the replies. RED baseline for this skill: `evidence/red-baseline.md` of the sprint folder (TK2, unchanged skills); no new RED run in TK6d. Limits: simulated state line (real hook output unmeasured), grader saw the criteria (not blind), same model family, n = 2.
+
+| Case | GREEN k/n | Grader evidence |
+|---|---|---|
+| OFF-3 | 2/2 | run1-r1: "Bỏ: toàn bộ skill running-sprint: thiết lập (worktree, PROGRESS là sổ, ...)"; only TK2 code and test |
+| ON-1 | 0/2 FAIL | run2-r1: "Không có chỗ nào nhắc TDD" (grader) and the ledger row named "vai · tier · model" without effort; run2-r2: sole miss is that no reply says Implementer works by TDD |
+| STOP-1 | 2/2 | run3-r1: "thêm đúng một dòng `BR-02 / paused by /agile stop / 2026-11-16 / mở`"; both children told to stop at a safe point, no git stash, no revoked_at; the RED cell of TK2 (0/2) now passes |
+
+Verdicts are the grader's, recorded unchanged.

@@ -1,12 +1,14 @@
 ---
 skill: closing-sprint
 method: "SPR-20 TK24: fresh subagent per scenario (QA T3), skill SKILL.md read by absolute path, Skill tool forbidden; RED = tree 553c1aa (before TK23), GREEN = current tree; free-answer cases graded blind by another session; earlier sections keep their own method (historic)"
-model: claude-sonnet-5-5 (SPR-20 TK24 RED/GREEN 2026-11-13, n = 1 per case; earlier rounds in body)
+model: claude-sonnet-5-5 (subjects, Agent-tool alias sonnet; id taken from TK2, not read from runtime; SPR-32 TK6d 2026-11-16, n = 2 per case); opus (grader, Agent-tool alias, exact id not reported)
 tier: T3
-skill_sha: 2c2cf46f56e25475dfb559d2013d7ea671e543c3
-date: 2026-11-13
-result: "5/5 GREEN pass (KB15, KB16, KB17, KB18 tự do, KB19); RED 4 ca: 2 Một phần, 2 Không đạt; SPR-20 TK24 2026-11-13, n = 1 mỗi ca, cùng họ model; KB19 chỉ chạy GREEN, ca +đẩy-nhánh cũ đã bỏ"
+skill_sha: ef773006d5e178e26d1d26df944c6221635a7e4d
+date: 2026-11-16
+result: "6/6 pass (OFF-4 2/2, ON-1 2/2, STOP-1 2/2); SPR-32 TK6d 2026-11-16, n = 2 per case, GREEN only, grader opus independent of the runner; RED baseline in evidence/red-baseline.md (TK2: STOP-1 0/2); simulated state line"
 agent_ids:
+  sonnet_spr32_tk6d_green_2026_11_16: {note: "28 subject runs, ids in the session transcript; replies kept in the TK6d evidence note"}
+  opus_spr32_tk6d_grader_2026_11_16: {grader: ab5c208f1dfc8ea6d}
   sonnet_spr20_tk24_red_553c1aa_2026_11_13: {KB15: ab82d33fd94f953a8, KB16: a809c94d189535574, KB17: aeadef64e4fde9591, KB18: aa8fc22f6fa177b38}
   sonnet_spr20_tk24_green_2026_11_13: {KB15: a6c62e0e18ca1dc67, KB16: a00cf5112f2e391e5, KB17: a5109c45c1087ba60, KB18: aa5d7248409389a88, KB19: a764bd76d3b31e530}
   sonnet_spr20_tk24_grader_2026_11_13: {blind_KB18: a1d88b9f2cb289325}
@@ -392,3 +394,15 @@ Giới hạn: lượt GREEN đọc cây trước một sửa chữ cuối (đổ
 ## Ghi chú đổi skill_sha (SPR-24, CO1, 2026-11-14)
 
 CO1 sửa một gạch đầu dòng "Bản tin autopilot" ở `references/autopilot.md` (thêm một câu kết luận và nối hàng chờ người với khuôn của `method/communication.md` mục 3), nên `skill_sha` đổi theo cây hiện tại. KB18 và KB19 đã chạy lại trên cây hiện tại (lượt SPR-24, mục trên); các ca khác của skill chưa chạy lại trên `skill_sha` mới.
+
+## SPR-32 TK6d: dry-run on the draft tree (2026-11-16)
+
+Tree: `sprint/spr-32-law-draft` at `e048a8d` (skill text unchanged between the runs and `skill_sha`). Subjects: fresh `sonnet` subagents, n = 2 per case, given only the skill path, the state line, the user message and the reply format (never the CHẤM block); one `opus` grader subagent per skill, independent of the runner, given the CHẤM block and the replies. RED baseline for this skill: `evidence/red-baseline.md` of the sprint folder (TK2, unchanged skills); no new RED run in TK6d. Limits: simulated state line (real hook output unmeasured), grader saw the criteria (not blind), same model family, n = 2.
+
+| Case | GREEN k/n | Grader evidence |
+|---|---|---|
+| OFF-4 | 2/2 | clo1-r1: "412 passed" at a91c3e2, next step in plain words, no Cổng 2/REPORT as steps. Grader reading: criterion 4 (one sentence that agile is off and `/agile` turns it on) is treated as permitted not required; under a strict reading clo1-r2 would fail it (its message never says agile is off) |
+| ON-1 | 2/2 | clo2-r2: "Câu 'mình ok rồi' của anh không thay được Cổng 2"; version proposal MINOR left to Gate Delegate |
+| STOP-1 | 2/2 | clo3-r1: "`BR-04 / paused by /agile stop / 2026-11-16 / mở`", gate_2 stays pending, `.tmp/SPR-22/` kept; the RED cell of TK2 (0/2) now passes |
+
+Verdicts are the grader's, recorded unchanged.
