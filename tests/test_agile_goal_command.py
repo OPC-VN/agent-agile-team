@@ -1,7 +1,7 @@
-"""Lệnh gạch chéo `commands/autopilot-goal.md` (SPR-27, RQ-131): chỉ **in** khối `/goal` cho người dùng tự gửi.
+"""Lệnh gạch chéo `commands/agile-goal.md` (SPR-27, RQ-131): chỉ **in** khối `/goal` cho người dùng tự gửi.
 
 Hỏng kiểu này thì hỏng im lặng: lệnh tự chạy `/goal` hay có công cụ ghi/shell; thân câu `/goal` lệch bản Đức duyệt
-(mất điều kiện dừng, mất câu cấm push); trần lượt bịa thay vì lấy từ `method/autopilot.md` mục 2.1; câu `/goal` vượt
+(mất điều kiện dừng, mất câu cấm push); trần lượt bịa thay vì lấy từ `method/agile.md` mục 2.1; câu `/goal` vượt
 4.000 ký tự nên bị từ chối; đối số của người dùng bị coi là chỉ dẫn.
 """
 
@@ -10,10 +10,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import _autopilot_rules as rules
+import _agile_rules as rules
 
 REPO = Path(__file__).resolve().parent.parent
-COMMAND = REPO / "commands" / "autopilot-goal.md"
+COMMAND = REPO / "commands" / "agile-goal.md"
 GOAL_LIMIT = 4000
 READ_ONLY_TOOLS = {"Read", "Glob", "Grep"}
 # Thân câu /goal Đức duyệt (SPR-27 lời giao); `{N}` là trần lượt, `{PUSH}` là câu cấm hoặc câu lời cấp.
@@ -24,7 +24,7 @@ APPROVED_GOAL_PARTS = (
     "hoặc (B) agent đã dừng đúng một điều kiện dừng và nêu rõ: việc không đảo ngược, chạm bảo mật hoặc secret, tác động ra ngoài phạm vi đã giao, hay PLAN hỏng vì giả định sai.",
     "Trong lúc làm: gặp lựa chọn mà người dùng chưa trả lời thì chọn phương án khuyến nghị, ghi một dòng 'Phán quyết: <gì> — <vì sao> — <sai thì tốn gì>', rồi làm tiếp;",
     "không kết lượt bằng câu hỏi hay khuyến nghị chờ người bấm.",
-    "Không push, không gộp main, không tag, không sửa file luật hay hai file sàn cứng của autopilot nếu PLAN chưa có lời cấp rõ;",
+    "Không push, không gộp main, không tag, không sửa file luật hay hai file sàn cứng của agile nếu PLAN chưa có lời cấp rõ;",
     "việc đó ghi vào 'Việc cần người' của báo cuối và làm các việc khác.",
     "Dừng ngay và báo nếu đã chạy {N} lượt mà chưa đạt (A) hoặc (B), hoặc cùng một lỗi lặp lại 3 lần.",
 )
@@ -47,7 +47,7 @@ NOTE_PHRASES = (
 
 
 def text() -> str:
-    assert COMMAND.is_file(), "thiếu commands/autopilot-goal.md"
+    assert COMMAND.is_file(), "thiếu commands/agile-goal.md"
     return COMMAND.read_text(encoding="utf-8")
 
 
@@ -113,7 +113,7 @@ def test_push_sentence_has_a_forbid_variant_and_a_grant_variant():
     assert "Đạt có điều kiện" in body and "không gộp" in body, "Đạt có điều kiện không mở gộp main"
 
 
-def test_cap_table_matches_method_autopilot_formula():
+def test_cap_table_matches_method_agile_formula():
     body = text()
     for size, label in (("tiny", "rất nhỏ"), ("small", "nhỏ"), ("medium", "vừa"), ("large", "lớn")):
         normal, high = rules.session_cap_formula(size, "normal"), rules.session_cap_formula(size, "high")
@@ -159,8 +159,8 @@ def test_only_a_whole_spr_argument_is_accepted():
     assert "toàn bộ đối số" in body.lower() and "SPR-" in body and "hợp lệ" in body
 
 
-def test_command_file_is_not_in_the_autopilot_fence():
-    assert "commands/autopilot-goal.md" not in rules.FENCE_FILES
+def test_command_file_is_not_in_the_agile_fence():
+    assert "commands/agile-goal.md" not in rules.FENCE_FILES
 
 
 def test_each_printed_note_is_its_own_bullet():

@@ -1,8 +1,8 @@
-"""Test ghim dòng nối của rào autopilot (SPR-16 TK2): hằng và validator nằm ở `scripts/_autopilot_rules.py`,
+"""Test ghim dòng nối của rào agile (SPR-16 TK2): hằng và validator nằm ở `scripts/_agile_rules.py`,
 `check.py` gọi đúng một lần và dùng kết quả, guard không nhập gì từ `check`.
 
 File này thuộc sàn cứng (`FLOOR_FILES`). Nó kiểm bằng đọc văn bản và cây AST, **không nhập** `check` hay
-`autopilot_guard`, để test đột biến xoá hay phá một file không biến assertion thành lỗi nạp test.
+`agile_guard`, để test đột biến xoá hay phá một file không biến assertion thành lỗi nạp test.
 """
 
 from __future__ import annotations
@@ -15,26 +15,26 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO / "scripts"
-RULES = SCRIPTS / "_autopilot_rules.py"
+RULES = SCRIPTS / "_agile_rules.py"
 CHECK = SCRIPTS / "check.py"
-GUARD = SCRIPTS / "autopilot_guard.py"
+GUARD = SCRIPTS / "agile_guard.py"
 
 # Bản ghim viết tay: mỗi lần danh sách đổi, đổi cả chỗ này trong cùng commit và nêu lý do ở thông điệp commit.
 PINNED_FENCE_FILES = (
-    "method/autopilot.md",
-    "skills/intake/references/autopilot.md",
-    "skills/running-sprint/references/autopilot.md",
-    "skills/closing-sprint/references/autopilot.md",
-    "scripts/_autopilot_rules.py",
-    "scripts/autopilot_guard.py",
-    "scripts/autopilot-hook.sh",
+    "method/agile.md",
+    "skills/intake/references/agile.md",
+    "skills/running-sprint/references/agile.md",
+    "skills/closing-sprint/references/agile.md",
+    "scripts/_agile_rules.py",
+    "scripts/agile_guard.py",
+    "scripts/agile-hook.sh",
     "hooks/hooks.json",
 )
 PINNED_EXCLUSIONS = {"push", "tag", "version", "main_merge", "publish", "license", "irreversible_delete",
                      "rules_unlisted", "user_soul", "secret", "auth", "network_fetch", "branch_merge_local"}
-PINNED_NAMES = ("DELEGATION_KEYS", "DELEGATION_OPTIONAL_KEYS", "AUTOPILOT_PREFIX", "AUTOPILOT_LEVELS", "AUTOPILOT_PUSH_FLAG",
-                "AUTOPILOT_EXCLUSIONS", "AUTOPILOT_GATES_BOTH", "AUTOPILOT_BRANCH_SUFFIX", "DELEGATION_CHANNELS",
-                "DATE", "MOMENT", "parse_moment", "autopilot_problem", "FENCE_FILES",
+PINNED_NAMES = ("DELEGATION_KEYS", "DELEGATION_OPTIONAL_KEYS", "AGILE_PREFIX", "AGILE_LEVELS", "AGILE_PUSH_FLAG",
+                "AGILE_EXCLUSIONS", "AGILE_GATES_BOTH", "AGILE_BRANCH_SUFFIX", "DELEGATION_CHANNELS",
+                "DATE", "MOMENT", "parse_moment", "agile_problem", "FENCE_FILES",
                 "FLOOR_ZONES", "FLOOR_FILES", "FLOOR_MARKER_START", "FLOOR_MARKER_END", "zone_spans")
 
 
@@ -76,10 +76,10 @@ def module_bindings(tree: ast.Module) -> dict[str, list[ast.AST]]:
 
 
 def rules_constant(name: str):
-    """Giá trị literal của hằng module `name` trong `_autopilot_rules.py`, đọc bằng AST (không nhập module)."""
+    """Giá trị literal của hằng module `name` trong `_agile_rules.py`, đọc bằng AST (không nhập module)."""
     nodes = module_bindings(parse(RULES)).get(name, [])
     if not nodes:
-        raise AssertionError(f"fence-def-shadowed: {name} không có trong _autopilot_rules.py")
+        raise AssertionError(f"fence-def-shadowed: {name} không có trong _agile_rules.py")
     node = nodes[-1]
     value = node.value if isinstance(node, (ast.Assign, ast.AnnAssign)) else None
     return _evaluate(value)
@@ -95,13 +95,13 @@ def _evaluate(node):
 
 
 def validator_calls(tree: ast.Module) -> list[tuple[ast.Call, ast.AST | None]]:
-    """Mọi `Call` tới `rules.autopilot_problem` kèm hàm chứa nó."""
+    """Mọi `Call` tới `rules.agile_problem` kèm hàm chứa nó."""
     out = []
     for func in ast.walk(tree):
         if isinstance(func, (ast.FunctionDef, ast.AsyncFunctionDef)):
             for node in ast.walk(func):
                 if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                        and node.func.attr == "autopilot_problem"
+                        and node.func.attr == "agile_problem"
                         and isinstance(node.func.value, ast.Name) and node.func.value.id == "rules"):
                     out.append((node, func))
     # `ast.walk` lặp một lời gọi lồng nhiều hàm: giữ hàm trong cùng nhất (xuất hiện cuối)
@@ -114,7 +114,7 @@ def validator_calls(tree: ast.Module) -> list[tuple[ast.Call, ast.AST | None]]:
 def delegation_call():
     tree = parse(CHECK)
     calls = validator_calls(tree)
-    assert len(calls) == 1, (f"fence-call-missing: cần đúng một lời gọi rules.autopilot_problem trong check.py, "
+    assert len(calls) == 1, (f"fence-call-missing: cần đúng một lời gọi rules.agile_problem trong check.py, "
                              f"có {len(calls)}")
     call, func = calls[0]
     assert func.name == "_delegation", f"fence-call-missing: lời gọi nằm ở {func.name}, không phải _delegation"
@@ -172,12 +172,12 @@ def test_validator_call_reachable():
 @pytest.mark.parametrize("name", PINNED_NAMES)
 def test_no_shadowed_definitions(name):
     nodes = module_bindings(parse(RULES)).get(name, [])
-    assert len(nodes) == 1, (f"fence-def-shadowed: {name} có {len(nodes)} chỗ gắn tên trong _autopilot_rules.py "
+    assert len(nodes) == 1, (f"fence-def-shadowed: {name} có {len(nodes)} chỗ gắn tên trong _agile_rules.py "
                              f"(cần đúng 1, không định nghĩa lại sau)")
 
 
 def test_validator_is_a_function_taking_block():
-    node = module_bindings(parse(RULES))["autopilot_problem"][0]
+    node = module_bindings(parse(RULES))["agile_problem"][0]
     assert isinstance(node, ast.FunctionDef) and [a.arg for a in node.args.args] == ["block"]
 
 
@@ -195,15 +195,15 @@ def test_guard_does_not_import_check(path):
 
 
 def test_guard_imports_exclusions_from_rules():
-    imported = [n for n in ast.walk(parse(GUARD)) if isinstance(n, ast.ImportFrom) and n.module == "_autopilot_rules"]
+    imported = [n for n in ast.walk(parse(GUARD)) if isinstance(n, ast.ImportFrom) and n.module == "_agile_rules"]
     names = {a.name for n in imported for a in n.names}
-    assert "AUTOPILOT_EXCLUSIONS" in names, "fence-import-from-check: guard phải nhập AUTOPILOT_EXCLUSIONS từ _autopilot_rules"
+    assert "AGILE_EXCLUSIONS" in names, "fence-import-from-check: guard phải nhập AGILE_EXCLUSIONS từ _agile_rules"
 
 
 def test_check_imports_rules():
     tree = parse(CHECK)
-    assert any(isinstance(n, ast.Import) and any(a.name == "_autopilot_rules" and a.asname == "rules" for a in n.names)
-               for n in ast.walk(tree)), "fence-call-missing: check.py phải có `import _autopilot_rules as rules`"
+    assert any(isinstance(n, ast.Import) and any(a.name == "_agile_rules" and a.asname == "rules" for a in n.names)
+               for n in ast.walk(tree)), "fence-call-missing: check.py phải có `import _agile_rules as rules`"
 
 
 # --- FR1.1: danh sách file rào -----------------------------------------------------------------------------------
@@ -219,14 +219,14 @@ def test_fence_files_exist():
 
 
 def test_exclusions_pinned():
-    values = rules_constant("AUTOPILOT_EXCLUSIONS")
+    values = rules_constant("AGILE_EXCLUSIONS")
     assert len(values) == 13 and len(set(values)) == 13 and set(values) == PINNED_EXCLUSIONS, (
-        f"fence-exclusions-changed: AUTOPILOT_EXCLUSIONS khác 13 mục ghim ({sorted(set(values) ^ PINNED_EXCLUSIONS)})")
+        f"fence-exclusions-changed: AGILE_EXCLUSIONS khác 13 mục ghim ({sorted(set(values) ^ PINNED_EXCLUSIONS)})")
 
 
 # --- FR2.1: vùng sàn cứng ------------------------------------------------------------------------------------------
 
-PINNED_FLOOR_ZONES = {"AGENTS.md": 2, "method/process.md": 3, "method/sizing.md": 1, "method/autopilot.md": 1}
+PINNED_FLOOR_ZONES = {"AGENTS.md": 2, "method/process.md": 3, "method/sizing.md": 1, "method/agile.md": 1}
 PINNED_FLOOR_FILES_EXTRA = (
     "scripts/floor_check.py", "scripts/merge_ready.py", "scripts/deploy_scan.py", "tests/test_fence_wiring.py",
     "tests/test_floor_check.py", "tests/test_mutation_floor.py",
@@ -242,7 +242,7 @@ PINNED_ZONE_HASHES = {
         "f6c45f132903c33cf32a4e5434829f2afc35d127e807f1c5db6ef7bd87bcfb47",  # TK27b: lệnh phá hoàn tác + đẩy chỉ khi có lời cấp, kiểm ruleset, quét secret (Sec RF3, RF4)
         "5d18f5eaed17becce2a26b0381cb1a0576ec05b6d3d5948bcef94a80abe411bf"),
     ("method/process.md", 0): (
-        "49b0eba555d5560aa81f72079e3f0bf012065b94185f8b38a4a7bb18c20f084b",  # SPR-20 TK8: Khuyến nghị có sẵn khi autopilot bật + câu mẫu `Mở SPR-NN` (vùng sàn đã duyệt ở PLAN); TK27b: lời cấp thật trích nguyên văn từ chat, câu mẫu chỉ là ví dụ (QA lệch 1)
+        "49b0eba555d5560aa81f72079e3f0bf012065b94185f8b38a4a7bb18c20f084b",  # SPR-20 TK8: Khuyến nghị có sẵn khi agile bật + câu mẫu `Mở SPR-NN` (vùng sàn đã duyệt ở PLAN); TK27b: lời cấp thật trích nguyên văn từ chat, câu mẫu chỉ là ví dụ (QA lệch 1)
         "ecb48ff6109d5b11438be3eef55f7e9c5d7af45c98a2cf48cf4dea2efc4f1029"),
     ("method/process.md", 1): (
         "46c568486b7986e0f7ec30197687361aaa199067688b25ead162163cd97051ec",  # TK27b: điều kiện dừng (a), (b) vào "Việc cần người" (Sec RF1)
@@ -253,7 +253,7 @@ PINNED_ZONE_HASHES = {
     ("method/sizing.md", 0): (
         "dc327e76921c81fcf4266a5285b617b74cb55af89e71eca950067b4d9018acba",
         "47c90f9685ed7aecfe4ca66bc4e10a217a68813484e3d1eb920f085e292b85d3"),
-    ("method/autopilot.md", 0): (
+    ("method/agile.md", 0): (
         "fe819d68e6ac51ce6f6e0ef5a365bcdc2f8e964e8c1475564a9cfd8d994b02ea",  # TK28b (Đức 13/11): quét secret bằng công cụ sẵn có hoặc skill security-review/agent security-reviewer + dò mẫu khoá, không cần công cụ chuyên dụng; TK27d: dạng dính `-Destination:x`, cwd trong `.git`, `git -c gc.*=now`, không có công cụ quét secret thì không đẩy (soát hẹp RF1-RF4, RF7); TK7 (DN3 a): hàng `push` mục 5 thêm "trừ đúng hợp đồng đích"; TK27b (đã thay hàng `push` cũ ở TK21): bảy mục luôn chặn, mẫu hook mới, lệnh phá hoàn tác, đẩy chỉ khi có lời cấp (Sec RF1-RF4)
         "55283740743d60f43bb66242f9133c4ff732b4617fe81bdf07ad8ad37098fc56"),
 }

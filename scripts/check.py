@@ -29,9 +29,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import _autopilot_rules as rules  # noqa: E402
+import _agile_rules as rules  # noqa: E402
 import _common as c  # noqa: E402
-from _autopilot_rules import (AUTOPILOT_EXCLUSIONS, DATE, DELEGATION_KEYS, DELEGATION_OPTIONAL_KEYS,  # noqa: E402,F401
+from _agile_rules import (AGILE_EXCLUSIONS, DATE, DELEGATION_KEYS, DELEGATION_OPTIONAL_KEYS,  # noqa: E402,F401
                               MOMENT, parse_moment)
 
 CHAN, PHAI, NEN, GHI = "Chặn", "Phải sửa", "Nên sửa", "Ghi chú"
@@ -84,7 +84,7 @@ RULES: dict[str, tuple[str, str]] = {
     "frontmatter-duplicate-key": (PHAI, "khoá `delegation` lặp trong frontmatter (chỉ một phiên điều phối ghi lời cấp)"),
     "decision-owner-missing": (NEN, "CQ/DN của sprint từ ngày chế độ mở mà bảng thiếu cột hoặc ô 'Người quyết'"),
     "report-missing-ask-count": (NEN, "REPORT của sprint từ ngày chế độ mở thiếu dòng 'số lượt Đức phải trả lời' (có số)"),
-    "conditional-pass-merged-main": (PHAI, "Cổng 2 'Đạt có điều kiện' mà bản tin autopilot ghi đã gộp `main`: Đạt có điều kiện thì nhánh chờ người"),
+    "conditional-pass-merged-main": (PHAI, "Cổng 2 'Đạt có điều kiện' mà bản tin agile ghi đã gộp `main`: Đạt có điều kiện thì nhánh chờ người"),
     "hard-floor-marker": (CHAN, "`--self`: cặp mốc `san-cung` ở file luật lệch, mất hoặc thừa so với số cặp quy định"),
     "routing-invalid": (PHAI, "routing evidence marker/JSON/record không hợp lệ"),
     "routing-unknown": (GHI, "routing record có field ngoài schema 1"),
@@ -168,6 +168,7 @@ REQUIRED_HEADINGS = {
 ASK_COUNT_LINE = re.compile(r"số lượt đức phải trả lời[^0-9\n]*[0-9]", re.IGNORECASE)  # FR7.4: dòng đếm lượt có số
 MERGED_MAIN = re.compile(r"đã gộp[^.\n]*(?:\bmain\b|nhánh chính)")  # FR7.2: bản tin khai đã gộp vào nhánh chính (chữ đã hạ về chữ thường)
 MERGE_COMMIT_LINE = re.compile(r"^[\s>*_-]*commit gộp")  # dòng nhãn "Commit gộp": có mã băm thì là đã gộp
+BULLETIN_HEADINGS = ("bản tin agile", "bản tin autopilot")  # legacy: old records (mục cũ "Bản tin autopilot" vẫn được đọc; chữ đã hạ về chữ thường)
 HEADING_LEVEL = re.compile(r"^(#{1,6})\s")  # dòng tiêu đề Markdown; cấp = số dấu #
 HEX_SHA = re.compile(r"\b[0-9a-f]{7,40}\b")
 
@@ -1425,7 +1426,7 @@ class Engine:
                        "thiếu khối delegation (lời cấp, phạm vi, hạn, người duyệt)")
         if self._unknown_delegation_key(doc, mode_key):
             return
-        problem = rules.autopilot_problem(block)
+        problem = rules.agile_problem(block)
         if problem is not None:
             return bad(*problem)
         listed = block.get("files")
@@ -1466,7 +1467,7 @@ class Engine:
         signer = block.get("by")
         if isinstance(signer, str) and signer.strip() and signer != "pending":  # trước kiểm T1 để tier thấp hơn người làm cũng được gọi tên
             self._signer_independence(doc, block, signer, gate)
-        self._autopilot_records(doc, gate, block)
+        self._agile_records(doc, gate, block)
         if grant_at[0].isoformat() >= rules.MODE_OPEN_EFFECTIVE_DATE and isinstance(data.get("roles"), dict):  # RQ-059: cổng đã kết luận thì vai thực thi không còn `pending`
             for role in sorted(({"analyst", "architect"} if gate == "gate_1" else EXECUTORS) & set(data["roles"])):
                 value = data["roles"][role]
@@ -1574,7 +1575,7 @@ class Engine:
     @staticmethod
     def _verdict_file(doc: Doc, gate: str, once) -> None:
         """Cổng `delegated` đã kết luận: `evidence/gate-<N>-verdict.md` (cạnh tài liệu) tồn tại và dòng đầu của nó bằng `gate_<N>_quote`
-        (`method/autopilot.md` mục 6.3). Thiếu hay lệch → một phát hiện ở dòng `gate_<N>_mode`."""
+        (`method/agile.md` mục 6.3). Thiếu hay lệch → một phát hiện ở dòng `gate_<N>_mode`."""
         number = gate[-1]
         name = f"gate-{number}-verdict.md"
         verdict = doc.path.resolve().parent / "evidence" / name
@@ -1591,10 +1592,10 @@ class Engine:
         if isinstance(quote, str) and first != quote.strip():
             once(line, f"dòng đầu của evidence/{name} không khớp {gate}_quote")
 
-    def _autopilot_records(self, doc: Doc, gate: str, block: dict) -> None:
+    def _agile_records(self, doc: Doc, gate: str, block: dict) -> None:
         """Hồ sơ phải có của duyệt thay mới (SPR-20 TK25; chỉ khi `grant_at` từ `MODE_OPEN_EFFECTIVE_DATE`, hồ sơ cũ giữ nguyên kết quả):
         REPORT ở Cổng 2 phải có mục `## Nhật ký quyết định` với ít nhất một dòng đủ ai ký (nhãn · vai · tier · model, bốn phần cách nhau
-        bằng `·`), bằng chứng, lệnh hoàn tác (`method/autopilot.md` mục 8); PLAN ở Cổng 1 phải có dòng `Trần phiên: <số nguyên >= 1>`
+        bằng `·`), bằng chứng, lệnh hoàn tác (`method/agile.md` mục 8); PLAN ở Cổng 1 phải có dòng `Trần phiên: <số nguyên >= 1>`
         trong mục `## Ước lượng` (mục 2.1)."""
         moment = parse_moment(block.get("grant_at"))
         if moment is None or moment[0].isoformat() < rules.MODE_OPEN_EFFECTIVE_DATE:
@@ -1612,7 +1613,7 @@ class Engine:
                 self.add(doc.path, doc.key_line("gate_1_mode"), "session-cap-missing", problem)
 
     def _session_cap_problem(self, doc: Doc, block: dict) -> str | None:
-        """Trần phiên của duyệt thay mới (`method/autopilot.md` mục 2.1): dòng `Trần phiên: <N>` (PLAN: mục 'Ước lượng'; `SPRINT.md`: cả file),
+        """Trần phiên của duyệt thay mới (`method/agile.md` mục 2.1): dòng `Trần phiên: <N>` (PLAN: mục 'Ước lượng'; `SPRINT.md`: cả file),
         `delegation.sessions_cap` là số nguyên khớp N (null hay vắng không hợp lệ), N không vượt công thức theo `size`/`risk` — vượt thì
         Nhật ký quyết định (của file này hoặc tài liệu cùng sprint) phải có dòng 'nâng trần'."""
         cap, inside = None, doc.kind == "sprint"
@@ -1632,7 +1633,7 @@ class Engine:
             return f"'Trần phiên: {cap}' khác delegation.sessions_cap ({held})"
         formula = rules.session_cap_formula(doc.data.get("size"), doc.data.get("risk"))
         if formula is not None and cap > formula and not self._cap_raise_logged(doc):
-            return (f"Trần phiên {cap} vượt công thức {formula} (cỡ {doc.data.get('size')}, rủi ro {doc.data.get('risk')}, method/autopilot.md mục 2.1) "
+            return (f"Trần phiên {cap} vượt công thức {formula} (cỡ {doc.data.get('size')}, rủi ro {doc.data.get('risk')}, method/agile.md mục 2.1) "
                     "mà Nhật ký quyết định không có dòng 'nâng trần'")
         return None
 
@@ -1777,21 +1778,21 @@ class Engine:
         if doc.kind == "report" and DATE.fullmatch(created) and created >= rules.MODE_OPEN_EFFECTIVE_DATE:
             if not any(ASK_COUNT_LINE.search(text) for _, text in body):
                 self.add(doc.path, doc.key_line("created"), "report-missing-ask-count",
-                         "REPORT thiếu dòng 'số lượt Đức phải trả lời: <số>' (bản tin autopilot, method/autopilot.md mục 8)")
+                         "REPORT thiếu dòng 'số lượt Đức phải trả lời: <số>' (bản tin agile, method/agile.md mục 8)")
         if doc.data.get("gate_2") != "conditional_pass":
             return
-        bulletin_level = 0  # 0 = ngoài mục "Bản tin autopilot"; còn lại = cấp tiêu đề của mục đang đọc
+        bulletin_level = 0  # 0 = ngoài mục "Bản tin agile" (hoặc "Bản tin autopilot" của hồ sơ cũ); còn lại = cấp tiêu đề của mục đang đọc
         for idx, text in body:
             folded = text.casefold()
             heading = HEADING_LEVEL.match(text)
             if heading:
                 level = len(heading.group(1))
-                if "bản tin autopilot" in folded:
+                if any(h in folded for h in BULLETIN_HEADINGS):
                     bulletin_level = level
                 elif bulletin_level and level <= bulletin_level:
                     bulletin_level = 0
                 continue
-            if not bulletin_level and "bản tin autopilot" not in folded:  # tin cuối chỉ nằm ở mục bản tin (hoặc dòng mục nhỏ của SPRINT.md)
+            if not bulletin_level and not any(h in folded for h in BULLETIN_HEADINGS):  # tin cuối chỉ nằm ở mục bản tin (hoặc dòng mục nhỏ của SPRINT.md)
                 continue
             if MERGED_MAIN.search(folded) or (MERGE_COMMIT_LINE.search(folded) and HEX_SHA.search(folded)):
                 self.add(doc.path, doc.line_no(idx), "conditional-pass-merged-main",

@@ -18,7 +18,7 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / "scripts" / "floor_check.py"
 WORKFLOW = REPO / ".github" / "workflows" / "verify.yml"
-ZONE_FILES = ("AGENTS.md", "method/process.md", "method/sizing.md", "method/autopilot.md")
+ZONE_FILES = ("AGENTS.md", "method/process.md", "method/sizing.md", "method/agile.md")
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="không có lệnh git")
 
@@ -68,7 +68,7 @@ def lab(tmp_path):
     git(root, "init", "-q", "-b", "main")
     for rel in ZONE_FILES:
         put(root, rel, (REPO / rel).read_text(encoding="utf-8"))
-    for rel in ("scripts/autopilot_guard.py", "scripts/floor_check.py", "hooks/hooks.json", ".github/workflows/verify.yml"):
+    for rel in ("scripts/agile_guard.py", "scripts/floor_check.py", "hooks/hooks.json", ".github/workflows/verify.yml"):
         put(root, rel, f"# {rel}\n")
     put(root, "README.md", "# lab\n")
     base = commit(root, "base")
@@ -106,11 +106,11 @@ def test_no_floor_change_passes(lab):
 
 def test_zone_text_changed_is_flagged(lab):
     root, base = lab
-    line = zone_line(root, "method/autopilot.md")
-    edit(root, "method/autopilot.md", line, line + " (đã sửa)")
+    line = zone_line(root, "method/agile.md")
+    edit(root, "method/agile.md", line, line + " (đã sửa)")
     commit(root, "head")
     code, out = run(root, base)
-    assert code == 1 and "floor-zone-changed method/autopilot.md" in out, out
+    assert code == 1 and "floor-zone-changed method/agile.md" in out, out
 
 
 def test_moved_end_marker_is_flagged(lab):
@@ -134,14 +134,14 @@ def test_marker_removed_is_flagged(lab):
 
 def test_floor_file_removed_renamed_added_changed(lab):
     root, base = lab
-    git(root, "mv", "scripts/autopilot_guard.py", "scripts/guard_renamed.py")
+    git(root, "mv", "scripts/agile_guard.py", "scripts/guard_renamed.py")
     put(root, "hooks/hooks.json", "# hooks đã sửa\n")
     put(root, "scripts/merge_ready.py", "# mới\n")
     (root / ".github/workflows/verify.yml").unlink()
     commit(root, "head")
     code, out = run(root, base)
     assert code == 1, out
-    for expected in ("floor-file-renamed scripts/autopilot_guard.py", "floor-file-changed hooks/hooks.json",
+    for expected in ("floor-file-renamed scripts/agile_guard.py", "floor-file-changed hooks/hooks.json",
                      "floor-file-added scripts/merge_ready.py", "floor-file-removed .github/workflows/verify.yml"):
         assert expected in out, out
 
@@ -237,7 +237,7 @@ def test_ci_step_runs_base_script_not_head_script(lab, tmp_path):
     root, _ = lab
     # base có bản floor_check.py thật; head thay bằng script độc hại in PWNED
     put(root, "scripts/floor_check.py", SCRIPT.read_text(encoding="utf-8"))
-    put(root, "scripts/_autopilot_rules.py", (REPO / "scripts" / "_autopilot_rules.py").read_text(encoding="utf-8"))
+    put(root, "scripts/_agile_rules.py", (REPO / "scripts" / "_agile_rules.py").read_text(encoding="utf-8"))
     commit(root, "base thật")
     origin = tmp_path / "origin.git"
     subprocess.run(["git", "clone", "-q", "--bare", str(root), str(origin)], check=True)
@@ -298,7 +298,7 @@ def test_in_process_strict_report_json_and_errors(lab):
     line = zone_line(root, "method/sizing.md")
     edit(root, "method/sizing.md", line, line + " (đã sửa)")
     put(root, "hooks/hooks.json", "# hooks đã sửa\n")
-    git(root, "mv", "scripts/autopilot_guard.py", "scripts/g2.py")
+    git(root, "mv", "scripts/agile_guard.py", "scripts/g2.py")
     put(root, "scripts/merge_ready.py", "# mới\n")
     (root / ".github/workflows/verify.yml").unlink()
     commit(root, "head")

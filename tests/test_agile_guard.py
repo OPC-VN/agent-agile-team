@@ -1,4 +1,4 @@
-"""Test cho scripts/autopilot_guard.py — rào máy autopilot (hook PreToolUse). Chạy: python -m pytest -q tests/test_autopilot_guard.py"""
+"""Test cho scripts/agile_guard.py — rào máy agile (hook PreToolUse). Chạy: python -m pytest -q tests/test_agile_guard.py"""
 
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ import sys
 
 import pytest
 
-import _autopilot_rules
-import autopilot_guard
+import _agile_rules
+import agile_guard
 from pathlib import Path
 
 from conftest import REPO, SCRIPTS
 
-ALL = list(_autopilot_rules.AUTOPILOT_EXCLUSIONS)
+ALL = list(_agile_rules.AGILE_EXCLUSIONS)
 WITHOUT_BRANCH = [e for e in ALL if e != "branch_merge_local"]
 
 
@@ -60,7 +60,7 @@ def claude(cmd, cwd, tool="Bash"):
 def run(fmt, payload, *extra):
     raw = payload if isinstance(payload, str) else json.dumps(payload)
     out, err = io.StringIO(), io.StringIO()
-    rc = autopilot_guard.main(["--format", fmt, *extra], stdin=io.StringIO(raw), stdout=out, stderr=err)
+    rc = agile_guard.main(["--format", fmt, *extra], stdin=io.StringIO(raw), stdout=out, stderr=err)
     return rc, out.getvalue(), err.getvalue()
 
 
@@ -82,14 +82,14 @@ PINNED_EXCLUSIONS = {"push", "tag", "version", "main_merge", "publish", "license
 
 
 def test_guard_uses_rules_exclusions():
-    assert autopilot_guard.known_exclusions() == _autopilot_rules.AUTOPILOT_EXCLUSIONS
+    assert agile_guard.known_exclusions() == _agile_rules.AGILE_EXCLUSIONS
 
 
 def test_guard_exclusions_pinned_to_thirteen():
-    """Bớt một mục ở `_autopilot_rules.AUTOPILOT_EXCLUSIONS` sẽ tắt chặn im lặng: ghim danh sách viết tay để test đỏ."""
+    """Bớt một mục ở `_agile_rules.AGILE_EXCLUSIONS` sẽ tắt chặn im lặng: ghim danh sách viết tay để test đỏ."""
     assert len(PINNED_EXCLUSIONS) == 13
-    assert set(autopilot_guard.known_exclusions()) == PINNED_EXCLUSIONS
-    assert set(_autopilot_rules.AUTOPILOT_EXCLUSIONS) == PINNED_EXCLUSIONS and len(_autopilot_rules.AUTOPILOT_EXCLUSIONS) == 13
+    assert set(agile_guard.known_exclusions()) == PINNED_EXCLUSIONS
+    assert set(_agile_rules.AGILE_EXCLUSIONS) == PINNED_EXCLUSIONS and len(_agile_rules.AGILE_EXCLUSIONS) == 13
 
 
 # --- các test PLAN -----------------------------------------------------------------------------------------------
@@ -306,7 +306,7 @@ def test_guard_bad_stdin_without_marker_passes_and_with_marker_blocks(tmp_path, 
     repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker())
     monkeypatch.chdir(repo)
     rc, _, err = run("claude", "{broken")
-    assert rc == 2 and "autopilot" in err
+    assert rc == 2 and "agile" in err
     rc, out, _ = run("antigravity", "null")
     assert rc == 0 and json.loads(out)["decision"] == "deny"
 
@@ -314,10 +314,10 @@ def test_guard_bad_stdin_without_marker_passes_and_with_marker_blocks(tmp_path, 
 def test_guard_unexpected_exception_closed_with_marker(tmp_path, monkeypatch):
     repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
     monkeypatch.chdir(repo)  # ngoại lệ lạ → dò file dấu từ thư mục của tiến trình hook
-    monkeypatch.setattr(autopilot_guard, "_analyze", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(agile_guard, "_analyze", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
     rc, _, err = run("claude", claude("git status", repo))
     assert rc == 2 and "RuntimeError" in err
-    monkeypatch.setenv("AUTOPILOT_GUARD_DEBUG", "1")
+    monkeypatch.setenv("AGILE_GUARD_DEBUG", "1")
     rc, _, err = run("claude", claude("git status", repo))
     assert rc == 2 and "Traceback" in err
     # không có file dấu: lỗi lạ không chặn việc của người dùng
@@ -350,10 +350,10 @@ def test_guard_cli_subprocess(tmp_path):
     import subprocess
     repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
     payload = json.dumps(claude("rm -rf x", repo))
-    proc = subprocess.run([sys.executable, str(SCRIPTS / "autopilot_guard.py"), "--format", "claude"], input=payload,
+    proc = subprocess.run([sys.executable, str(SCRIPTS / "agile_guard.py"), "--format", "claude"], input=payload,
                           capture_output=True, text=True, encoding="utf-8", cwd=str(repo))
     assert proc.returncode == 2 and "'irreversible_delete'" in proc.stderr and proc.stdout == ""
-    ok = subprocess.run([sys.executable, str(SCRIPTS / "autopilot_guard.py"), "--format", "antigravity"], input="{broken",
+    ok = subprocess.run([sys.executable, str(SCRIPTS / "agile_guard.py"), "--format", "antigravity"], input="{broken",
                         capture_output=True, text=True, encoding="utf-8", cwd=str(tmp_path))
     assert ok.returncode == 0 and ok.stdout.strip() == "{}"
 
@@ -401,7 +401,7 @@ def test_guard_error_after_event_dir_probes_event_dir(tmp_path, monkeypatch):
     def boom():
         raise ImportError("check không nhập được")
 
-    monkeypatch.setattr(autopilot_guard, "known_exclusions", boom)
+    monkeypatch.setattr(agile_guard, "known_exclusions", boom)
     rc, _, err = run("claude", claude("git push", repo))
     assert rc == 2 and "ImportError" in err
     rc, out, _ = run("antigravity", {"toolCall": {"name": "run_command", "args": {"CommandLine": "git push", "Cwd": str(repo)}}})
@@ -409,7 +409,7 @@ def test_guard_error_after_event_dir_probes_event_dir(tmp_path, monkeypatch):
     assert run("claude", claude("git push", away)) == (0, "", "")  # thư mục sự kiện không file dấu: lỗi không chặn
     monkeypatch.undo()
     monkeypatch.chdir(away)
-    monkeypatch.setattr(autopilot_guard, "_analyze", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(agile_guard, "_analyze", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
     rc, _, err = run("claude", claude("git status", repo))
     assert rc == 2 and "RuntimeError" in err
 
@@ -450,7 +450,7 @@ def test_guard_marker_name_case_insensitive(tmp_path):
     """S-RF7: tên file dấu so không phân biệt hoa thường trên mọi hệ."""
     repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
     assert_blocked(repo, "rm -rf .tmp/Autopilot.JSON", "irreversible_delete")
-    assert_blocked(repo, "rm -rf .tmp/AUTOPILOT*", "irreversible_delete")
+    assert_blocked(repo, "rm -rf .tmp/AGILE*", "irreversible_delete")
     assert_blocked(repo, "rm -rf .tmp/autopilot.js?n", "irreversible_delete")
 
 
@@ -652,7 +652,7 @@ def test_guard_git_c_from_outside_repo_finds_marker(tmp_path):
 # --- launcher ---
 
 SH = shutil.which("sh")
-LAUNCHER = Path(os.environ.get("AUTOPILOT_LAUNCHER_PATH", str(SCRIPTS / "autopilot-hook.sh")))
+LAUNCHER = Path(os.environ.get("AGILE_LAUNCHER_PATH", str(SCRIPTS / "agile-hook.sh")))
 
 
 def run_launcher(cwd, payload, path_dirs, extra_env=None):
@@ -729,15 +729,15 @@ def test_hooks_json_registers_guard():
         assert len(entry["hooks"]) == 1
         hook = entry["hooks"][0]
         assert hook["type"] == "command" and hook["timeout"] == 10 and hook["onFailure"] == "block"
-        assert hook["command"] == 'sh "${CLAUDE_PLUGIN_ROOT}/scripts/autopilot-hook.sh" --format claude'
-    assert (REPO / "scripts" / "autopilot-hook.sh").is_file() and (REPO / "scripts" / "autopilot_guard.py").is_file()
+        assert hook["command"] == 'sh "${CLAUDE_PLUGIN_ROOT}/scripts/agile-hook.sh" --format claude'
+    assert (REPO / "scripts" / "agile-hook.sh").is_file() and (REPO / "scripts" / "agile_guard.py").is_file()
 
 
 # ===================== lối dừng tường minh: --clear =====================
 
 def clear_cli(directory):
     out, err = io.StringIO(), io.StringIO()
-    rc = autopilot_guard.main(["--clear", str(directory)], stdin=io.StringIO(""), stdout=out, stderr=err)
+    rc = agile_guard.main(["--clear", str(directory)], stdin=io.StringIO(""), stdout=out, stderr=err)
     return rc, out.getvalue(), err.getvalue()
 
 
@@ -784,10 +784,10 @@ def test_clear_oserror_reported(tmp_path, monkeypatch):
 def test_clear_cli_subprocess_needs_no_format(tmp_path):
     import subprocess
     repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
-    done = subprocess.run([sys.executable, str(SCRIPTS / "autopilot_guard.py"), "--clear", str(repo)], capture_output=True, text=True,
+    done = subprocess.run([sys.executable, str(SCRIPTS / "agile_guard.py"), "--clear", str(repo)], capture_output=True, text=True,
                           encoding="utf-8", cwd=str(tmp_path))
     assert done.returncode == 0 and not (repo / ".tmp" / "autopilot.json").exists()
-    missing = subprocess.run([sys.executable, str(SCRIPTS / "autopilot_guard.py")], capture_output=True, text=True, encoding="utf-8",
+    missing = subprocess.run([sys.executable, str(SCRIPTS / "agile_guard.py")], capture_output=True, text=True, encoding="utf-8",
                              cwd=str(tmp_path), input="{}")
     assert missing.returncode == 2 and "--format" in missing.stderr  # argparse lỗi tham số
 
@@ -795,8 +795,8 @@ def test_clear_cli_subprocess_needs_no_format(tmp_path):
 def test_guard_allows_clear_command_of_this_plugin(tmp_path):
     repo = make_repo(tmp_path / "a", branch="spr-12", marker=good_marker())
     other = make_repo(tmp_path / "b", branch="spr-12", marker=good_marker())
-    guard = fwd(SCRIPTS / "autopilot_guard.py")
-    launcher = fwd(SCRIPTS / "autopilot-hook.sh")
+    guard = fwd(SCRIPTS / "agile_guard.py")
+    launcher = fwd(SCRIPTS / "agile-hook.sh")
     for cmd in ("python {g} --clear {d}", "python3 {g} --clear {d}", "py -3 {g} --clear {d}", "python -I {g} --clear {d}",
                 "python -X utf8 {g} --clear {d}", "sh {l} --clear {d}", "bash {l} --clear {d}", "python {g} --clear {d}/",
                 "cd {d} && python {g} --clear {d}", "python {g} --clear ."):
@@ -807,19 +807,19 @@ def test_guard_allows_clear_command_of_this_plugin(tmp_path):
 
 @pytest.mark.parametrize("cmd", [
     "python other.py --clear {d}/.tmp/autopilot.json", "python other.py --clear {d}/.tmp", "python {g} other.py --clear {d}/.tmp",
-    "python /elsewhere/autopilot_guard.py --clear {d}/.tmp/autopilot.json",
+    "python /elsewhere/agile_guard.py --clear {d}/.tmp/autopilot.json",
     "python {g} --clear {d} > {d}/.tmp/autopilot.json", "python {g} --clear {d}>{d}/.tmp/autopilot.json",
     "python {g} --format claude --clear {d}/.tmp/autopilot.json",
 ])
 def test_guard_blocks_lookalike_clear_commands(tmp_path, cmd):
     repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
-    rc, _, err = run("claude", claude(cmd.format(g=fwd(SCRIPTS / "autopilot_guard.py"), d=fwd(repo)), repo))
+    rc, _, err = run("claude", claude(cmd.format(g=fwd(SCRIPTS / "agile_guard.py"), d=fwd(repo)), repo))
     assert rc == 2 and "file dấu là rào" in err, (cmd, err)
 
 
 def test_clear_command_recognizer_is_exact():
-    g, launcher = fwd(SCRIPTS / "autopilot_guard.py"), fwd(SCRIPTS / "autopilot-hook.sh")
-    ok = autopilot_guard._is_clear_command
+    g, launcher = fwd(SCRIPTS / "agile_guard.py"), fwd(SCRIPTS / "agile-hook.sh")
+    ok = agile_guard._is_clear_command
     assert ok(["python", g, "--clear", "d"]) and ok(["sh", launcher, "--clear", "d"]) and ok(["py", "-3", g, "--clear", "d"])
     for tokens in (["python", g, "--clear", "d", "--extra"], ["python", g, "--clear"], ["python", g, "--clear", "-x"],
                    ["ruby", g, "--clear", "d"], ["python", "-c", "pass", g, "--clear", "d"], ["python", "other.py", "--clear", "d"],
@@ -847,10 +847,10 @@ def outside(tmp_path):
 def stage_launcher(folder, guard_text=None):
     """Chép launcher đang thử vào `folder` (như thư mục scripts của plugin), kèm guard giả nếu có; trả đường launcher đã chép."""
     folder.mkdir(parents=True, exist_ok=True)
-    staged = folder / "autopilot-hook.sh"
+    staged = folder / "agile-hook.sh"
     staged.write_bytes(LAUNCHER.read_bytes())
     if guard_text is not None:
-        (folder / "autopilot_guard.py").write_text(guard_text, encoding="utf-8")
+        (folder / "agile_guard.py").write_text(guard_text, encoding="utf-8")
     return staged
 
 
@@ -865,13 +865,13 @@ def run_staged(staged, cwd, payload, path_dirs, stdin_text=None):
 
 
 def test_launcher_guard_missing_falls_back_to_marker_probe(tmp_path, bare_sh_ok):
-    staged = stage_launcher(tmp_path / "scripts_no_guard")  # không có autopilot_guard.py cạnh launcher
+    staged = stage_launcher(tmp_path / "scripts_no_guard")  # không có agile_guard.py cạnh launcher
     plain = make_repo(tmp_path / "p", branch="spr-12")
     marked = make_repo(tmp_path / "m", branch="spr-12", marker=good_marker())
     path = [bare_sh_ok, Path(sys.executable).parent]
     assert run_staged(staged, plain, claude("git push", plain), path).returncode == 0
     done = run_staged(staged, marked, claude("git push", marked), path)
-    assert done.returncode == 2 and "autopilot:" in done.stderr
+    assert done.returncode == 2 and "agile:" in done.stderr
 
 
 def test_launcher_guard_broken_falls_back_to_marker_probe(tmp_path, bare_sh_ok):
@@ -896,24 +896,24 @@ def test_launcher_passes_guard_exit_codes_and_stdout(tmp_path, bare_sh_ok):
     if "seen" not in done.stdout:
         pytest.skip("launcher không thấy Python dùng được trong PATH thử")
     assert done.returncode == 0 and "seen EVENT" in done.stdout  # sự kiện đi nguyên vẹn tới guard
-    (tmp_path / "scripts_fake" / "autopilot_guard.py").write_text(code_of.format(2), encoding="utf-8")
+    (tmp_path / "scripts_fake" / "agile_guard.py").write_text(code_of.format(2), encoding="utf-8")
     two = run_staged(staged, repo, None, path, stdin_text="E")
     assert two.returncode == 2 and "guard lỗi" not in two.stderr  # mã 2 của guard trả nguyên, không thay bằng lý do dự phòng
 
 
 def test_launcher_has_no_guard_path_override(tmp_path, bare_sh_ok):
     """RF18: biến môi trường không đổi được guard mà launcher chạy."""
-    assert "AUTOPILOT_GUARD_PATH" not in LAUNCHER.read_text(encoding="utf-8")
+    assert "AGILE_GUARD_PATH" not in LAUNCHER.read_text(encoding="utf-8")
     plain = make_repo(tmp_path / "p", branch="spr-12")
     marked = make_repo(tmp_path / "m", branch="spr-12", marker=good_marker())
     path = [bare_sh_ok, Path(sys.executable).parent]
     evil = tmp_path / "evil.py"
     evil.write_text("import sys\nsys.exit(0)\n", encoding="utf-8")
-    done = run_launcher(marked, claude("rm -rf x", marked), path, {"AUTOPILOT_GUARD_PATH": fwd(evil)})
+    done = run_launcher(marked, claude("rm -rf x", marked), path, {"AGILE_GUARD_PATH": fwd(evil)})
     if "không chạy được Python" in done.stderr:
         pytest.skip("launcher không thấy Python dùng được trong PATH thử")
     assert done.returncode == 2 and "'irreversible_delete'" in done.stderr  # guard thật vẫn chạy, giả không thay được
-    assert run_launcher(plain, claude("ls", plain), path, {"AUTOPILOT_GUARD_PATH": fwd(evil)}).returncode == 0
+    assert run_launcher(plain, claude("ls", plain), path, {"AGILE_GUARD_PATH": fwd(evil)}).returncode == 0
 
 
 def test_launcher_clear_does_not_read_stdin(tmp_path, bare_sh_ok):
@@ -989,7 +989,7 @@ def test_guard_write_tool_absolute_path_from_outside(tmp_path, outside):
 
 def test_guard_clear_command_from_outside_still_allowed(tmp_path, outside):
     repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker())
-    cmd = "python {g} --clear {r}".format(g=fwd(SCRIPTS / "autopilot_guard.py"), r=fwd(repo))
+    cmd = "python {g} --clear {r}".format(g=fwd(SCRIPTS / "agile_guard.py"), r=fwd(repo))
     assert_allowed(outside, cmd)
 
 
@@ -1044,7 +1044,7 @@ def test_guard_marker_pattern_blocked(tmp_path, cmd):
 
 def test_guard_stash_and_clean_plain_allowed(tmp_path):
     repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
-    # TK27b A3: `stash -u` và `clean -f[d]` chỉ còn qua khi file dấu bị gitignore (repo thật) — các ca đó ở tests/test_autopilot_guard_undo.py
+    # TK27b A3: `stash -u` và `clean -f[d]` chỉ còn qua khi file dấu bị gitignore (repo thật) — các ca đó ở tests/test_agile_guard_undo.py
     for cmd in ("git stash", "git stash list", "git stash pop", "git stash push -m x", "git stash show -p",
                 "git clean -n", "git clean -nx", "git clean -x"):
         assert_allowed(repo, cmd)
@@ -1059,11 +1059,11 @@ def test_guard_old_python_guard_falls_back(tmp_path, monkeypatch):
     monkeypatch.chdir(repo)
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        assert autopilot_guard._last_resort(["--format", "claude"]) == 2
+        assert agile_guard._last_resort(["--format", "claude"]) == 2
     monkeypatch.chdir(plain)
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        assert autopilot_guard._last_resort(["--format", "claude"]) == 0
-        assert autopilot_guard._last_resort(["--format=antigravity"]) == 0
+        assert agile_guard._last_resort(["--format", "claude"]) == 0
+        assert agile_guard._last_resort(["--format=antigravity"]) == 0
 
 
 # ===================== TK8 vòng sửa 3: heredoc theo nháy, file dấu lồng trong .tmp =====================
@@ -1104,8 +1104,8 @@ def test_guard_tmp_cleanup_not_applied_when_target_contains_nested_marker(tmp_pa
     (deep / ".tmp" / "autopilot.json").write_text("{}", encoding="utf-8")
     for cmd in ("rm -rf .tmp/livetest", "rm -rf .tmp/wrap", "Remove-Item -Recurse -Force .tmp\\livetest", "rm -rf .tmp/live*", "rm -rf .tmp/wrap/a"):
         assert_blocked(repo, cmd, "irreversible_delete")
-    assert_allowed(repo, "python {g} --clear {d}".format(g=fwd(SCRIPTS / "autopilot_guard.py"), d=fwd(nested)))
-    assert_allowed(repo, "python {g} --clear {d}".format(g=fwd(SCRIPTS / "autopilot_guard.py"), d=fwd(deep)))
+    assert_allowed(repo, "python {g} --clear {d}".format(g=fwd(SCRIPTS / "agile_guard.py"), d=fwd(nested)))
+    assert_allowed(repo, "python {g} --clear {d}".format(g=fwd(SCRIPTS / "agile_guard.py"), d=fwd(deep)))
     assert clear_cli(nested)[0] == 0 and clear_cli(deep)[0] == 0  # chạy thật --clear từng thư mục
     assert_allowed(repo, "rm -rf .tmp/livetest")
     assert_allowed(repo, "rm -rf .tmp/wrap")

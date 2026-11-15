@@ -313,7 +313,7 @@ def test_denylist_whole_word_applies_to_file_names(tmp_path):
 # --- hard-floor-marker (SPR-16 TK3) ---------------------------------------------------------------------------------
 
 START, END = "<!-- san-cung:start -->", "<!-- san-cung:end -->"
-ZONES = {"AGENTS.md": 2, "method/process.md": 3, "method/sizing.md": 1, "method/autopilot.md": 1}
+ZONES = {"AGENTS.md": 2, "method/process.md": 3, "method/sizing.md": 1, "method/agile.md": 1}
 
 
 def make_floor_repo(tmp_path: Path) -> Path:
@@ -354,7 +354,7 @@ def test_floor_marker_unbalanced_is_blocked(tmp_path):
 
 def test_floor_marker_nested_is_blocked(tmp_path):
     root = make_floor_repo(tmp_path)
-    path = root / "method" / "autopilot.md"
+    path = root / "method" / "agile.md"
     path.write_text(path.read_text(encoding="utf-8").replace("chữ vùng 0\n", f"{START}\nchữ\n"), encoding="utf-8")
     hits = floor_hits(root)
     assert hits and "floor-nested" in hits[0].message
@@ -378,7 +378,7 @@ def test_floor_marker_inside_code_fence_is_blocked(tmp_path):
 
 def test_floor_marker_file_missing_is_blocked(tmp_path):
     root = make_floor_repo(tmp_path)
-    (root / "method" / "autopilot.md").unlink()
+    (root / "method" / "agile.md").unlink()
     hits = floor_hits(root)
     assert len(hits) == 1 and "không còn" in hits[0].message
 

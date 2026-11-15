@@ -1,17 +1,17 @@
 #!/bin/sh
-# Launcher cho hook autopilot (scripts/autopilot_guard.py): POSIX sh, không cần Python để chạy.
+# Launcher cho hook agile (scripts/agile_guard.py): POSIX sh, không cần Python để chạy.
 # Đọc sự kiện ở stdin một lần vào biến, rồi gọi thẳng guard bằng `python3`, `python`, `py -3` theo thứ tự (không dò phiên bản bằng tiến trình
 # riêng, để mỗi lệnh chỉ tốn một lần khởi động Python; guard tự xử khi Python quá cũ). Guard trả 0 hoặc 2 thì trả nguyên mã (kèm
 # stdout/stderr của guard). Guard vắng, Python không có, hoặc mọi ứng viên trả mã khác (lỗi cú pháp, import hỏng, traceback) thì KHÔNG
 # trả mã đó mà tự dò file dấu `.tmp/autopilot.json`
 # (không phân biệt hoa thường) đi lên từ $CLAUDE_PROJECT_DIR và $PWD tới thư mục có `.git`: có thì chặn (thoát 2), không thì cho qua (thoát 0).
-# `--clear <thư mục>` không đọc stdin. Guard luôn là autopilot_guard.py cạnh chính launcher (không có biến môi trường đổi đường).
+# `--clear <thư mục>` không đọc stdin. Guard luôn là agile_guard.py cạnh chính launcher (không có biến môi trường đổi đường).
 # Nhánh dự phòng chỉ dùng lệnh dựng sẵn của sh, nên vẫn chạy được khi PATH rỗng.
 
 here=${0%/*}
 [ "$here" = "$0" ] && here=.
 here=$(cd "$here" 2>/dev/null && pwd) || here=.
-guard=$here/autopilot_guard.py
+guard=$here/agile_guard.py
 
 has_marker() {
   cur=${1%/}
@@ -40,7 +40,7 @@ has_marker() {
   done
 }
 
-reason="autopilot: không chạy được Python để kiểm lệnh — chặn vì đang bật autopilot"
+reason="agile: không chạy được Python để kiểm lệnh — chặn vì đang bật agile"
 
 if [ -f "$guard" ]; then
   stdin_needed=1
@@ -69,7 +69,7 @@ if [ -f "$guard" ]; then
       exit "$code"
     fi
     # 126/127: không chạy được lệnh; mã khác (traceback, lỗi cú pháp, Python quá cũ, stub của Store): thử ứng viên kế rồi mới dò bằng sh
-    [ "$code" = 126 ] || [ "$code" = 127 ] || reason="autopilot: guard lỗi — chặn vì đang bật autopilot"
+    [ "$code" = 126 ] || [ "$code" = 127 ] || reason="agile: guard lỗi — chặn vì đang bật agile"
   done
 fi
 

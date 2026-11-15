@@ -1,6 +1,6 @@
 """SPR-20 TK6: định tuyến cổng, người quyết, `check` cổng `pending`, một người ghi (FR6.1-FR6.3, FR7.3, FR7.5, FR4.3, SC6, SC10).
 
-Đặt ở file riêng (không nối vào `tests/test_check.py`); mượn helper dựng hồ sơ từ đó như `tests/test_autopilot_modes.py`.
+Đặt ở file riêng (không nối vào `tests/test_check.py`); mượn helper dựng hồ sơ từ đó như `tests/test_agile_modes.py`.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import pytest
 
 import check
 from conftest import write_lf
-from test_check import AUTOPILOT_FIXTURES, _rewrite, delegate_plan, make_sprint
+from test_check import AGILE_FIXTURES, _rewrite, delegate_plan, make_sprint
 
 FLOOR_TABLE = """
 ## File luật và file sàn cứng sẽ chạm
@@ -92,7 +92,7 @@ def test_duplicate_delegation_key_flags(tmp_path):
 
 
 def test_old_sprint_no_new_findings():
-    findings = check.check_paths([AUTOPILOT_FIXTURES / "legacy-delegation"], env={}).findings
+    findings = check.check_paths([AGILE_FIXTURES / "legacy-delegation"], env={}).findings
     new = {"gate-route-floor", "decision-owner-missing", "frontmatter-duplicate-key", "protected-repos-unconfigured"}
     assert not [f.render() for f in findings if f.rule in new]
 

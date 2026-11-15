@@ -2364,21 +2364,21 @@ def test_plain_quote_without_delegation_stays_clean(tmp_path):
     assert codes(check.check_paths([root]).findings) == []
 
 
-# --- Autopilot trên khối `delegation` (SPR-12 TK3, FR1.13) --------------------------------------------------
+# --- Agile trên khối `delegation` (SPR-12 TK3, FR1.13) --------------------------------------------------
 
-AUTOPILOT_FIXTURES = FIXTURES / "autopilot"
-AUTOPILOT_GRANT = '"Bật autopilot cổng 1 cho SPR-03."'
+AGILE_FIXTURES = FIXTURES / "agile"
+AGILE_GRANT = '"Bật autopilot cổng 1 cho SPR-03."'
 GATES_1_2_GRANT = '"Bật autopilot cổng 1+2 cho SPR-03 tới hết sprint."'
 PROGRAM_GRANT = '"Bật autopilot chương trình doi-skill gồm SPR-03…SPR-05 tới 2026-12-31, cổng 1+2."'
 
 
-def autopilot_plan(root: Path, **fields) -> Path:
-    """PLAN ở Cổng 1 duyệt thay với khối `delegation` autopilot hợp lệ; `fields` ghi đè một khoá (giá trị là chữ YAML thô)
+def agile_plan(root: Path, **fields) -> Path:
+    """PLAN ở Cổng 1 duyệt thay với khối `delegation` agile hợp lệ; `fields` ghi đè một khoá (giá trị là chữ YAML thô)
     hoặc bỏ khoá khi giá trị là `None`. `by` giữ vai `gate-delegate` T1."""
     delegate_plan(root)
     path = root / "PLAN.md"
     _rewrite(path, "  tech-reviewer: [T1, agent-d]\n", "  gate-delegate: [T1, agent-d]\n")
-    block = {"grant": AUTOPILOT_GRANT, "grant_at": "2026-02-01 08:30 +07", "scope": "[gate_1]", "expires": "sprint_end",
+    block = {"grant": AGILE_GRANT, "grant_at": "2026-02-01 08:30 +07", "scope": "[gate_1]", "expires": "sprint_end",
              "by": "agent-d", "tier": "T1", "files": "[]", "revoked_at": "null", "level": "gate_1",
              "channel": "chat", "orchestrator": "agent-orch", "sessions_cap": "null"}
     block.update(fields)
@@ -2391,12 +2391,12 @@ def autopilot_plan(root: Path, **fields) -> Path:
 def _only_hit(root: Path, fragment: str) -> None:
     hits = _delegation_hits(root)
     assert len(hits) == 1 and fragment in hits[0].message, [f.render() for f in hits]
-    assert "ngoài bảng khoá" not in hits[0].message, hits[0].message  # khoá autopilot là khoá đã biết
+    assert "ngoài bảng khoá" not in hits[0].message, hits[0].message  # khoá agile là khoá đã biết
 
 
-def test_autopilot_gate_delegate_by_ok(tmp_path):
+def test_agile_gate_delegate_by_ok(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root)
+    agile_plan(root)
     assert [f.render() for f in check.check_paths([root]).findings] == []
 
 
@@ -2406,34 +2406,34 @@ def test_autopilot_gate_delegate_by_ok(tmp_path):
     {"level": "program", "program": "doi-skill", "expires": "2026-12-31", "scope": "[gate_1]",
      "grant": '"Bật autopilot chương trình doi-skill gồm SPR-03…SPR-05 tới 2026-12-31, cổng 1."'},
     {"level": "program", "program": "doi-skill", "expires": "2026-12-31", "scope": "[gate_1, gate_2]",
-     "grant": '"BẬT AUTOPILOT chương trình doi-skill tới 2026-12-31, CỔNG 1+2."'},
-    {"grant": '"  BẬT AUTOPILOT cổng 1 cho SPR-03."'},  # tiền tố không phân biệt hoa thường, bỏ khoảng trắng đầu
+     "grant": '"BẬT AGILE chương trình doi-skill tới 2026-12-31, CỔNG 1+2."'},
+    {"grant": '"  BẬT AGILE cổng 1 cho SPR-03."'},  # tiền tố không phân biệt hoa thường, bỏ khoảng trắng đầu
     {"channel": "host_comment", "sessions_cap": "20", "orchestrator": "null"},
     {"channel": None, "orchestrator": None, "sessions_cap": None},  # ba khoá tuỳ chọn vắng
 ], ids=["gate_1_2", "program-1+2", "program-1", "program-casefold", "prefix-case", "host_comment", "optional-absent"])
-def test_autopilot_valid_variants_stay_clean(tmp_path, fields):
+def test_agile_valid_variants_stay_clean(tmp_path, fields):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, **fields)
+    agile_plan(root, **fields)
     assert [f.render() for f in check.check_paths([root]).findings] == []
 
 
 @pytest.mark.parametrize("value", ["gate_3", "gate-1", "Gate_1", "null", "[gate_1]"])
-def test_autopilot_level_invalid(tmp_path, value):
+def test_agile_level_invalid(tmp_path, value):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, level=value)
+    agile_plan(root, level=value)
     _only_hit(root, "level")
 
 
-def test_autopilot_program_needs_date(tmp_path):
+def test_agile_program_needs_date(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, level="program", program="doi-skill", expires="sprint_end", scope="[gate_1, gate_2]", grant=PROGRAM_GRANT)
+    agile_plan(root, level="program", program="doi-skill", expires="sprint_end", scope="[gate_1, gate_2]", grant=PROGRAM_GRANT)
     _only_hit(root, "expires")
 
 
 @pytest.mark.parametrize("program", ["null", '""', None])
-def test_autopilot_program_level_needs_program_name(tmp_path, program):
+def test_agile_program_level_needs_program_name(tmp_path, program):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, level="program", program=program, expires="2026-12-31", scope="[gate_1, gate_2]", grant=PROGRAM_GRANT)
+    agile_plan(root, level="program", program=program, expires="2026-12-31", scope="[gate_1, gate_2]", grant=PROGRAM_GRANT)
     _only_hit(root, "program")
 
 
@@ -2445,33 +2445,33 @@ def test_autopilot_program_level_needs_program_name(tmp_path, program):
     {"level": "program", "program": "x", "expires": "2026-12-31", "scope": "[gate_1]",
      "grant": '"Bật autopilot chương trình x tới 2026-12-31, cổng 1+2."'},
 ], ids=["gate_1_2-missing-gate_2", "empty", "program-extra", "program-missing"])
-def test_autopilot_scope_must_equal_level_gates(tmp_path, fields):
+def test_agile_scope_must_equal_level_gates(tmp_path, fields):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, **fields)
+    agile_plan(root, **fields)
     _only_hit(root, "phạm vi")
 
 
-def test_autopilot_scope_exceeds_level(tmp_path):
+def test_agile_scope_exceeds_level(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, level="gate_1", scope="[gate_1, gate_2]")
+    agile_plan(root, level="gate_1", scope="[gate_1, gate_2]")
     _only_hit(root, "phạm vi")
 
 
 @pytest.mark.parametrize("value", ["file", "Chat", '""', "null"])
-def test_autopilot_channel_file_rejected(tmp_path, value):
+def test_agile_channel_file_rejected(tmp_path, value):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, channel=value)
+    agile_plan(root, channel=value)
     _only_hit(root, "channel")
 
 
 @pytest.mark.parametrize("grant", [
-    '"Bật autopilot cho SPR-03."',  # vắng chữ mức = cổng 1 (method/autopilot.md mục 2)
+    '"Bật autopilot cho SPR-03."',  # vắng chữ mức = cổng 1 (method/agile.md mục 2)
     '"Bật autopilot cổng 1 cho SPR-03 (chương trình dời skill)."',  # chữ mức chỉ tính ngay sau tiền tố
     '"  bật autopilot   cổng 1 cho SPR-03."',
 ], ids=["no-level-word", "program-word-in-free-text", "spaces-casefold"])
-def test_autopilot_level_word_default_and_position(tmp_path, grant):
+def test_agile_level_word_default_and_position(tmp_path, grant):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, grant=grant)
+    agile_plan(root, grant=grant)
     assert [f.render() for f in check.check_paths([root]).findings] == []
 
 
@@ -2483,21 +2483,21 @@ def test_autopilot_level_word_default_and_position(tmp_path, grant):
     ('"Bật autopilot cổng 2 cho SPR-03."', "gate_1", "[gate_1]"),
     ('"Bật autopilot cho SPR-03."', "gate_1_2", "[gate_1, gate_2]"),  # vắng mức = gate_1
 ], ids=["1-claims-1_2", "1_2-claims-1", "program-claims-1", "1-claims-program", "unrecognized", "default-claims-1_2"])
-def test_autopilot_grant_text_must_match_level(tmp_path, grant, level, scope):
+def test_agile_grant_text_must_match_level(tmp_path, grant, level, scope):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, grant=grant, level=level, scope=scope, program="x", expires="2026-12-31")
+    agile_plan(root, grant=grant, level=level, scope=scope, program="x", expires="2026-12-31")
     _only_hit(root, "lời cấp nêu mức")
 
 
 @pytest.mark.parametrize("missing", ["level", "expires"])
-def test_autopilot_grant_requires_level_and_expires(tmp_path, missing):
+def test_agile_grant_requires_level_and_expires(tmp_path, missing):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, **{missing: None})
+    agile_plan(root, **{missing: None})
     _only_hit(root, missing)
 
 
 @pytest.mark.parametrize("key,value", [("channel", "chat"), ("sessions_cap", "5"), ("orchestrator", "agent-orch"), ("program", "x")])
-def test_autopilot_new_key_alone_triggers_the_rules(tmp_path, key, value):
+def test_agile_new_key_alone_triggers_the_rules(tmp_path, key, value):
     """Lời cấp kiểu cũ nhưng có một khoá mới → đã kích, nên thiếu `level` bị báo."""
     root = make_sprint(tmp_path)
     delegate_plan(root)
@@ -2506,47 +2506,47 @@ def test_autopilot_new_key_alone_triggers_the_rules(tmp_path, key, value):
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "abc", "1.5", "true", "[3]"])
-def test_autopilot_sessions_cap_invalid(tmp_path, value):
+def test_agile_sessions_cap_invalid(tmp_path, value):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, sessions_cap=value)
+    agile_plan(root, sessions_cap=value)
     _only_hit(root, "sessions_cap")
 
 
-def test_autopilot_orchestrator_same_as_by(tmp_path):
+def test_agile_orchestrator_same_as_by(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, orchestrator="agent-d")
+    agile_plan(root, orchestrator="agent-d")
     _only_hit(root, "orchestrator")
 
 
-def test_autopilot_two_errors_reports_first(tmp_path):
+def test_agile_two_errors_reports_first(tmp_path):
     """`level` đứng trước `channel` và `sessions_cap` trong thứ tự kiểm → chỉ báo `level`."""
     root = make_sprint(tmp_path)
-    autopilot_plan(root, level="gate_9", sessions_cap="0", channel="file")
+    agile_plan(root, level="gate_9", sessions_cap="0", channel="file")
     _only_hit(root, "level")
 
 
-def test_autopilot_keys_are_reported_before_old_checks(tmp_path):
-    """Luật autopilot đứng trước các kiểm cũ: ở đây `tier: T3` (kiểm cũ) cũng sai nhưng chỉ báo `channel`."""
+def test_agile_keys_are_reported_before_old_checks(tmp_path):
+    """Luật agile đứng trước các kiểm cũ: ở đây `tier: T3` (kiểm cũ) cũng sai nhưng chỉ báo `channel`."""
     root = make_sprint(tmp_path)
-    autopilot_plan(root, tier="T3", channel="file")
+    agile_plan(root, tier="T3", channel="file")
     _only_hit(root, "channel")
 
 
-def test_autopilot_old_checks_still_apply_after_autopilot_rules(tmp_path):
+def test_agile_old_checks_still_apply_after_agile_rules(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root)
+    agile_plan(root)
     _rewrite(root / "PLAN.md", "gate-delegate: [T1, agent-d]", "gate-delegate: [T2, agent-d]")
     assert _delegation_hits(root), "người duyệt thay không phải T1 phải bị báo"
 
 
-def test_autopilot_rules_apply_to_gate_2_report(tmp_path):
+def test_agile_rules_apply_to_gate_2_report(tmp_path):
     root = make_sprint(tmp_path)
     delegate_report(root)
     _rewrite(root / "REPORT.md", "  revoked_at: null\n", "  revoked_at: null\n  level: gate_1_2\n")
     _only_hit(root, "phạm vi")  # level gate_1_2 đòi scope có cả hai cổng, REPORT chỉ khai gate_2
 
 
-def test_autopilot_new_keys_are_known_while_gate_is_pending(tmp_path):
+def test_agile_new_keys_are_known_while_gate_is_pending(tmp_path):
     root = make_sprint(tmp_path)
     _pending_delegated_plan(root)
     _rewrite(root / "PLAN.md", "  files: []\n", "  files: []\n  level: gate_1\n  channel: chat\n")
@@ -2555,42 +2555,42 @@ def test_autopilot_new_keys_are_known_while_gate_is_pending(tmp_path):
 
 def test_legacy_delegation_unchanged():
     """Hồ sơ duyệt thay thật chỉ có tám khoá cũ: không phát hiện delegation, không Chặn/Phải sửa, thoát 0."""
-    report = check.check_paths([AUTOPILOT_FIXTURES / "legacy-delegation"])
+    report = check.check_paths([AGILE_FIXTURES / "legacy-delegation"])
     assert not [f.render() for f in report.findings if f.rule == "gate-delegation-invalid"]
     assert [f.render() for f in report.findings if f.level in check.BLOCKING] == []
     assert report.exit_code == 0
 
 
 @pytest.mark.parametrize("key,value", [("orchestrator", "5"), ("orchestrator", '""'), ("program", "5")])
-def test_autopilot_orchestrator_and_program_wrong_type(tmp_path, key, value):
+def test_agile_orchestrator_and_program_wrong_type(tmp_path, key, value):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, **{key: value})
+    agile_plan(root, **{key: value})
     _only_hit(root, key)
 
 
-def test_autopilot_files_not_named_in_grant_rejected(tmp_path):
+def test_agile_files_not_named_in_grant_rejected(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, files="[AGENTS.md]")
+    agile_plan(root, files="[AGENTS.md]")
     _only_hit(root, "delegation.files có 'AGENTS.md' không nêu trong lời cấp")
 
 
-def test_autopilot_files_empty_ok_and_named_file_ok(tmp_path):
+def test_agile_files_empty_ok_and_named_file_ok(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, files="[]")
+    agile_plan(root, files="[]")
     assert [f.render() for f in check.check_paths([root]).findings] == []
     named = make_sprint(tmp_path / "named")
-    autopilot_plan(named, files="[AGENTS.md]", grant='"Bật autopilot cổng 1 cho SPR-03, gồm AGENTS.md."')
+    agile_plan(named, files="[AGENTS.md]", grant='"Bật autopilot cổng 1 cho SPR-03, gồm AGENTS.md."')
     assert [f.render() for f in check.check_paths([named]).findings] == []
 
 
-def test_autopilot_files_item_must_be_a_name_in_the_grant(tmp_path):
+def test_agile_files_item_must_be_a_name_in_the_grant(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, files="[agents.md]")  # khớp nguyên văn, phân biệt hoa thường
+    agile_plan(root, files="[agents.md]")  # khớp nguyên văn, phân biệt hoa thường
     _only_hit(root, "delegation.files có 'agents.md'")
 
 
 def test_legacy_grant_naming_a_file_unchanged(tmp_path):
-    """Lời cấp kiểu cũ không kích luật mới: file nêu trong lời cấp hợp lệ như trước; không nêu cũng không bị luật autopilot báo."""
+    """Lời cấp kiểu cũ không kích luật mới: file nêu trong lời cấp hợp lệ như trước; không nêu cũng không bị luật agile báo."""
     root = make_sprint(tmp_path)
     delegate_plan(root)
     _rewrite(root / "PLAN.md", "files: []", "files: [AGENTS.md]")
@@ -2598,18 +2598,18 @@ def test_legacy_grant_naming_a_file_unchanged(tmp_path):
     assert [f.render() for f in check.check_paths([root]).findings] == []
 
 
-@pytest.mark.parametrize("files", ['[""]', "[autopilot]", "[Bật]", '["   "]', "[AGENT]"], ids=["empty", "autopilot", "word", "blank", "substring"])
-def test_autopilot_files_must_be_a_whole_token_of_the_grant(tmp_path, files):
+@pytest.mark.parametrize("files", ['[""]', "[agile]", "[Bật]", '["   "]', "[AGENT]"], ids=["empty", "agile", "word", "blank", "substring"])
+def test_agile_files_must_be_a_whole_token_of_the_grant(tmp_path, files):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, files=files, grant='"Bật autopilot cổng 1 cho SPR-03, gồm AGENTS.md."')
+    agile_plan(root, files=files, grant='"Bật autopilot cổng 1 cho SPR-03, gồm AGENTS.md."')
     _only_hit(root, "delegation.files có")
 
 
 @pytest.mark.parametrize("grant", ['"Bật autopilot cổng 1 cho SPR-03, gồm (AGENTS.md)."', '"Bật autopilot cổng 1 cho SPR-03 gồm AGENTS.md."'],
                          ids=["punctuation", "trailing-dot"])
-def test_autopilot_files_token_with_punctuation_in_grant_ok(tmp_path, grant):
+def test_agile_files_token_with_punctuation_in_grant_ok(tmp_path, grant):
     root = make_sprint(tmp_path)
-    autopilot_plan(root, files="[AGENTS.md]", grant=grant)
+    agile_plan(root, files="[AGENTS.md]", grant=grant)
     assert [f.render() for f in check.check_paths([root]).findings] == []
 
 
@@ -2808,7 +2808,7 @@ def test_session_cap_ignores_old_delegation_blocks(tmp_path):
 
 # --- TK27b: trần phiên khớp khối delegation và công thức; file kết luận cổng; SPRINT.md; khử trùng ---------------------------------
 
-import _autopilot_rules as _rules  # noqa: E402
+import _agile_rules as _rules  # noqa: E402
 
 
 @pytest.mark.parametrize("size,risk,expected", [
@@ -2816,7 +2816,7 @@ import _autopilot_rules as _rules  # noqa: E402
     ("tiny", "high", 5), ("small", "high", 10), ("medium", "high", 19), ("large", "high", 29), ("huge", "normal", None),
 ])
 def test_session_cap_formula_table(size, risk, expected):
-    """Bảng `method/autopilot.md` mục 2.1: cơ sở theo cỡ; rủi ro cao nhân 1,25 làm tròn lên."""
+    """Bảng `method/agile.md` mục 2.1: cơ sở theo cỡ; rủi ro cao nhân 1,25 làm tròn lên."""
     assert _rules.session_cap_formula(size, risk) == expected
 
 
@@ -2839,7 +2839,7 @@ def test_new_block_sessions_cap_null_or_absent_is_flagged(tmp_path, value):
 
 def test_old_block_with_null_sessions_cap_is_not_flagged(tmp_path):
     root = make_sprint(tmp_path)
-    autopilot_plan(root)  # grant_at 2026-02-01, sessions_cap: null
+    agile_plan(root)  # grant_at 2026-02-01, sessions_cap: null
     assert _rule_hits(root, "session-cap-missing") == []
 
 

@@ -1,6 +1,6 @@
-"""Rào autopilot gom một chỗ (SPR-16 FR1): hằng, hàm ngày/giờ và validator khối `delegation`.
+"""Rào agile gom một chỗ (SPR-16 FR1): hằng, hàm ngày/giờ và validator khối `delegation`.
 
-`scripts/check.py` và `scripts/autopilot_guard.py` nhập từ đây; guard không nhập gì từ `check`. File này thuộc
+`scripts/check.py` và `scripts/agile_guard.py` nhập từ đây; guard không nhập gì từ `check`. File này thuộc
 `FENCE_FILES` và được `tests/test_fence_wiring.py` ghim (tên, số định nghĩa, dòng nối). Chỉ dùng thư viện chuẩn.
 """
 
@@ -11,21 +11,21 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 
 DELEGATION_KEYS = ("grant", "grant_at", "scope", "expires", "by", "tier", "files", "revoked_at")
-DELEGATION_OPTIONAL_KEYS = ("level", "program", "channel", "orchestrator", "sessions_cap")  # khoá autopilot (method/autopilot.md): có một khoá là kích luật
-AUTOPILOT_PREFIX = "bật autopilot"  # `grant` bắt đầu bằng chuỗi này (không phân biệt hoa thường) cũng kích luật
-AUTOPILOT_LEVELS = ("gate_1", "gate_1_2", "program")
-# Danh sách 13 mục: `autopilot_guard.py` chỉ dùng khi file dấu hỏng (chặn cả 13) và bản ghim `tests/test_fence_wiring.py` đếm đúng 13; luật `check` không đọc
+DELEGATION_OPTIONAL_KEYS = ("level", "program", "channel", "orchestrator", "sessions_cap")  # khoá agile (method/agile.md): có một khoá là kích luật
+AGILE_PREFIX = "bật autopilot"  # legacy: old records. `grant` bắt đầu bằng chuỗi này (không phân biệt hoa thường) cũng kích luật
+AGILE_LEVELS = ("gate_1", "gate_1_2", "program")
+# Danh sách 13 mục: `agile_guard.py` chỉ dùng khi file dấu hỏng (chặn cả 13) và bản ghim `tests/test_fence_wiring.py` đếm đúng 13; luật `check` không đọc
 # (một chế độ, không `exclusions`). `OPEN_ALWAYS_BLOCKED` mới là tập guard chặn khi file dấu hợp lệ; `OPEN_DEFAULT_OPEN` không còn nơi dùng (chỉ bản ghim).
-AUTOPILOT_EXCLUSIONS = ("push", "tag", "version", "main_merge", "publish", "license", "irreversible_delete",
+AGILE_EXCLUSIONS = ("push", "tag", "version", "main_merge", "publish", "license", "irreversible_delete",
                         "rules_unlisted", "user_soul", "secret", "auth", "network_fetch", "branch_merge_local")  # danh sách đóng 13 mục
 OPEN_ALWAYS_BLOCKED = ("network_fetch", "rules_unlisted", "irreversible_delete", "secret", "auth", "user_soul", "license")
 OPEN_DEFAULT_OPEN = ("push", "branch_merge_local", "version", "main_merge", "tag", "publish")
 # Ngày hiệu lực của các luật sprint mới (người quyết CQ/DN, dòng đếm lượt ở REPORT, người ký cổng độc lập với người làm); hồ sơ trước ngày này giữ nguyên kết quả.
 MODE_OPEN_EFFECTIVE_DATE = "2026-11-13"
-AUTOPILOT_GATES_BOTH = "cổng 1+2"  # trong `grant` của mức program: phạm vi là cả hai cổng
-AUTOPILOT_BRANCH_SUFFIX = "+nhánh"  # hằng chết: chỉ còn để bản ghim `tests/test_fence_wiring.py` đếm đúng một định nghĩa; không nơi nào đọc (gỡ cùng bản ghim ở sprint sau)
-AUTOPILOT_PUSH_FLAG = "+đẩy-nhánh"  # hằng chết như trên: chỉ còn vì bản ghim, không nơi nào đọc
-# Trần phiên mỗi sprint (method/autopilot.md mục 2.1): cơ sở theo cỡ; `risk: high` nhân 1,25 làm tròn lên. Một nguồn: `check.py` đối chiếu `Trần phiên:` với bảng này.
+AGILE_GATES_BOTH = "cổng 1+2"  # trong `grant` của mức program: phạm vi là cả hai cổng
+AGILE_BRANCH_SUFFIX = "+nhánh"  # hằng chết: chỉ còn để bản ghim `tests/test_fence_wiring.py` đếm đúng một định nghĩa; không nơi nào đọc (gỡ cùng bản ghim ở sprint sau)
+AGILE_PUSH_FLAG = "+đẩy-nhánh"  # hằng chết như trên: chỉ còn vì bản ghim, không nơi nào đọc
+# Trần phiên mỗi sprint (method/agile.md mục 2.1): cơ sở theo cỡ; `risk: high` nhân 1,25 làm tròn lên. Một nguồn: `check.py` đối chiếu `Trần phiên:` với bảng này.
 SESSION_CAP_BASE = {"tiny": 4, "small": 8, "medium": 15, "large": 23}
 
 
@@ -41,16 +41,16 @@ DELEGATION_CHANNELS = ("chat", "host_comment")
 MOMENT = re.compile(r"([0-9]{4}-[0-9]{2}-[0-9]{2})(?: ([0-9]{2}):([0-9]{2}) ([+-])([0-9]{2})(?::?([0-9]{2}))?)?")
 DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
-# Tập file chứa nội dung rào autopilot (SPEC SPR-16 FR1.1). trang quyền git và rào git thường trực (SPR-16) đã gỡ ở SPR-20 TK21.
+# Tập file chứa nội dung rào agile (SPEC SPR-16 FR1.1). trang quyền git và rào git thường trực (SPR-16) đã gỡ ở SPR-20 TK21.
 # Bản ghim viết tay ở `tests/test_fence_wiring.py`.
 FENCE_FILES: tuple[str, ...] = (
-    "method/autopilot.md",
-    "skills/intake/references/autopilot.md",
-    "skills/running-sprint/references/autopilot.md",
-    "skills/closing-sprint/references/autopilot.md",
-    "scripts/_autopilot_rules.py",
-    "scripts/autopilot_guard.py",
-    "scripts/autopilot-hook.sh",
+    "method/agile.md",
+    "skills/intake/references/agile.md",
+    "skills/running-sprint/references/agile.md",
+    "skills/closing-sprint/references/agile.md",
+    "scripts/_agile_rules.py",
+    "scripts/agile_guard.py",
+    "scripts/agile-hook.sh",
     "hooks/hooks.json",
 )
 
@@ -61,7 +61,7 @@ FLOOR_ZONES: dict[str, int] = {  # đường file → số cặp mốc quy đị
     "AGENTS.md": 2,
     "method/process.md": 3,
     "method/sizing.md": 1,
-    "method/autopilot.md": 1,
+    "method/agile.md": 1,
 }
 FLOOR_FILES: tuple[str, ...] = FENCE_FILES + (  # `merge_ready.py`, `deploy_scan.py` (SPR-17) chỉ tính khi tồn tại
     "scripts/floor_check.py",
@@ -96,23 +96,23 @@ def _stated_level(grant: str) -> str | None:
     """Mức mà câu lệnh `Bật autopilot …` nêu (`gate_1`, `gate_1_2`, `program`; vắng chữ mức = `gate_1`; mức lạ → `None`);
     câu không mở đầu bằng tiền tố → `ValueError`."""
     text = unicodedata.normalize("NFC", grant).casefold().strip() if isinstance(grant, str) else ""
-    if not text.startswith(AUTOPILOT_PREFIX):
-        raise ValueError(f"lời cấp phải mở đầu bằng '{AUTOPILOT_PREFIX}' (ví dụ: 'Bật autopilot cổng 1+2 cho SPR-9 tới hết sprint.')")
-    rest = text[len(AUTOPILOT_PREFIX):].lstrip()
+    if not text.startswith(AGILE_PREFIX):
+        raise ValueError(f"lời cấp phải mở đầu bằng '{AGILE_PREFIX}' (ví dụ: 'Bật autopilot cổng 1+2 cho SPR-9 tới hết sprint.')")
+    rest = text[len(AGILE_PREFIX):].lstrip()
     if rest.startswith("chương trình"):
         return "program"
-    if rest.startswith(AUTOPILOT_GATES_BOTH):
+    if rest.startswith(AGILE_GATES_BOTH):
         return "gate_1_2"
     return "gate_1" if rest.startswith("cổng 1") or not rest.startswith("cổng ") else None
 
 
-def autopilot_problem(block: dict) -> tuple[str, str] | None:
-    """Luật autopilot (method/autopilot.md mục 3) trên khối `delegation`: `None` = không kích hoặc đạt, ngược lại
+def agile_problem(block: dict) -> tuple[str, str] | None:
+    """Luật agile (method/agile.md mục 3) trên khối `delegation`: `None` = không kích hoặc đạt, ngược lại
     `(khoá, lời)` của lỗi ĐẦU theo thứ tự kiểm: khoá bắt buộc → `level`/`program`/`expires` → `scope` khác tập cổng của `level` →
     `channel` → `sessions_cap` → `orchestrator` trùng `by`. Khoá vắng báo ở dòng `delegation`. Một chế độ: không `mode`/`exclusions`."""
     grant = block.get("grant")
     grant_text = unicodedata.normalize("NFC", grant).casefold() if isinstance(grant, str) else ""
-    if not (grant_text.lstrip().startswith(AUTOPILOT_PREFIX) or any(k in block for k in DELEGATION_OPTIONAL_KEYS)):
+    if not (grant_text.lstrip().startswith(AGILE_PREFIX) or any(k in block for k in DELEGATION_OPTIONAL_KEYS)):
         return None  # không kích: hồ sơ kiểu cũ giữ nguyên kết quả
 
     def where(key: str) -> str:
@@ -120,26 +120,26 @@ def autopilot_problem(block: dict) -> tuple[str, str] | None:
 
     for key in ("level", "expires"):
         if block.get(key) is None:
-            return where(key), f"autopilot: thiếu delegation.{key} (bắt buộc khi lời cấp là autopilot hoặc có khoá autopilot)"
+            return where(key), f"agile: thiếu delegation.{key} (bắt buộc khi lời cấp là agile hoặc có khoá agile)"
     level = block["level"]
-    if level not in AUTOPILOT_LEVELS:  # `in` trên tuple so ==, nên danh sách/số không lọt
-        return "delegation.level", f"delegation.level: {level!r} phải là một trong {list(AUTOPILOT_LEVELS)}"
-    if grant_text.lstrip().startswith(AUTOPILOT_PREFIX):  # chữ mức trong lệnh phải khớp `level` (không nới phạm vi hơn lời người dùng)
+    if level not in AGILE_LEVELS:  # `in` trên tuple so ==, nên danh sách/số không lọt
+        return "delegation.level", f"delegation.level: {level!r} phải là một trong {list(AGILE_LEVELS)}"
+    if grant_text.lstrip().startswith(AGILE_PREFIX):  # chữ mức trong lệnh phải khớp `level` (không nới phạm vi hơn lời người dùng)
         stated = _stated_level(grant)  # vắng mức = gate_1; cổng lạ = None
         if stated != level:
-            return "delegation.level", f"autopilot: lời cấp nêu mức {stated!r} mà delegation.level là {level!r}"
+            return "delegation.level", f"agile: lời cấp nêu mức {stated!r} mà delegation.level là {level!r}"
     program, expires = block.get("program"), block["expires"]
     if "program" in block and not (program is None or (isinstance(program, str) and program.strip())):
         return "delegation.program", f"delegation.program: {program!r} phải là tên chương trình hoặc null"
     if level == "program":
         if program is None:
-            return where("program"), "autopilot: level program cần delegation.program là tên chương trình"
+            return where("program"), "agile: level program cần delegation.program là tên chương trình"
         if not (isinstance(expires, str) and DATE.fullmatch(expires) and parse_moment(expires) is not None):
-            return "delegation.expires", f"autopilot: level program cần delegation.expires là ngày YYYY-MM-DD, đang là {expires!r}"
+            return "delegation.expires", f"agile: level program cần delegation.expires là ngày YYYY-MM-DD, đang là {expires!r}"
     scope = block.get("scope")
-    wanted = ["gate_1", "gate_2"] if level == "gate_1_2" or (level == "program" and AUTOPILOT_GATES_BOTH in grant_text) else ["gate_1"]
+    wanted = ["gate_1", "gate_2"] if level == "gate_1_2" or (level == "program" and AGILE_GATES_BOTH in grant_text) else ["gate_1"]
     if isinstance(scope, list) and set(scope) != set(wanted):  # scope không phải danh sách: để kiểm cũ báo
-        return "delegation.scope", f"autopilot: phạm vi {scope!r} phải bằng đúng {wanted!r} theo level {level}"
+        return "delegation.scope", f"agile: phạm vi {scope!r} phải bằng đúng {wanted!r} theo level {level}"
     if "channel" in block and block["channel"] not in DELEGATION_CHANNELS:
         return "delegation.channel", f"delegation.channel: {block['channel']!r} phải là một trong {list(DELEGATION_CHANNELS)}"
     cap = block.get("sessions_cap")
@@ -153,7 +153,7 @@ def autopilot_problem(block: dict) -> tuple[str, str] | None:
     files = block.get("files")
     if isinstance(files, list):  # không phải danh sách: kiểm cũ báo
         tokens = {w.rstrip(".") for w in re.split(r"[\s,;:()`'\"]+", grant)} if isinstance(grant, str) else set()
-        for item in files:  # lệnh autopilot chuẩn không nêu file nên `files` thực tế là []; mục phải bằng đúng một từ của lời cấp và trông như đường dẫn (không nhận tên trần như LICENSE)
+        for item in files:  # lệnh agile chuẩn không nêu file nên `files` thực tế là []; mục phải bằng đúng một từ của lời cấp và trông như đường dẫn (không nhận tên trần như LICENSE)
             if not (isinstance(item, str) and item.strip() and item in tokens and re.search(r"[./\\]", item)):  # đường dẫn: có dấu chấm hoặc gạch
                 return "delegation.files", f"delegation.files có {item!r} không nêu trong lời cấp"
     return None

@@ -1,15 +1,15 @@
-"""Rào máy autopilot — hook PreToolUse từ chối lệnh shell thuộc danh sách loại (method/autopilot.md mục 5). Chỉ thư viện chuẩn.
+"""Rào máy agile — hook PreToolUse từ chối lệnh shell thuộc danh sách loại (method/agile.md mục 5). Chỉ thư viện chuẩn.
 
-Gọi: python autopilot_guard.py --format {claude,codex,antigravity}; đọc JSON sự kiện ở stdin.
-Lối dừng tường minh: python autopilot_guard.py --clear <thư mục làm việc> xoá đúng <thư mục>/.tmp/autopilot.json (chỉ file đó; in đường
+Gọi: python agile_guard.py --format {claude,codex,antigravity}; đọc JSON sự kiện ở stdin.
+Lối dừng tường minh: python agile_guard.py --clear <thư mục làm việc> xoá đúng <thư mục>/.tmp/autopilot.json (chỉ file đó; in đường
 đã xoá; không có thì báo và thoát 0). Hook nhận ra lệnh này (đúng script của plugin, đúng dạng `--clear <đường>`, không thêm gì khác)
 và cho qua kể cả khi có file dấu; mọi đường xoá khác vẫn bị chặn. ĐÂY LÀ RÀO HÀNH VI: phiên con gọi được lệnh này về mặt máy, nhưng luật
-cấm — chỉ điều phối (sau `Dừng autopilot.` hay khi thu hồi) hoặc người dùng được gọi, và lần gọi hiện trong transcript để soát.
+cấm — chỉ điều phối (sau `Dừng agile.` hay khi thu hồi) hoặc người dùng được gọi, và lần gọi hiện trong transcript để soát.
 Chỉ hoạt động khi có file dấu `.tmp/autopilot.json`: tìm từ thư mục chạy lệnh của sự kiện (`tool_input.workdir`/`cwd`,
 `toolCall.args.Cwd`, rồi `cwd` của phiên) đi lên, dừng sau cấp đầu tiên có `.git` (thư mục hoặc file `gitdir:` của worktree);
 thư mục lệnh và thư mục phiên khác nhau thì thấy file dấu ở đâu cũng bật. Không có file dấu → cho qua (claude/codex thoát 0
 không in; antigravity in `{}`). Có file dấu và lệnh khớp mục loại → chặn: claude/codex in lý do ở stderr rồi thoát 2;
-antigravity in JSON `deny` ở stdout, thoát 0. Lý do: `autopilot: '<mục loại>' cần người dùng nói trong chat — lệnh không chạy`.
+antigravity in JSON `deny` ở stdout, thoát 0. Lý do: `agile: '<mục loại>' cần người dùng nói trong chat — lệnh không chạy`.
 
 Mục có mẫu lệnh: chỉ `irreversible_delete` — xoá đệ quy ngoài `.tmp/`, mọi lệnh xoá có đích thuộc `.git`, `find -delete`/`-exec rm`,
 `Get-ChildItem -Recurse | Remove-Item`, `[IO.Directory]::Delete(…, $true)`, `robocopy /MIR`, `busybox rm`, chuỗi `mv`/`robocopy`/`cp -r` vào `.tmp/` rồi xoá,
@@ -18,7 +18,7 @@ Lệnh git khác (đẩy thường, tag, gộp, `commit`, `reset`) không bị h
 Ngoài danh sách loại, hook bảo vệ chính file dấu: lệnh shell không chỉ-đọc có đối số trỏ tới file dấu (hoặc `.tmp/` bao nó, hay glob khớp
 nó) và công cụ ghi file (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `apply_patch`, `write_to_file`, `replace_file_content`…) có đường
 đích là file dấu đều bị chặn với lý do `file dấu là rào`. Claude đã đăng ký matcher cho công cụ ghi file ở hooks/hooks.json; Codex và Antigravity chưa.
-Danh sách đóng 13 mục lấy từ `_autopilot_rules.AUTOPILOT_EXCLUSIONS` chỉ dùng khi file dấu hỏng (chặn cả 13); file dấu hợp lệ chặn bảy mục
+Danh sách đóng 13 mục lấy từ `_agile_rules.AGILE_EXCLUSIONS` chỉ dùng khi file dấu hỏng (chặn cả 13); file dấu hợp lệ chặn bảy mục
 `OPEN_ALWAYS_BLOCKED`. Tiến trình con duy nhất: `git check-ignore -q <file dấu>` khi gặp `git stash -u` hay `git clean -f` (lỗi → coi là không ignore).
 
 Không phân tích chuỗi chương trình tuỳ ý (`awk 'BEGIN{system(…)}'`, `perl -e`, `ruby -e`, `node -e`, `python -c`): giới hạn đã biết.
@@ -29,7 +29,7 @@ dấu nháy (chấp nhận chặn nhầm). Chỉ mở lớp `bash -c`/`pwsh -Com
 an toàn, không phải ranh giới bảo mật.
 
 Đóng khi lỗi: có file dấu (dò từ thư mục sự kiện khi đã đọc được sự kiện) mà JSON hỏng hay hook gặp ngoại lệ → chặn; không có
-file dấu thì ngoại lệ không chặn việc của người dùng. AUTOPILOT_GUARD_DEBUG=1 in traceback ra stderr.
+file dấu thì ngoại lệ không chặn việc của người dùng. AGILE_GUARD_DEBUG=1 in traceback ra stderr.
 """
 
 from __future__ import annotations
@@ -144,7 +144,7 @@ def clear_marker(directory: str, stdout: TextIO, stderr: TextIO) -> int:
 
 
 def _is_clear_command(tokens: list[str]) -> bool:
-    """`python <plugin>/scripts/autopilot_guard.py --clear <đường>` (hay `sh <plugin>/scripts/autopilot-hook.sh --clear <đường>`): đúng
+    """`python <plugin>/scripts/agile_guard.py --clear <đường>` (hay `sh <plugin>/scripts/agile-hook.sh --clear <đường>`): đúng
     script của plugin này, không đối số nào khác, đích không chứa chuyển hướng hay nháy."""
     if len(tokens) < 4 or tokens[-2] != "--clear":
         return False
@@ -154,9 +154,9 @@ def _is_clear_command(tokens: list[str]) -> bool:
     name = _exe_name(tokens[0])
     here = os.path.dirname(os.path.realpath(__file__))
     if PYTHON_NAME.match(name):
-        wanted = os.path.join(here, "autopilot_guard.py")
+        wanted = os.path.join(here, "agile_guard.py")
     elif name in ("sh", "bash"):
-        wanted = os.path.join(here, "autopilot-hook.sh")
+        wanted = os.path.join(here, "agile-hook.sh")
     else:
         return False
     script_at = len(tokens) - 3
@@ -168,12 +168,12 @@ def _is_clear_command(tokens: list[str]) -> bool:
 
 
 def known_exclusions() -> tuple[str, ...]:
-    """Danh sách đóng 13 mục từ `_autopilot_rules.AUTOPILOT_EXCLUSIONS`; nạp muộn để lệnh không có file dấu không trả phí nhập."""
+    """Danh sách đóng 13 mục từ `_agile_rules.AGILE_EXCLUSIONS`; nạp muộn để lệnh không có file dấu không trả phí nhập."""
     here = os.path.dirname(os.path.abspath(__file__))
     if here not in sys.path:
         sys.path.insert(0, here)
-    from _autopilot_rules import AUTOPILOT_EXCLUSIONS
-    return tuple(AUTOPILOT_EXCLUSIONS)
+    from _agile_rules import AGILE_EXCLUSIONS
+    return tuple(AGILE_EXCLUSIONS)
 
 
 # --- file dấu ---------------------------------------------------------------------------------------------------
@@ -209,7 +209,7 @@ def find_repo_root(start: str) -> str | None:
 
 def load_active(marker: str) -> tuple[set[str], bool]:
     """(mục đang chặn, file dấu hỏng?). Một chế độ (SPR-20 TK22): file dấu hợp lệ chặn bảy mục luôn-chặn của
-    `_autopilot_rules.OPEN_ALWAYS_BLOCKED`; khoá `mode`/`exclusions` (file dấu kiểu cũ) bị bỏ qua. File không đọc được hoặc không
+    `_agile_rules.OPEN_ALWAYS_BLOCKED`; khoá `mode`/`exclusions` (file dấu kiểu cũ) bị bỏ qua. File không đọc được hoặc không
     phải đối tượng JSON → chặn cả 13 mục và báo hỏng."""
     known = known_exclusions()
     try:
@@ -219,7 +219,7 @@ def load_active(marker: str) -> tuple[set[str], bool]:
         return set(known), True
     if not isinstance(data, dict):
         return set(known), True
-    from _autopilot_rules import OPEN_ALWAYS_BLOCKED  # nạp muộn như `known_exclusions`
+    from _agile_rules import OPEN_ALWAYS_BLOCKED  # nạp muộn như `known_exclusions`
     return set(OPEN_ALWAYS_BLOCKED), False
 
 
@@ -406,7 +406,7 @@ def _delete_parts(name: str, args: list[str]) -> tuple[bool, list[str]]:
 
 
 def tmp_target_ok(target: str, ctx: Context) -> bool:
-    """Đích xoá nằm thật sự dưới `<gốc repo>/.tmp/` (ngoại lệ dọn tạm, method/autopilot.md mục 5). Glob ở thành phần cuối được
+    """Đích xoá nằm thật sự dưới `<gốc repo>/.tmp/` (ngoại lệ dọn tạm, method/agile.md mục 5). Glob ở thành phần cuối được
     mở rộng bằng `os.listdir`: mỗi mục khớp phải nằm thật trong `.tmp/` (theo `realpath`) và không phải file dấu."""
     marker_root = os.path.dirname(os.path.dirname(ctx.marker)) if ctx.marker else None
     roots = [r for r in (ctx.root, marker_root if marker_root and _has_git(marker_root) else None) if r]
@@ -1111,10 +1111,10 @@ def _event_dirs(payload: dict) -> tuple[str, str]:
 
 def reason_for(item: str, broken: bool) -> str:
     if item == MARKER:
-        return "autopilot: file dấu là rào — chỉ người dùng hoặc lệnh dừng mới xoá"
+        return "agile: file dấu là rào — chỉ người dùng hoặc lệnh dừng mới xoá"
     if item == NESTED:
-        return "autopilot: lệnh lồng quá {} lớp shell, không phân tích được — cần người dùng nói trong chat — lệnh không chạy".format(MAX_UNWRAP)
-    lead = "autopilot: file dấu hỏng, " if broken else "autopilot: "
+        return "agile: lệnh lồng quá {} lớp shell, không phân tích được — cần người dùng nói trong chat — lệnh không chạy".format(MAX_UNWRAP)
+    lead = "agile: file dấu hỏng, " if broken else "agile: "
     return "{}'{}' cần người dùng nói trong chat — lệnh không chạy".format(lead, item)
 
 
@@ -1262,7 +1262,7 @@ def _unparsed_reason(label: str, dirs: tuple[str, ...]) -> str | None:
             return None
     except Exception:  # noqa: BLE001 — không dò được thì đóng
         pass
-    return "autopilot: hook gặp lỗi ({}) khi có file dấu — lệnh không chạy".format(label)
+    return "agile: hook gặp lỗi ({}) khi có file dấu — lệnh không chạy".format(label)
 
 
 def _deny(fmt: str, reason: str, stdout: TextIO, stderr: TextIO) -> int:
@@ -1280,7 +1280,7 @@ def _allow(fmt: str, stdout: TextIO) -> int:
 
 
 def main(argv: list[str] | None = None, stdin: TextIO = sys.stdin, stdout: TextIO = sys.stdout, stderr: TextIO = sys.stderr) -> int:
-    parser = argparse.ArgumentParser(description="Rào máy autopilot (PreToolUse).")
+    parser = argparse.ArgumentParser(description="Rào máy agile (PreToolUse).")
     parser.add_argument("--format", choices=FORMATS)
     parser.add_argument("--clear", metavar="DIR", help="xoá <DIR>/.tmp/autopilot.json rồi thoát")
     args = parser.parse_args(argv)
@@ -1288,7 +1288,7 @@ def main(argv: list[str] | None = None, stdin: TextIO = sys.stdin, stdout: TextI
         return clear_marker(args.clear, stdout, stderr)
     if args.format is None:
         parser.error("the following arguments are required: --format")
-    debug = os.environ.get("AUTOPILOT_GUARD_DEBUG", "") not in ("", "0")
+    debug = os.environ.get("AGILE_GUARD_DEBUG", "") not in ("", "0")
     reason = None
     try:
         reason = _evaluate(stdin.read())

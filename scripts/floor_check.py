@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _autopilot_rules import FLOOR_FILES, FLOOR_MARKER_END, FLOOR_MARKER_START, FLOOR_ZONES, zone_spans  # noqa: E402
+from _agile_rules import FLOOR_FILES, FLOOR_MARKER_END, FLOOR_MARKER_START, FLOOR_ZONES, zone_spans  # noqa: E402
 
 BOOTSTRAP = "bootstrap — chưa kiểm so base"
 

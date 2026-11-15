@@ -12,8 +12,8 @@ import subprocess
 
 import pytest
 
-import autopilot_guard
-from test_autopilot_guard import MARKER_REASON, assert_allowed, assert_blocked, assert_marker_blocked, good_marker, make_repo, run
+import agile_guard
+from test_agile_guard import MARKER_REASON, assert_allowed, assert_blocked, assert_marker_blocked, good_marker, make_repo, run
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="cần git")
 
@@ -205,8 +205,8 @@ def test_guard_clean_dry_run_and_plain_clean_still_allowed(tmp_path):
 def test_guard_marker_ignored_helper_reports_both_states(tmp_path):
     ignored = real_repo(tmp_path / "i", ignored=True)
     plain = real_repo(tmp_path / "p", ignored=False)
-    assert autopilot_guard._marker_ignored(str(ignored), str(ignored / ".tmp" / "autopilot.json")) is True
-    assert autopilot_guard._marker_ignored(str(plain), str(plain / ".tmp" / "autopilot.json")) is False
+    assert agile_guard._marker_ignored(str(ignored), str(ignored / ".tmp" / "autopilot.json")) is True
+    assert agile_guard._marker_ignored(str(plain), str(plain / ".tmp" / "autopilot.json")) is False
     assert MARKER_REASON  # nhập dùng chung: lý do chặn file dấu giữ nguyên
 
 

@@ -20,11 +20,11 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 PINNED_SUITES = ("tests/test_fence_wiring.py", "tests/test_floor_check.py",
-                 "tests/test_autopilot_guard.py", "tests/test_autopilot_guard_undo.py", "tests/test_check.py")
-KEYWORDS = "fence or floor or marker or autopilot or delegation or push"
+                 "tests/test_agile_guard.py", "tests/test_agile_guard_undo.py", "tests/test_check.py")
+KEYWORDS = "fence or floor or marker or agile or delegation or push"
 IGNORE = shutil.ignore_patterns(".git", ".tmp", ".claude", "__pycache__", ".pytest_cache", "*.pyc", ".env", ".env.*")
 WIRING = "tests/test_fence_wiring.py"
-UNDO = "tests/test_autopilot_guard_undo.py"
+UNDO = "tests/test_agile_guard_undo.py"
 
 
 @dataclass
@@ -42,7 +42,7 @@ def edit(root: Path, rel: str, old: str, new: str, count: int = 1) -> None:
     path.write_bytes(text.replace(old, new, count).encode("utf-8"))
 
 
-CALL_LINE = "problem = rules.autopilot_problem(block)"
+CALL_LINE = "problem = rules.agile_problem(block)"
 
 
 def line_indent(root: Path, rel: str, needle: str) -> str:
@@ -57,7 +57,7 @@ def drop_call(root: Path) -> None:
 
 
 def drop_result(root: Path) -> None:
-    edit(root, "scripts/check.py", CALL_LINE, "rules.autopilot_problem(block)")
+    edit(root, "scripts/check.py", CALL_LINE, "rules.agile_problem(block)")
 
 
 def early_return(root: Path) -> None:
@@ -66,8 +66,8 @@ def early_return(root: Path) -> None:
 
 
 def shadow_def(root: Path) -> None:
-    path = root / "scripts" / "_autopilot_rules.py"
-    path.write_bytes((path.read_text(encoding="utf-8") + "\n\ndef autopilot_problem(block):\n    return None\n").encode("utf-8"))
+    path = root / "scripts" / "_agile_rules.py"
+    path.write_bytes((path.read_text(encoding="utf-8") + "\n\ndef agile_problem(block):\n    return None\n").encode("utf-8"))
 
 
 def move_marker(root: Path) -> None:
@@ -79,20 +79,20 @@ def move_marker(root: Path) -> None:
 
 
 def remove_fence_file(root: Path) -> None:
-    (root / "scripts" / "autopilot_guard.py").unlink()
+    (root / "scripts" / "agile_guard.py").unlink()
 
 
 def guard_imports_check(root: Path) -> None:
-    edit(root, "scripts/autopilot_guard.py", "from _autopilot_rules import AUTOPILOT_EXCLUSIONS",
-         "from check import AUTOPILOT_EXCLUSIONS")
+    edit(root, "scripts/agile_guard.py", "from _agile_rules import AGILE_EXCLUSIONS",
+         "from check import AGILE_EXCLUSIONS")
 
 
 def drop_always_blocked(root: Path) -> None:
     """Bỏ `irreversible_delete` khỏi tập bảy mục luôn chặn: guard không còn chặn xoá khi file dấu hợp lệ (thay đột biến cũ trỏ danh sách 13 mục, nay chỉ dùng khi file dấu hỏng)."""
-    edit(root, "scripts/_autopilot_rules.py", '"network_fetch", "rules_unlisted", "irreversible_delete", "secret"', '"network_fetch", "rules_unlisted", "secret"')
+    edit(root, "scripts/_agile_rules.py", '"network_fetch", "rules_unlisted", "irreversible_delete", "secret"', '"network_fetch", "rules_unlisted", "secret"')
 
 
-GUARD = "scripts/autopilot_guard.py"
+GUARD = "scripts/agile_guard.py"
 
 
 def stash_all_open(root: Path) -> None:
@@ -171,7 +171,7 @@ MUTATIONS = {
     "guard-imports-check": Mutation(guard_imports_check, f"{WIRING}::test_guard_does_not_import_check", (WIRING,)),
     "drop-always-blocked": Mutation(drop_always_blocked, f"{WIRING}::test_fence_wiring_pins_7_plus_6", (WIRING,)),
     # SPR-20 TK27b: mười đột biến phủ rào mới của guard và trần phiên (mỗi cái trúng đúng một test ghim; hằng chết `drop-exclusion` cũ được thay bằng `drop-always-blocked`).
-    "stash-all-open": Mutation(stash_all_open, "tests/test_autopilot_guard.py::test_guard_marker_pattern_blocked", ("tests/test_autopilot_guard.py",)),
+    "stash-all-open": Mutation(stash_all_open, "tests/test_agile_guard.py::test_guard_marker_pattern_blocked", ("tests/test_agile_guard.py",)),
     "clean-x-open": Mutation(clean_x_open, f"{UNDO}::test_guard_stash_all_and_clean_x_blocked_in_both_ignore_states", (UNDO,)),
     "ignore-check-inverted": Mutation(ignore_check_inverted, f"{UNDO}::test_guard_stash_clean_allowed_when_marker_ignored", (UNDO,)),
     "git-dir-delete-open": Mutation(git_dir_delete_open, f"{UNDO}::test_guard_delete_inside_git_always_blocked", (UNDO,)),
