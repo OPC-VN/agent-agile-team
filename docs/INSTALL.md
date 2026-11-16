@@ -44,6 +44,8 @@ Cần **Git** và **Python 3.9 trở lên** (ba script chỉ dùng thư viện c
 | Git | `winget install --id Git.Git -e --scope user` | `xcode-select --install` |
 | Python | `winget install --id Python.Python.3.12 -e --scope user` | `brew install python@3.12` |
 
+Các hook của plugin (từ 0.12.0) chạy thẳng lệnh `python`, nên cần **`python` trên PATH**; máy chỉ có `python3` (macOS mặc định, Debian/Ubuntu) thì hook không chạy và rào ngủ im. Gõ `/agent-agile-team:agile` **một mình** để bật agile; gõ kèm câu (`/agent-agile-team:agile <câu>`) không bật được.
+
 Trên Windows, `python` mở Microsoft Store nghĩa là máy chưa có Python thật. Mọi lệnh `python …` dưới đây trên
 macOS là `python3 …`.
 
