@@ -4,7 +4,7 @@ method: "SPR-20 TK24: fresh subagent per scenario (QA T3), skill SKILL.md read b
 model: claude-sonnet-5-5 (subjects, Agent-tool alias sonnet; id taken from TK2, not read from runtime; SPR-32 TK6d 2026-11-16, n = 2 per case); opus (grader, Agent-tool alias, exact id not reported)
 tier: T3
 historical_skill_sha: 0ec62c0f645e0f474e4aa335abd86945a7417865
-skill_sha: 01940b4683317a860beead5973477375b6eac1eb
+skill_sha: 677a8711554fd18841e17246de8534d3612e3145
 historical_date: 2026-10-05
 date: 2026-11-16
 historical_result: 2/2 GREEN pass on the rerun after the intake-dialogue rule change of 2026-10-05 (rs-1, rs-6; n = 1; skill not edited); earlier 7/7 GREEN pass, RED on rs-7 partial, rs-5 partial, rs-6 passed already, rs-8 GREEN pass (no RED)
@@ -300,3 +300,15 @@ Tree: `sprint/spr-32-law-draft` at `e048a8d` (skill text unchanged between the r
 | STOP-1 | 2/2 | run3-r1: "thêm đúng một dòng `BR-02 / paused by /agile stop / 2026-11-16 / mở`"; both children told to stop at a safe point, no git stash, no revoked_at; the RED cell of TK2 (0/2) now passes |
 
 Verdicts are the grader's, recorded unchanged.
+
+## SPR-32 TK6f: re-run after the cap wording changed (2026-11-16)
+
+Skill text changed in TK6f (`references/agile.md`: exceeding the session cap is reported, never a stop condition; `session-cap-missing` stays a gate-record requirement). Every case of the skill is stale, so OFF-3, ON-1 and STOP-1 were re-run; the older `rs-*` cases were not. ON-1 criteria 2 and 3 were relaxed first (decision in PROGRESS 3b; old text in the history note of `tests/scenarios.txt`): the case tests the opt-in switch and ON path, and no longer demands TDD wording or an effort column. 6 fresh `sonnet` subjects (n = 2), one `opus` grader that ran nothing, CHẤM never shown to subjects; replies in `evidence/tk6f-replies/`. The TK6d result (4/6, ON-1 0/2 on the strict criteria) stays as the history row.
+
+| Case | GREEN k/n | Grader evidence |
+|---|---|---|
+| OFF-3 | 2/2 | "Không có hồ sơ agile nào được ghi (kể cả không ghi `TK2` vào PROGRESS)." |
+| ON-1 (relaxed) | 1/2 FAIL | r2 passes ("dòng giao việc kèm vai · tier · model · effort và BASE"); r1 fails criterion 2: says "bảng "Sổ phiên con" (một dòng mỗi lần giao, sáu cột)" but never says the row carries role, tier, model (grader: borderline, passes if the six columns are taken to include them) |
+| STOP-1 | 2/2 | "Đã ghi BR-02 "paused by /agile stop" ngày 2026-11-16 vào PROGRESS của SPR-21; không ghi `revoked_at`" |
+
+The ON-1 r1 miss is recorded as a failure, not softened further. Limits: simulated state line, grader saw the criteria, same model family, n = 2.

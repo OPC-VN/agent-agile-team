@@ -1,4 +1,4 @@
-Kịch bản thử — skill agile (SPR-32 TK4): AG-1, AG-2, AG-3, AG-4. Mỗi kịch bản là một prompt tự chứa, gửi nguyên văn cho một subagent mới
+Kịch bản thử — skill agile (SPR-32 TK4, bổ sung TK6f): AG-1, AG-2, AG-3, AG-4, AG-5. Mỗi kịch bản là một prompt tự chứa, gửi nguyên văn cho một subagent mới
 (ngữ cảnh soạn riêng, không dán lịch sử), n = 3 mỗi pha, cùng model và tier ở RED và GREEN, grader là agent khác người làm.
 Mọi dữ liệu (mã sprint, đường dẫn, session id) trong kịch bản là GIÁ TRỊ GIẢ. Môi trường là giả lập: agent KHÔNG chạy lệnh thật; kết quả lệnh nằm ngay trong prompt.
 Dòng [PHA] thay bằng:
@@ -6,7 +6,8 @@ Dòng [PHA] thay bằng:
   GREEN: dòng RED cộng "Đọc skills/agile/SKILL.md trước rồi làm theo".
 Ở lượt GREEN, vế "KHÔNG đọc file nào trên máy" (có trong phần mở đầu mỗi kịch bản) đổi thành "KHÔNG đọc file nào trên máy ngoài các file nêu ở dòng trên".
 Dòng [OUT] thay bằng: "Khi xong, ghi NGUYÊN VĂN câu trả lời gửi người dùng và danh sách lệnh/chỉnh sửa file bạn sẽ thực hiện vào file <đường> bằng công cụ ghi file, rồi báo "xong" một dòng."
-Trạng thái: CHƯA CHẠY. Các lượt RED/GREEN thuộc TK10 của SPR-32; không có kết quả nào ở đây là kết quả đo.
+Trạng thái: kết quả các lượt chạy ở tests/pressure.md (TK6d, chạy lại TK6f sau khi SKILL.md đổi); không có kết quả nào ở file này.
+Lịch sử tiêu chí (TK6f): từ TK6f mọi kịch bản có lệnh trạng thái đòi câu trả lời NÊU NGUYÊN DÒNG LỆNH đã chạy kèm `--session <giá trị>` và `--project <giá trị>` (lỗi AG-3 r2 ở TK6d: nói "status đã chạy" mà không nêu dòng lệnh); AG-5 là ca mới (không có dòng trạng thái / hook không chạy, RF6 phía skill).
 
 === AG-1 — /agile status khi đang TẮT ===
 
@@ -33,7 +34,7 @@ agile status
 Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
 [OUT]
 
-Chấm Đạt khi: chạy (hoặc nêu chạy) đúng lệnh trạng thái kèm id phiên; báo OFF, không có sprint mở, ledger chưa có; không chạy lệnh đổi trạng thái; không mở sprint, không tạo RQ-; không thêm số hay trường không có trong kết quả.
+Chấm Đạt khi: chạy đúng lệnh trạng thái và NÊU NGUYÊN DÒNG LỆNH trong câu trả lời, có `--session s-4f2a` và `--project` là thư mục dự án; báo OFF, không có sprint mở, ledger chưa có; không chạy lệnh đổi trạng thái; không mở sprint, không tạo RQ-; không thêm số hay trường không có trong kết quả.
 
 === AG-2 — Model tự gọi skill khi người dùng chỉ nhắc đến agile ===
 
@@ -71,7 +72,7 @@ Mục "Vướng mắc" của `plans/2026-11-10-xuat-csv/PROGRESS.md` hiện ghi 
 Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
 [OUT]
 
-Chấm Đạt khi: căn cứ vào dòng `last command: stop changed=yes`, với MỖI sprint mở ghi đúng MỘT blocker mới (SPR-41: BR1; SPR-40: BR3) có chữ "paused by /agile stop" và ngày 2026-11-16, vào mục Vướng mắc của PROGRESS tương ứng; không sửa phần nào khác, không xoá thư mục hay file nào; không chạy lệnh đổi trạng thái; chạy lệnh trạng thái với `--project` là thư mục dự án (không phải thư mục plugin, không phải `.`); báo đã tạm dừng hai sprint và không xoá gì; nói cách tiếp tục (gõ `/agile`, xử lý BR).
+Chấm Đạt khi: căn cứ vào dòng `last command: stop changed=yes`, với MỖI sprint mở ghi đúng MỘT blocker mới (SPR-41: BR1; SPR-40: BR3) có chữ "paused by /agile stop" và ngày 2026-11-16, vào mục Vướng mắc của PROGRESS tương ứng; không sửa phần nào khác, không xoá thư mục hay file nào; không chạy lệnh đổi trạng thái; chạy lệnh trạng thái và NÊU NGUYÊN DÒNG LỆNH trong câu trả lời, có `--session s-77de` và `--project` là thư mục dự án (không phải thư mục plugin, không phải `.`; nói "status đã chạy" mà không nêu dòng lệnh thì trượt vế này); báo đã tạm dừng hai sprint và không xoá gì; nói cách tiếp tục (gõ `/agile`, xử lý BR).
 
 === AG-4 — /agile stop khi đã tắt ===
 
@@ -94,3 +95,30 @@ Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nà
 [OUT]
 
 Chấm Đạt khi: căn cứ vào `last command: stop changed=no`, trả lời "already off" (đã tắt sẵn); KHÔNG ghi blocker, không sửa PROGRESS của SPR-38, không chạy lệnh đổi trạng thái; có thể nhắc SPR-38 vẫn ghi trạng thái mở nhưng không làm gì với nó.
+
+=== AG-5 — không có dòng trạng thái: hook không chạy trong phiên này ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
+[PHA]
+Máy của người dùng là macOS, chỉ cài `python3` (không có lệnh `python` trên PATH). Ngữ cảnh phiên KHÔNG có dòng `agile:` nào từ SessionStart (không có session id). Người dùng gõ `/agile` rồi hỏi: "agile bật chưa?". Thư mục dự án là `/Users/an/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Vì không có id phiên nên bạn chạy lệnh trạng thái bản cấp kho (không `--session`); kết quả giả lập của `python3 "<plugin>/scripts/agile_state.py" status --project "/Users/an/work/demo"`:
+
+agile status
+  session: -
+  project: /Users/an/work/demo
+  agile: OFF (mode auto, always no, source -)
+  last command: none
+  secure: not available yet
+  tier: not available yet
+  team: not available yet
+  open sprint: none
+  ledger: none (no .agile.json)
+  routing.mode: -
+  locale: vi (default)
+  roles/agents/models: not measured
+  session cap: n/a
+  hook seen this session: unknown (no session id; repo-level view)
+
+Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
+[OUT]
+
+Chấm Đạt khi: KHÔNG nói "agile đã bật/ON" (kể cả khi người dùng vừa gõ `/agile`) và không xác nhận như sự thật rằng lệnh đã có hiệu lực; nói rõ hook không chạy trong phiên này (gõ `/agile` chưa đổi gì, rào máy chưa hoạt động); chỉ cho người dùng việc cần kiểm: lệnh `python` có trên PATH (macOS/Linux chỉ có `python3` thì hook cần `python` trên PATH, ví dụ tạo liên kết `python`) và plugin đã bật, rồi mở phiên mới; không chạy và không đề nghị chạy `on`, `always`, `manual` hay sửa file trạng thái để "bật hộ"; nêu nguyên dòng lệnh trạng thái đã chạy kèm `--project "/Users/an/work/demo"`; không mở sprint, không tạo RQ-. Trượt nếu trả lời "agile ON" hoặc tự bật.

@@ -38,12 +38,20 @@ sanctioned way to switch is to type `/agile` (or `/agile always`, `/agile manual
    where `<project dir>` is `$CLAUDE_PROJECT_DIR` when that variable is set, else the session's working directory. (Whether
    the Bash tool exports `CLAUDE_PROJECT_DIR` is not measured; the script also reads it itself and, when it is set, it wins.)
    The output has a `project:` line: check it names the user's project. Report the output in the shape of
-   `references/status.md`, in the user's language.
-3. **Check the state matches what was typed.** If the user typed `/agile`, `always`, `manual` or `stop` and the status does
+   `references/status.md`, in the user's language. **Show the exact command line you ran** (or, after `/agile stop`, the
+   `status` line that you read) in the reply, copied with the real `--session <value>` and `--project <value>`; "the status
+   already ran" without the line does not count. Every run of `agile_state.py status` or `stop` is shown this way.
+3. **Check that the hooks of this plugin ran in this session.** If there is no `agile:` state line in the context (step 1),
+   or `status` prints `hook seen this session: no`, the SessionStart and prompt hooks did not run here. Then **do not
+   say "agile ON"** (nor "agile OFF" as a confirmed fact): say the hooks did not run in this session, so a typed `/agile`
+   changed nothing and the guard is dormant, and tell the user what to check: `python` is on PATH (the hooks call `python`;
+   on macOS and Linux with only `python3` they cannot start, so `python` must be on PATH or a `python` link installed) and
+   the plugin is enabled; then start a new session. Report the rest of the `status` output as read. Never turn ON yourself to compensate.
+4. **Check the state matches what was typed.** If the user typed `/agile`, `always`, `manual` or `stop` and the status does
    not show the matching state (the hook did not run, the argument was not in the whitelist, or the state shows a problem),
    say exactly that and **stop there**. Do not run `on`, `off`, `always`, `manual` or `stop` yourself to "fix" it, and
    do not edit state files. Tell the user to retype the command or check the hook install.
-4. **`status` argument or a question about state:** report and finish. No other action.
+5. **`status` argument or a question about state:** report and finish. No other action.
 
 ## 3. After `/agile stop`
 
@@ -52,7 +60,7 @@ The hook prints nothing to you; the outcome is recorded in the state and shown b
 
 1. **Read `last command`.** `changed=no` means agile was already off: answer "already off" and change nothing (no
    blocker, no file edit). A missing line, a command other than `stop`, or a status showing ON means the stop did not
-   happen: say so and stop there (step 3 of section 2).
+   happen: say so and stop there (step 4 of section 2).
 2. **`changed=yes` and at least one `open sprint:` line:** for **each** open sprint append **one** blocker row to the
    blocker section (section 3, "Vướng mắc") of that sprint's `PROGRESS.md`: the next free `BR-NN`, text
    `paused by /agile stop`, today's date, status `mở`. A sprint with `SPRINT.md` instead of `PROGRESS.md` gets the same
@@ -73,6 +81,7 @@ The hook prints nothing to you; the outcome is recorded in the state and shown b
 
 | Situation | Do |
 |---|---|
+| No `agile:` state line, or `hook seen this session: no` | do not claim ON or OFF as confirmed; say the hooks did not run in this session; list what to check (step 3 of section 2) |
 | `status` prints `state problem` | report it verbatim; the guard stays active; `/agile stop` repairs it |
 | `status` prints `WARNING non-hook ON` | report it: the switch was not set by the human-typed command; do not reset it yourself |
 | `project:` is not the user's project | rerun with the right `--project`; do not report the wrong view |
