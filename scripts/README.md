@@ -115,6 +115,9 @@ dấu huyền. Mã bị bắt có dấu huyền sát bên thì phát hiện kèm
 | `frontmatter-missing` | Phải sửa | File tên chuẩn (`SPEC.md`, `PLAN.md`, `PROGRESS.md`, `REPORT.md`, `SPRINT.md`, ba sổ) không có frontmatter |
 | `frontmatter-key-missing` | Phải sửa | Thiếu khoá bắt buộc theo loại tài liệu (`templates/README.md` mục 3); file tên chuẩn có frontmatter mà thiếu `doc` |
 | `frontmatter-key-unknown` | Ghi chú | Khoá ngoài bảng khoá của hợp đồng |
+| `locale-invalid` | Phải sửa | Khoá `locale` khai giá trị không thuộc các ngôn ngữ đã phát hành (`vi`, `en`); chỉ xét tài liệu có khoá `locale` |
+| `locale-differs` | Nên sửa | Tài liệu cùng một thư mục sprint khai `locale` khác nhau (tài liệu đầu theo tên file là chuẩn); chỉ xét tài liệu có khoá `locale` |
+| `locale-label-mixed` | Ghi chú | Tài liệu khai `locale` có nhãn máy đọc (tiêu đề, đầu cột, nhãn in đậm) chỉ thuộc ngôn ngữ kia; nhãn giống nhau ở hai ngôn ngữ không tính; chỉ xét tài liệu có khoá `locale` |
 | `frontmatter-value` | Phải sửa | Giá trị sai miền (`status`, `size`, `risk`, ngày, mã `RQ-`/`FS-`/`SPR-` kể cả độ rộng theo `id_width` của `.agile.json` gần nhất, `id`, `next_id`, `links`, `review_round`) hoặc mâu thuẫn (`risk: high` mà không `large`, `risk_tags` khác rỗng mà không `high`) |
 | `doc-unknown` | Ghi chú | Có khoá `doc` nhưng không thuộc loại đã biết — chỉ áp luật chung |
 | `heading-missing` | Phải sửa | Thiếu tiêu đề cấp 2 bắt buộc theo loại tài liệu (SPEC cỡ vừa trở lên thiếu "Truy vết" cũng báo); `SPRINT.md` cỡ rất nhỏ (hoặc chưa rõ cỡ) nhận hai phần "Kế hoạch" · "Kết quả" hoặc bốn phần cũ — bốn phần chỉ được suy ra khi có tiêu đề **bắt đầu** bằng SPEC, PLAN hay PROGRESS (sau số thứ tự); cỡ nhỏ trở lên luôn cần bốn phần |

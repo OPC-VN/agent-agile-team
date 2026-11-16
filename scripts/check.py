@@ -50,6 +50,9 @@ RULES: dict[str, tuple[str, str]] = {
     "frontmatter-missing": (PHAI, "file tài liệu (tên chuẩn) không có frontmatter"),
     "frontmatter-key-missing": (PHAI, "thiếu khoá bắt buộc theo loại tài liệu"),
     "frontmatter-key-unknown": (GHI, "khoá ngoài bảng khoá của hợp đồng"),
+    "locale-invalid": (PHAI, "khoá `locale` khai giá trị không thuộc các ngôn ngữ đã phát hành"),
+    "locale-differs": (NEN, "tài liệu cùng một thư mục sprint khai `locale` khác nhau"),
+    "locale-label-mixed": (GHI, "tài liệu khai `locale` có nhãn máy đọc (tiêu đề, đầu cột, nhãn in đậm) thuộc ngôn ngữ kia"),
     "frontmatter-value": (PHAI, "giá trị khoá sai miền hoặc mâu thuẫn"),
     "doc-unknown": (GHI, "khoá `doc` có nhưng không thuộc loại đã biết — chỉ áp luật chung"),
     "heading-missing": (PHAI, "thiếu tiêu đề cấp 2 bắt buộc"),
@@ -127,7 +130,7 @@ REQUIRED_KEYS = {
 }
 KNOWN_KEYS = set(_SPRINT_KEYS) | set(_GATE1) | set(_GATE2) | {
     "risk_tags", "review_round", "requests", "sprints", "next_id", "links",
-    "gate_1_mode", "gate_2_mode", "delegation", "tier_scale"}
+    "gate_1_mode", "gate_2_mode", "delegation", "tier_scale", "locale"}
 
 STATUS = {
     "spec": {"draft", "in_review", "approved", "superseded"},
@@ -1220,6 +1223,7 @@ class Engine:
         self.cache: dict = {}
         self.configs: dict = {}
         self.size_flagged: set = set()  # thư mục sprint bốn file đã báo `sprint-size-mismatch` (một lần mỗi thư mục)
+        self.locales: dict = {}  # thư mục -> [(đường dẫn, locale hợp lệ, dòng khoá)] của tài liệu khai `locale` tường minh
         self.delegation_flagged: set = set()  # (tài liệu, khoá lạ) đã báo trong khối `delegation` (khối chung của hai cổng)
         self.report = Report()
         self.routing_records: list[tuple[dict, Path, int]] = []
@@ -1255,6 +1259,7 @@ class Engine:
         if doc.kind is None or doc.fm is None:
             return
         self.frontmatter_rules(doc)
+        self.locale_rules(doc)
         self.size_rules(doc)
         self.heading_rules(doc)
         self.id_rules(doc)
@@ -1271,6 +1276,38 @@ class Engine:
         if doc.kind in ("report", "sprint"):
             self.verification_rules(doc)
             self.stop_message_rules(doc)
+
+    def locale_rules(self, doc: Doc) -> None:
+        """Rules for an explicit `locale` key (GC4): a document without the key is never touched by them."""
+        if "locale" not in doc.data:
+            return
+        value = doc.data["locale"]
+        line = doc.key_line("locale")
+        if not isinstance(value, str) or not lab.valid_locale(value):
+            self.add(doc.path, line, "locale-invalid",
+                     f"locale: {value!r} không thuộc các ngôn ngữ đã phát hành {list(lab.shipped())}")
+            return
+        self.locales.setdefault(doc.path.resolve().parent, []).append((doc.path, value, line))
+        foreign = []
+        for span in lab.scan("\n".join(doc.raw)):
+            owners = {loc for loc, _ in span.entries}
+            if value not in owners:
+                foreign.append(span)
+        if foreign:
+            first = foreign[0]
+            other = "/".join(sorted({loc for s in foreign for loc, _ in s.entries}))
+            self.add(doc.path, doc.line_no(first.line), "locale-label-mixed",
+                     f"locale: {value} nhưng {len(foreign)} nhãn máy đọc thuộc ngôn ngữ {other}, đầu tiên là '{first.text}'")
+
+    def locale_folder_rules(self) -> None:
+        """Documents of one sprint folder with an explicit `locale` must agree; the first (by file name) sets the reference."""
+        for folder in sorted(self.locales):
+            items = sorted(self.locales[folder], key=lambda item: c.display(item[0]))
+            ref_path, ref_value, _ = items[0]
+            for path, value, line in items[1:]:
+                if value != ref_value:
+                    self.add(path, line, "locale-differs",
+                             f"locale: {value} khác locale: {ref_value} của {ref_path.name} trong cùng thư mục sprint")
 
     def routing_rules(self, doc: Doc) -> None:
         """Read an explicit marker and its immediately following fenced JSON object."""
@@ -2478,6 +2515,7 @@ def check_paths(paths, env=None, routing_manifest=None, include_evidence: bool =
                        for record, path, _ in engine.routing_records if path.resolve().is_relative_to(base.resolve())]
             for rule, message in routing_bundle_problems(records, manifest):
                 engine.add(manifest_path, 1, rule, message)
+    engine.locale_folder_rules()
     engine.report.findings.sort(key=lambda f: (c.display(f.path), f.line, f.rule))
     return engine.report
 

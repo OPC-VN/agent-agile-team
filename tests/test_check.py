@@ -19,6 +19,7 @@ CASES = json.loads((FIXTURES / "broken.json").read_text(encoding="utf-8"))["case
 SPECIAL_CASES = {
     "leak-denylist", "agents-md-budget", "hard-floor-marker", "root-junk",
     "routing-invalid", "routing-unknown", "routing-manifest-invalid", "routing-missing", "routing-duplicate",
+    "locale-invalid", "locale-differs", "locale-label-mixed",  # tests/test_check_locale_rules.py (need the `locale` key)
 }
 
 

@@ -97,6 +97,7 @@ Giá trị là token tiếng Anh cho máy đọc; thân tài liệu dùng nhãn 
 | `review_round` | PROGRESS, REPORT, SPRINT | số nguyên ≥ 0 — vòng kiểm định hiện tại |
 | `requests` · `sprints` | spec sống | danh sách inline `RQ-NNN` / `SPR-NN` đã chạm tính năng |
 | `next_id` | sổ gốc | mã kế tiếp sẽ cấp: `RQ-NNN` · `FS-NNN` · `SPR-NN` |
+| `locale` | any document (optional) | `vi` or `en`: the language of the machine-read labels of the document. A document without the key is read as before; a value that is not a shipped locale is reported by `locale-invalid` |
 | `created` · `updated` | mọi file (sổ gốc: chỉ `updated`) | `YYYY-MM-DD` |
 | `links` | SPEC, PLAN, PROGRESS, REPORT | khối lồng; khoá `spec` · `plan` · `progress` · `report` → đường dẫn tương đối |
 
