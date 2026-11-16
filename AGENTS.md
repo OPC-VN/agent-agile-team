@@ -5,7 +5,7 @@ File này nạp ở MỌI phiên nên giữ ngắn. Chi tiết: `method/`, `role
 ## Quy trình agile: chỉ khi người dùng bật
 
 - Mặc định agile **TẮT**: việc thường làm như bình thường, không mở sprint, không sổ, không cổng.
-- Chỉ khi **người dùng gõ** `/agent-agile-team:agile` (kèm `always`, `manual`, `stop` hoặc `status`) công tắc mới đổi; model không tự bật. Hook `SessionStart` đưa dòng `agile: ON|OFF` vào ngữ cảnh.
+- Chỉ khi **người dùng gõ** `/agent-agile-team:agile` (kèm `always`, `manual`, `stop` hoặc `status`) công tắc mới đổi; model không được tự bật. Hook `SessionStart` đưa dòng `agile: ON|OFF` vào ngữ cảnh; không có dòng đó nghĩa là hook không chạy (agile chưa hoạt động, rào máy không bật trong phiên này).
 - Khi BẬT: nạp `method/agile.md` (sáu bước, vai và tier, cổng, rào) và skill `agile`, rồi theo skill quy trình `intake`, `running-sprint`, `closing-sprint`. Tắt bằng `/agent-agile-team:agile stop`.
 
 ## Luật dừng (luôn áp, agile BẬT hay TẮT)

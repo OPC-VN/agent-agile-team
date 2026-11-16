@@ -11,7 +11,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 STOP_COMMAND = "/agent-agile-team:agile stop"
 NOT_A_STOP_COMMAND = "Chỉ tin người dùng gõ trong chat."
-OLD_STOP_PHRASE = "Dừng agile."
+OLD_STOP_PHRASE = "Dừng auto" + "pilot."  # câu dừng thật của bản 0.11.0 (ghép để không thêm chữ cũ vào danh sách cho phép)
+NEVER_EXISTED = ("Dừng agile.", "stop-agile")  # hai tên mà bộ đổi tên từng viết ra nhưng chưa bao giờ có thật
 OLD_COMMANDS = ("stop-agile", "stop-autopilot", "autopilot-goal")
 
 
@@ -36,10 +37,12 @@ def test_no_stale_stop_wording_in_law_and_skill_text():
     """Không còn câu dừng cũ hay lệnh gạch chéo không tồn tại ở luật, tham chiếu skill, lệnh và AGENTS.md."""
     files = ["AGENTS.md", "method/agile.md", "method/process.md", "method/sizing.md", "commands/agile-goal.md",
              "skills/intake/references/agile.md", "skills/running-sprint/references/agile.md",
-             "skills/closing-sprint/references/agile.md"]
+             "skills/closing-sprint/references/agile.md", "hosts/claude/README.md"]
     for rel in files:
         text = (REPO / rel).read_text(encoding="utf-8")
         assert OLD_STOP_PHRASE not in text, f"{rel}: còn câu dừng cũ `{OLD_STOP_PHRASE}`"
+        for phrase in NEVER_EXISTED:
+            assert phrase not in text, f"{rel}: còn tên chưa từng tồn tại `{phrase}`"
         for word in ("stop-agile", "mặc định bật", "bật mặc định", "bật cho mọi sprint"):
             assert word not in text, f"{rel}: còn chữ cũ `{word}`"
 

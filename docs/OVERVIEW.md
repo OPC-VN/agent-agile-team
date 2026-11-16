@@ -100,7 +100,7 @@ Skill là năng lực thường trực: agent rà danh mục trước mỗi hàn
   `plan-review`, `security-review`, `security-audit`, `web-qa`, `hooks-guardrails`) · Giao tiếp và tối ưu (4: `response-style`, `explain`,
   `id-convention`, `token-economy`) · Meta (2: `writing-skills`, `eval-harness`).
 - Skill **kỷ luật** (24) có luật sắt và được thử áp lực; skill **tham chiếu** (14) là bảng tra kỹ thuật và được
-  thử truy xuất. 37 trong 38 skill có tệp thử đã chạy; `agile` có tệp thử nhưng chưa chạy (0/4 kịch bản, chạy thật ở SPR-32 TK10).
+  thử truy xuất. 38 trong 38 skill có tệp thử đã chạy; `agile` 9/10 lượt GREEN (n = 2, chưa có lượt RED, AG-5 1/2).
 - **13 agent** chuyên đề: 12 agent **chỉ đọc** (reviewer theo ngôn ngữ, bảo mật, CSDL, săn lỗi bị nuốt, kiểm
   comment, kiểm test, lần bản đồ code…) và `build-fixer` — agent duy nhất được sửa file, chỉ sửa đúng chỗ lỗi
   build đòi.

@@ -55,12 +55,12 @@ claude --plugin-dir "$HOME\agent-agile-team"              # Windows PowerShell
 **Công tắc agile.** Agile **tắt mặc định**. Người dùng gõ `/agent-agile-team:agile` (hoặc `/agile`) để bật cho phiên này; `always` nhớ cho repo,
 `manual` để người ký hai cổng, `stop` tắt (sprint đang mở nhận một vướng mắc `paused by /agile stop`, hồ sơ giữ nguyên), `status` chỉ xem.
 Hook `UserPromptExpansion` (`scripts/agile_hook.py`) đọc lệnh người gõ và ghi trạng thái vào thư mục state của nền tảng qua
-`scripts/agile_state.py` (không còn file dấu `.tmp/autopilot.json`); hook `SessionStart` đưa dòng trạng thái vào ngữ cảnh. Model không tự bật được.
+`scripts/agile_state.py` (không còn file dấu `.tmp/autopilot.json`); hook `SessionStart` đưa dòng trạng thái vào ngữ cảnh. Đường ghi BẬT được phép duy nhất là hook trên lệnh do người dùng gõ; model không được tự bật (skill `agile` không ghi ON), nhưng chương trình nào gọi được Bash vẫn chạy được `scripts/agile_state.py`, và `source` do bên ghi tự khai: bản ghi như vậy `status` đánh dấu `non-hook ON`.
 
 **Hook của plugin.** `hooks/hooks.json` đăng ký ba sự kiện, mỗi hook dạng `command` + `args` (`python` chạy thẳng, không qua `sh` hay Git Bash): `SessionStart` và `UserPromptExpansion` chạy `scripts/agile_hook.py`; `PreToolUse` (`Bash|PowerShell` và `Write|Edit|MultiEdit|NotebookEdit`, không `onFailure`: thiếu `python` thì hook lỗi mở, đã đo) chạy `scripts/agile_guard.py` — guard chỉ chặn khi agile **bật**, agile tắt thì thoát 0 và không làm gì. Đã đo ở sprint này (Windows, claude 2.1.325): dạng `args` chạy khi PATH không có `sh`, tiến trình cha là `claude.exe`, mốc khởi động 143 ms; máy Windows không có Git là **Chưa chạy**. Cần lệnh tên `python` trên PATH: trên macOS/Linux chỉ có `python3` thì **Chưa chạy** (chưa đo), hook sẽ không khởi động được; lối dự phòng dạng chuỗi là launcher `scripts/agile-hook.sh` (`sh "${CLAUDE_PLUGIN_ROOT}/scripts/agile-hook.sh" --format claude`, thử `python3`/`python`/`py -3`; trên Windows cần Git Bash, chậm hơn khoảng 40 ms) — Đức chọn dùng thay thế hay không, file vẫn nằm trong repo nhưng không được gọi. Chi tiết luật: [method/agile.md](../../method/agile.md), [hooks/hooks.json](../../hooks/hooks.json), [scripts/README.md](../../scripts/README.md).
 Codex và Antigravity chưa có hook này: xem [method/agile.md](../../method/agile.md).
 
-**Lệnh mục tiêu.** `/agent-agile-team:agile-goal` (kèm `SPR-NN` nếu cần) in sẵn khối `/goal` để chạy tiếp sprint đang mở; lệnh chỉ in, người dùng phải gửi khối đó trong chat. Dừng agile dùng `/agile stop` (thay cho câu `Dừng agile.` và lệnh `stop-agile` cũ).
+**Lệnh mục tiêu.** `/agent-agile-team:agile-goal` (kèm `SPR-NN` nếu cần) in sẵn khối `/goal` để chạy tiếp sprint đang mở; lệnh chỉ in, người dùng phải gửi khối đó trong chat. Dừng agile dùng `/agile stop` (thay cho câu dừng và lệnh dừng riêng của bản 0.11.0).
 
 ## 3. Kiểm, cập nhật, gỡ
 

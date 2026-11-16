@@ -35,4 +35,6 @@ Agent reviewer trong `agents/` là thẻ vai Markdown, đọc theo brief như v�
 - **Gỡ:** xoá đúng các **liên kết** do mình tạo (không xoá thư mục đích của liên kết), bỏ phần ghép khỏi
   `~/.gemini/GEMINI.md` bằng script sinh.
 
+**Agile:** agile không bật được bằng lệnh chat ở host này trong bản này: không có hook `SessionStart` nên không có dòng `agile: ON|OFF`, và ba skill quy trình (`intake`, `running-sprint`, `closing-sprint`) tự loại khi thiếu dòng đó (hồi quy so với 0.11.0). Lối dự phòng, chưa chạy ở host này: người dùng tự chạy `python scripts/agile_state.py always --project <thư mục dự án>` rồi dán dòng `agile: ON …` mà `status` in ra vào chat (`status` báo `non-hook ON`); xem [method/agile.md](../../method/agile.md) mục 9.
+
 Điểm cắm (bảng tier, từ cấm, nơi lưu bài học, cầu gọi chéo): [`hosts/README.md`](../README.md) mục 2.

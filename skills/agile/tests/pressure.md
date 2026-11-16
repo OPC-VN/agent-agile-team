@@ -4,7 +4,7 @@ method: pressure-test with subagents (RED without skill, GREEN with skill read f
 model: claude-sonnet-5-5 (subjects, Agent-tool alias sonnet; id taken from TK2, not read from runtime; SPR-32 TK6d 2026-11-16, n = 2 per case); opus (grader, Agent-tool alias, exact id not reported)
 date: 2026-11-16
 result: "9/10 pass (AG-1 2/2, AG-2 2/2, AG-3 2/2, AG-4 2/2, AG-5 1/2 FAIL); SPR-32 TK6g re-run 2026-11-16 on the final text (blocker id BR<number>), n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; AG-5 r2 fails the clause 'say the hook did not run in this session (typed /agile changed nothing, machine guard not active)': it hedged ('rất có thể', 'có thể chưa đổi gì') and never said the guard is inactive; history: TK6f 9/10 (AG-3 r2 wrote BR-01/BR-03, format only), TK6d 7/8 (AG-3 r2 never showed --project); SPR-32 TK6f re-run 2026-11-16 on the edited skill text, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; AG-3 r2 fails the clause 'exactly one new blocker (BR1 for SPR-41, BR3 for SPR-40)': it wrote BR-01/BR-03 (grader: format only, the command line with --session and --project was shown); history: TK6d 7/8 on the earlier text (AG-3 r2 never showed the --project value); simulated status output"
-tier: tier 2 (cũ T2) author; runs and grader are assigned at TK10
+tier: tier 2 (cũ T2) author; runs sonnet, grader opus (TK6d, TK6f, TK6g)
 skill_sha: 678bec443f97b0796891c766c5bb38b128013d00
 ---
 
@@ -71,4 +71,4 @@ Skill text changed in TK6g: the blocker written after `/agile stop` is `BR<numbe
 | AG-4 | 2/2 | r1: "Agile đã tắt từ trước rồi, nên lệnh `/agile stop` lần này không đổi gì" |
 | AG-5 | 1/2 FAIL | r1 passes ("hook của plugin chưa chạy trong phiên này"; guard asleep; python/PATH). r2 fails: only "rất có thể đã không chạy" and "có thể chưa đổi gì", and never says the machine guard is inactive |
 
-The AG-5 r2 miss is recorded as a failure, not softened; the skill was not edited again. Limits: simulated state line and status output, grader saw the criteria (not blind) and is the same model family as the subjects, n = 2; the grader flagged that AG-3 would fail both replies under a stricter reading of "run the status command" (list it in (B)).
+The AG-5 r2 miss is recorded as a failure, not softened; the skill was not edited again. Limits: simulated state line and status output, grader saw the criteria (not blind) and is the same model family as the subjects, n = 2; the grader flagged that AG-3 would fail both replies under a stricter reading of "run the status command" (list it in (B)). Verbatim replies, prompts and the case map of this re-run: `evidence/tk6g-replies/` in the SPR-32 sprint folder (`system/workshop/records/agent-agile-team/plans/2026-11-16-agile-1a-switch-state-status/`), outside this repo.

@@ -323,4 +323,4 @@ Skill text changed in TK6g: `references/agile.md` lists the six real columns of 
 | ON-1 | 1/2 FAIL | r2 passes ("giao TKn … vai · tier · model; BASE"). r1 fails criterion 2 again: ledger is only "Sổ phiên con (một dòng mỗi lần giao, sáu cột)"; grader: close call, a loose reading would pass |
 | STOP-1 | 2/2 | r2: "Đã ghi một dòng BR2 'paused by /agile stop' (2026-11-16, trạng thái mở)"; r1 writes BR2 with the same fields; no `revoked_at` |
 
-The ON-1 r1 miss is recorded as a failure, not softened; the skill was not edited again. Limits: simulated state line, grader saw the criteria, same model family, n = 2.
+The ON-1 r1 miss is recorded as a failure, not softened; the skill was not edited again. Limits: simulated state line, grader saw the criteria, same model family, n = 2. Verbatim replies, prompts and the case map of this re-run: `evidence/tk6g-replies/` in the SPR-32 sprint folder (`system/workshop/records/agent-agile-team/plans/2026-11-16-agile-1a-switch-state-status/`), outside this repo.

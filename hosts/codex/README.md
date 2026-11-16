@@ -45,4 +45,5 @@ Reviewer cần một chuyên đề, brief của subagent ghi "đọc `agents/<t�
 
 - Sandbox của Codex có thể chặn ghi ra ngoài thư mục đang mở; `init.py` ghi vào **dự án đang áp dụng**, nên
   mở Codex ở gốc dự án đó.
+- **Agile:** agile không bật được bằng lệnh chat ở host này trong bản này: không có hook `SessionStart` nên không có dòng `agile: ON|OFF`, và ba skill quy trình (`intake`, `running-sprint`, `closing-sprint`) tự loại khi thiếu dòng đó (hồi quy so với 0.11.0). Lối dự phòng, chưa chạy ở host này: người dùng tự chạy `python scripts/agile_state.py always --project <thư mục dự án>` rồi dán dòng `agile: ON …` mà `status` in ra vào chat (`status` báo `non-hook ON`); xem [method/agile.md](../../method/agile.md) mục 9.
 - Điểm cắm (bảng tier, từ cấm, nơi lưu bài học, cầu gọi chéo): [`hosts/README.md`](../README.md) mục 2.
