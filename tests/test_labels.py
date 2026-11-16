@@ -455,3 +455,124 @@ def test_en_render_of_sprint_templates_has_no_vietnamese_machine_labels():
     for path in sorted((TEMPLATES / "sprint").glob("*.md")) + sorted((TEMPLATES / "registry").glob("*.md")):
         en = m.translate(path.read_bytes().decode("utf-8"), "en")
         assert "vi" not in m.locales_in(en), path.name
+
+
+# --- review round 1 (RF1, RF2, RF5) --------------------------------------------------------------------
+
+
+def test_ascii_vietnamese_labels_do_not_match_english_substrings():
+    """RF1: vi labels that are ASCII-only or equal to the English label (PR, Review, PLAN, ...) match anchored."""
+    m = _mod()
+    assert not m.contains("Approved", "field.pr")
+    assert not m.contains("Preview", "field.review")
+    assert not m.contains("Plan review notes", "heading.part_plan")
+    assert not m.contains("Link checker", "column.link") and not m.contains("Sprinting", "column.sprint")
+    assert not m.startswith("Preview: x", "field.review") and not m.startswith("PRD: x", "field.pr")
+    assert m.contains("2. PLAN", "heading.part_plan") and m.contains("Timeline", "heading.timeline")
+    assert m.contains("Review", "field.review") and m.startswith("Review: ok", "field.review")
+    assert m.contains("Số lượt Đức phải trả lời: 3", "field.ask_count")  # accented Vietnamese keeps substring
+
+
+def test_author_heading_is_a_label():
+    m = _mod()
+    assert m.exact("Tác giả", "heading.author") and m.exact("Author", "heading.author")
+    assert m.translate("## Tác giả\n", "en") == "## Author\n" and m.translate("## Author\n", "vi") == "## Tác giả\n"
+
+
+def test_documented_limits_of_translate():
+    m = _mod()
+    assert m.translate("## 3.Rủi ro\n", "en") == "## 3.Rủi ro\n"  # no space after the number: not a label
+    assert m.translate("## RỦI RO\n", "en") == "## Risks\n"
+    assert m.translate("## Risks\n", "vi") == "## Rủi ro\n"  # the round trip is byte-identical only for template casing
+
+
+# --- RF2: pin the labels to the real constants of check.py and index.py ----------------------------------
+
+
+def _check():
+    return importlib.import_module("check")
+
+
+def _index():
+    return importlib.import_module("index")
+
+
+def test_check_constants_resolve_to_their_keys():
+    m, c = _mod(), _check()
+    pins = [
+        (c.DELEGATION_RECORD, "heading.delegation_record"),
+        (c.DELEGATION_LABELS[0], "field.delegation_chosen"),
+        (c.DELEGATION_LABELS[1], "field.delegation_rejected"),
+        (c.DELEGATION_LABELS[2], "field.delegation_cost_if_wrong"),
+        (c.FLOOR_TABLE_HEADING, "heading.floor_files"),
+        (c.DELEGATION_QUOTE, "quote.delegated"),
+        (c.PLAIN_SUMMARY_HEADING, "heading.plain_summary"),
+        (c.PLAN_GOAL_LABELS[0], "field.plan_goal"),
+        (c.PLAN_GOAL_LABELS[1], "field.plan_desired_result"),
+        (c.PLAN_GOAL_LABELS[2], "field.plan_risk_watch"),
+        (c.INPUT_FIELD, "field.input"),
+        (c.OUTPUT_FIELD, "field.output"),
+        (c.PARALLEL_MARK, "phrase.parallel_with"),
+        (c.SELF_CHECK, "phrase.self_check"),
+        (c.SPRINT_TINY_HEADINGS[0], "heading.tiny_plan"),
+        (c.SPRINT_TINY_HEADINGS[1], "heading.result"),
+        (c.CHAN, "level.blocker"),
+        (c.PHAI, "level.must_fix"),
+        (c.NEN, "level.should_fix"),
+        (c.GHI, "level.note"),
+        (c.BULLETIN_HEADINGS[0], "heading.bulletin"),
+        # literals inside check.py code (facts-1 section 1a), pinned by hand
+        ("ước lượng", "heading.estimate"),
+        ("nhật ký quyết định", "heading.decision_log"),
+        ("nâng trần", "phrase.raise_cap"),
+        ("trần phiên", "field.session_cap"),
+        ("ai ký", "column.signed_by"),
+        ("bằng chứng", "column.evidence"),
+        ("lệnh hoàn tác", "column.rollback_command"),
+        ("mã", "column.code"),
+        ("người quyết", "column.owner"),
+        ("Truy vết", "heading.traceability"),
+        ("đã gộp", "phrase.merged"),
+        ("nhánh chính", "phrase.main_branch"),
+        ("bỏ", "phrase.dropped"),
+    ]
+    for text, key in pins:
+        assert m.exact(text, key), (text, key)
+        assert m.key_of(text, groups=m.domain_of(key)) == key, (text, key)
+    assert {_fold(x) for x in m.alternates("column.level", "vi")} == c.SEVERITY_HEADERS_VI
+
+
+def test_required_headings_resolve_to_their_keys():
+    m, c = _mod(), _check()
+    expected = {
+        "spec": ["context", "user_stories", "functional_requirements", "success_criteria", "out_of_scope", "clarification_questions"],
+        "plan": ["goal", "architecture", "common_constraints", "review_focus", "tasks", "risks", "human_decisions", "estimate"],
+        "progress": ["status_table", "log", "blockers", "current_review_round"],
+        "report": ["plain_summary", "verification_results", "reviewer_findings", "remaining_risks", "usage_changes_rollback",
+                   "lessons", "leftovers", "review_retro", "gate_2"],
+        "sprint": ["part_spec", "part_plan", "part_progress", "part_report"],
+        "feature": ["current_behaviour", "criteria_in_force", "known_limits", "related_decisions", "sprint_history"],
+        "requests": ["open", "timeline"],
+        "sprints": ["open", "timeline"],
+        "specs": ["open", "catalog"],
+    }
+    assert set(expected) == set(c.REQUIRED_HEADINGS)
+    for doc, keys in expected.items():
+        assert len(keys) == len(c.REQUIRED_HEADINGS[doc]), doc
+        for phrase, name in zip(c.REQUIRED_HEADINGS[doc], keys):
+            assert m.exact(phrase, f"heading.{name}"), (doc, phrase, name)
+
+
+def test_index_constants_resolve_to_their_keys():
+    m, i = _mod(), _index()
+    for state, word in i.SPRINT_LABEL.items():
+        assert m.exact(word, f"status.{state}") and m.label(f"status.{state}", "vi") == word, (state, word)
+    for state, word in i.FEATURE_LABEL.items():
+        assert m.label(f"status.{state}", "vi") == word, (state, word)
+    assert {m.label(f"status.{n}", "vi") for n in ("new", "in_progress")} == i.OPEN_REQUEST
+    for name, sentence in i.EMPTY.items():
+        assert m.label(f"phrase.empty_{name}", "vi") == sentence, name
+    for text, key in [("Trạng thái", "column.status"), ("Mã", "column.code"), ("Tính năng", "column.feature"),
+                      ("Mở", "column.opened"), ("Mục tiêu", "heading.goal"), ("Spec sống", "column.living_spec"),
+                      ("Ngày", "column.date"), ("Tóm tắt", "column.summary"), ("Vòng", "column.round"), ("Thư mục", "column.folder")]:
+        assert m.exact(text, key), (text, key)

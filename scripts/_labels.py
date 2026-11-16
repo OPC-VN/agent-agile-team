@@ -9,16 +9,17 @@ Matching accepts the labels of every shipped locale (a label is resolved to its 
 
     key_of(text)             whole text -> key, or None
     exact(text, key)         whole text equals a label of the key
-    contains(text, key)      Vietnamese: substring (today's check.py semantics); other locales: whole text only
-    startswith(text, key)    Vietnamese: prefix; other locales: prefix ending at a word boundary
+    contains(text, key)      accented Vietnamese labels: substring (today's check.py semantics); every other label
+                             (English, and Vietnamese labels that are pure ASCII such as SPEC, PR, Review): whole text only
+    startswith(text, key)    accented Vietnamese labels: prefix; every other label: prefix ending at a word boundary
     alternation(key)         regex alternation of every label of the key, every label passed through re.escape
 
 "Whole text" means: leading numbering ("2.1"), surrounding asterisks, a trailing colon, letter case and runs of
 blanks are ignored; nothing else (GC1: an English label never matches as a bare substring). A text that is exactly a
 label of another key in a non-substring locale is never matched by contains/startswith of a different key, so the
-Vietnamese label "Review" cannot hijack the English heading "Review focus". Known limit: contains() on a longer
-English text can still hit an ASCII-only Vietnamese label as a substring; callers match headings and cells, not
-prose, with the English locale.
+Vietnamese label "Review" cannot hijack the English heading "Review focus". Vietnamese matching also folds NFC
+and runs of blanks (_squash), a small widening of today's byte-exact casefold substring test. The index.py substring
+test for the ASCII heading "Timeline" becomes anchored; the numbered form "2. Timeline" still matches.
 
 translate(text, locale) and scan(text) share one walker. It skips front matter, code fences, HTML comments and table
 data rows, and looks only at headings (numbering kept), table header rows and bold field labels ("**Label:**" at any
@@ -27,11 +28,16 @@ spaced em dash, which covers "Placeholder - Plan (PLAN)". translate() rewrites o
 stays byte for byte; a label already in the target locale is left alone, so translating twice changes nothing. A label
 whose first letter is lowercase in the source keeps that lowercase first letter, so vi -> en -> vi is byte-identical.
 Only the groups heading, column and field are walked; level, quote, phrase and status keys are for matching code.
+Limits: "## 3.Rủi ro" style numbering without a blank after the number is not a label and is left alone; matching is
+case-insensitive, so an all-caps heading is rewritten with the target label's own case and the round trip is
+byte-identical only for template casing. Table header cells reuse the heading and field keys (a column header such as
+"Rủi ro" is heading.risks) instead of a parallel column key set; that is a decision, not an omission.
 
 Uniqueness is per domain: no two keys of the labels domain (heading, column, field) or of the words domain (level,
 quote, phrase, status) share a label inside a locale or across locales. One Vietnamese word is deliberately shared
 between the two domains (column.proposal and status.proposed, both written as the same word, the second being the
 existing index.py output); key_of() without groups reports None for it, key_of(text, groups=domain_of(key)) resolves it.
+Per-domain uniqueness is a decision recorded in review round 1, not a gap in the tables.
 
 Importing this module reads nothing; tables are read on first use. Locale names are validated against the files in
 labels/ (two or three lowercase letters), so "../x" is rejected before any path is built.
@@ -262,13 +268,19 @@ def _hijacked(text: str, key: str) -> bool:
     return winner is not None and winner != key
 
 
+def _substring_label(locale: str, lab: str) -> bool:
+    """Substring semantics only for genuinely Vietnamese labels (a substring locale and at least one non-ASCII letter);
+    ASCII-only labels (SPEC, Timeline, PR, Review, ...) are shared with English and match anchored."""
+    return locale in SUBSTRING_LOCALES and not lab.isascii()
+
+
 def contains(text: str, key: str, locales=None) -> bool:
     entries = _key_labels(key, locales)
     if not entries or _hijacked(text, key):
         return False
     squashed = _squash(text)
     for loc, lab in entries:
-        if loc in SUBSTRING_LOCALES:
+        if _substring_label(loc, lab):
             if _squash(lab) in squashed:
                 return True
         elif _fold(text) == _fold(lab):
@@ -287,7 +299,7 @@ def startswith(text: str, key: str, tail: str = "", locales=None) -> bool:
         if not squashed.startswith(target):
             continue
         rest = squashed[len(target):]
-        if loc in SUBSTRING_LOCALES or rest == "" or not rest[0].isalnum() or target.endswith(":"):
+        if _substring_label(loc, lab) or rest == "" or not rest[0].isalnum() or target.endswith(":"):
             return True
     return False
 
