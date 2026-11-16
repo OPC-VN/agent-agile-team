@@ -18,6 +18,13 @@ Writes are atomic (temp file in the same directory, then os.replace). A corrupt 
 resolves to `vi` and is reported in `problems`; `set --scope user` replaces it. `--scope repo` edits only the
 `locale` key of an existing .agile.json and keeps every other key.
 
+A non-interactive `set --scope user` (flag, CI or AGENT_AGILE_NONINTERACTIVE) writes nothing and exits 0 with
+`written: false` and a reason, so a headless "no answer" never marks the user as asked. `set --scope repo` is a
+deliberate configuration choice and is written in any session. It walks up from --root to the nearest .agile.json,
+rewrites it with 2-space indent (keys and their order are kept, hand formatting is not), and replaces a symlinked
+config with a regular file (os.replace swaps the link, not its target). A `locale` key that is JSON null in
+.agile.json or in the user config counts as an invalid value (like config_problems), not as "not declared".
+
 Exit codes: 0 ok, 1 I/O failure, 2 bad usage (unknown locale, no .agile.json for --scope repo, ...).
 """
 
@@ -42,6 +49,16 @@ NONINTERACTIVE_ENV = ("AGENT_AGILE_NONINTERACTIVE", "CI")
 
 class UsageError(Exception):
     """Bad input: exit code 2."""
+
+
+_NULL_VALUE = "null"  # stands in for a JSON null so that resolve_locale skips it with a reason, never as "absent"
+
+
+def _layer_value(data: dict):
+    if "locale" not in data:
+        return None
+    value = data["locale"]
+    return _NULL_VALUE if value is None else value
 
 
 def user_config_path() -> Path:
@@ -120,13 +137,14 @@ def read_sprint_locale(path: Path):
         raise UsageError(f"--sprint-file {str(path)[:80]!r} cannot be read")
     if not lines or lines[0].strip() != "---":
         return None
+    found = None
     for line in lines[1:]:
         if line.strip() == "---":
-            return None
+            return found  # closed front matter
         match = _FRONT_LOCALE.match(line.rstrip("\r"))
-        if match:
-            return match.group(1).strip("'\"")
-    return None
+        if match and found is None:
+            found = match.group(1).strip("'\"")
+    return None  # never closed: what was read is body text, not front matter
 
 
 def gather(args, interactive: bool) -> dict:
@@ -143,11 +161,14 @@ def gather(args, interactive: bool) -> dict:
         repo_data, problem = read_repo_config(repo_path)
         if problem:
             problems.append(problem)
-        repo_value = repo_data.get("locale")
+        repo_value = _layer_value(repo_data)
+    state_problem = agile_state.state_dir_problem()
+    if state_problem:
+        problems.append(state_problem)
     user_data, problem = read_user_config()
     if problem:
         problems.append(problem)
-    user_value = user_data.get("locale")
+    user_value = _layer_value(user_data)
     resolution = _labels.resolve_locale(explicit, sprint, repo_value, user_value)
     asked = user_data.get("locale_asked") is True
     ask_needed = resolution.source == "default" and not asked and interactive
@@ -179,18 +200,22 @@ def render_status(info: dict) -> str:
     return "\n".join(lines)
 
 
-def do_set(args) -> dict:
+def do_set(args, interactive: bool = True) -> dict:
     locale = args.locale
     if not _labels.valid_locale(locale):
         raise UsageError(f"--locale {str(locale)[:40]!r} is not shipped (shipped: {', '.join(_labels.shipped())})")
     if args.scope == "user":
+        if not interactive:
+            return {"scope": "user", "locale": locale, "written": False,
+                    "reason": "non-interactive run: nothing recorded, so a later interactive session still asks once"}
         data, problem = read_user_config()
         data = dict(data)
         data["locale"] = locale
         data["locale_asked"] = True
         path = user_config_path()
         write_atomic(path, _dump(data))
-        return {"scope": "user", "locale": locale, "locale_asked": True, "path": str(path), "replaced_problem": problem}
+        return {"scope": "user", "locale": locale, "locale_asked": True, "written": True, "path": str(path),
+                "replaced_problem": problem}
     root = Path(args.root).resolve() if args.root else Path.cwd()
     path = find_repo_config(root)
     if path is None:
@@ -200,7 +225,7 @@ def do_set(args) -> dict:
         raise UsageError(f"{problem}; fix it before setting the repo locale")
     data["locale"] = locale
     write_atomic(path, _dump(data))
-    return {"scope": "repo", "locale": locale, "path": str(path)}
+    return {"scope": "repo", "locale": locale, "written": True, "path": str(path)}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -216,7 +241,7 @@ def build_parser() -> argparse.ArgumentParser:
     se.add_argument("--scope", required=True, choices=("user", "repo"))
     se.add_argument("--locale", required=True)
     se.add_argument("--root", help="project directory for --scope repo (default: current directory)")
-    se.add_argument("--non-interactive", action="store_true", help="accepted for symmetry; set always writes what it is told")
+    se.add_argument("--non-interactive", action="store_true", help="with --scope user: write nothing (like CI or AGENT_AGILE_NONINTERACTIVE)")
     se.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
@@ -233,9 +258,13 @@ def main(argv=None) -> int:
             info = gather(args, is_interactive(args.non_interactive))
             print(json.dumps(info, ensure_ascii=False, indent=2) if args.as_json else render_status(info))
         else:
-            result = do_set(args)
-            print(json.dumps(result, ensure_ascii=False, indent=2) if args.as_json
-                  else f"{result['scope']} locale set to {result['locale']} ({result['path']})")
+            result = do_set(args, is_interactive(args.non_interactive))
+            if args.as_json:
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+            elif result["written"]:
+                print(f"{result['scope']} locale set to {result['locale']} ({result['path']})")
+            else:
+                print(f"not written: {result['reason']}")
     except UsageError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

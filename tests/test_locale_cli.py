@@ -328,3 +328,74 @@ def test_config_problems_accepts_shipped_locale(good):
 def test_config_problems_rejects_other_locale(bad):
     problems = c.config_problems(c.merge_config({"locale": bad}))
     assert len(problems) == 1 and problems[0].startswith("locale")
+
+
+# --- review round 1 (RF1 and notes a-d) ------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("how", ["flag", "CI", "AGENT_AGILE_NONINTERACTIVE"])
+def test_headless_set_user_writes_nothing_and_ask_stays_needed(env, tmp_path, how):
+    e, state = env
+    e = dict(e)
+    args = ["set", "--scope", "user", "--locale", "vi", "--json"]
+    if how == "flag":
+        args.append("--non-interactive")
+    else:
+        e[how] = "1"
+    root = make_repo(tmp_path)
+    r = cli((e, state), *args, "--root", str(root))
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["written"] is False and out["reason"]
+    assert not state.exists()
+    # a later human session is still asked
+    assert status_json(env, "--root", str(root))["ask_needed"] is True
+
+
+def test_interactive_set_reports_written_true(env, tmp_path):
+    root = make_repo(tmp_path)
+    r = cli(env, "set", "--scope", "user", "--locale", "en", "--json", "--root", str(root))
+    assert json.loads(r.stdout)["written"] is True
+
+
+def test_headless_set_repo_still_writes(env, tmp_path):
+    root = make_repo(tmp_path)
+    r = cli(env, "set", "--scope", "repo", "--locale", "en", "--non-interactive", "--root", str(root))
+    assert r.returncode == 0
+    assert json.loads((root / ".agile.json").read_text(encoding="utf-8"))["locale"] == "en"
+
+
+def test_relative_state_dir_problem_is_reported(tmp_path, monkeypatch):
+    import argparse
+    import agile_state
+
+    mod = _cli_mod()
+    monkeypatch.setenv("AGENT_AGILE_STATE_DIR", "relative/dir")
+    monkeypatch.setattr(agile_state, "platform_state_dir", lambda *a, **k: tmp_path / "plat")
+    root = make_repo(tmp_path)
+    ns = argparse.Namespace(root=str(root), locale=None, sprint_file=None)
+    info = mod.gather(ns, True)
+    assert any("AGENT_AGILE_STATE_DIR" in p for p in info["problems"])
+
+
+def test_locale_null_is_invalid_in_repo_and_user_like_config_problems(env, tmp_path):
+    assert c.config_problems(c.merge_config({"locale": None}))  # config_problems rejects null
+    root = make_repo(tmp_path, {"schema": 1, "locale": None})
+    s = status_json(env, "--root", str(root))
+    assert s["locale"] == "vi" and s["source"] == "default"
+    assert [i["layer"] for i in s["ignored"]] == ["repo"]
+    assert s["ask_needed"] is True
+    env[1].mkdir()
+    (env[1] / "user-config.json").write_text(json.dumps({"locale": None}), encoding="utf-8")
+    assert [i["layer"] for i in status_json(env, "--root", str(root))["ignored"]] == ["repo", "user"]
+
+
+def test_unclosed_front_matter_does_not_read_body_locale(env, tmp_path):
+    root = make_repo(tmp_path)
+    doc = root / "S.md"
+    doc.write_text("---\nid: SPR-9\n\n# Title\nlocale: en\nmore text\n", encoding="utf-8")
+    s = status_json(env, "--root", str(root), "--sprint-file", str(doc))
+    assert (s["locale"], s["source"]) == ("vi", "default")
+    closed = root / "T.md"
+    closed.write_text("---\nid: SPR-9\n---\n\nlocale: en\n", encoding="utf-8")
+    assert status_json(env, "--root", str(root), "--sprint-file", str(closed))["source"] == "default"
