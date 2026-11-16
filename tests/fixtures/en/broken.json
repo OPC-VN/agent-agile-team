@@ -195,6 +195,22 @@
    ],
    "exit": 1,
    "why": "A locale that is not shipped is invalid."
+  },
+  {
+   "name": "not-run-row-under-verdict-pass",
+   "root": "valid",
+   "file": "REPORT.md",
+   "replaces": [
+    [
+     "| `pytest` | Pass | QA",
+     "| `pytest` | Not run | QA"
+    ]
+   ],
+   "rules": [
+    "vr-result-not-pass"
+   ],
+   "exit": 0,
+   "why": "A verification row says Not run while the verdict is pass; a Should fix, so the exit code stays 0."
   }
  ]
 }
