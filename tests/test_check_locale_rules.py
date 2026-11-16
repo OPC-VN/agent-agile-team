@@ -212,3 +212,97 @@ def test_adding_the_key_to_a_clean_set_adds_no_finding(tmp_path):
     fa = [(f.path.name, f.rule) for f in check.check_paths([a]).findings]
     fb = [(f.path.name, f.rule) for f in check.check_paths([b]).findings]
     assert fa == fb == []
+
+
+# --- review round 1 (TK4) ------------------------------------------------------------------------------------
+
+
+def flagged(report) -> list:
+    return sorted(f.path.name for f in report.findings if f.rule == "locale-differs")
+
+
+def test_differs_flags_the_minority_when_the_first_file_is_the_odd_one(tmp_path):
+    root = make_sprint(tmp_path)
+    tag_all(root, "vi")
+    set_locale(root / "PLAN.md", "en", english=True)  # PLAN sorts before PROGRESS, REPORT, SPEC
+    assert flagged(check.check_paths([root])) == ["PLAN.md"]
+
+
+def test_differs_tie_prefers_sprint_then_spec_then_alphabetical(tmp_path):
+    root = make_sprint(tmp_path)
+    for name in ("PROGRESS.md", "REPORT.md"):
+        (root / name).unlink()
+    set_locale(root / "SPEC.md", "vi")
+    set_locale(root / "PLAN.md", "en", english=True)
+    assert flagged(check.check_paths([root])) == ["PLAN.md"]  # SPEC.md wins the tie
+    (root / "SPEC.md").rename(root / "SPRINT.md")
+    set_locale(root / "SPRINT.md", "vi")
+    set_locale(root / "PLAN.md", "en", english=True)
+    assert flagged(check.check_paths([root])) == ["PLAN.md"]  # SPRINT.md wins the tie
+
+
+def test_differs_tie_without_sprint_or_spec_uses_alphabetical(tmp_path):
+    root = make_sprint(tmp_path)
+    (root / "SPEC.md").unlink()
+    (root / "PROGRESS.md").unlink()
+    set_locale(root / "PLAN.md", "vi")
+    set_locale(root / "REPORT.md", "en", english=True)
+    assert flagged(check.check_paths([root])) == ["REPORT.md"]
+
+
+def test_differs_two_document_folder(tmp_path):
+    root = make_sprint(tmp_path)
+    for name in ("PLAN.md", "PROGRESS.md"):
+        (root / name).unlink()
+    set_locale(root / "SPEC.md", "en", english=True)
+    set_locale(root / "REPORT.md", "vi")
+    assert flagged(check.check_paths([root])) == ["REPORT.md"]
+
+
+def test_differs_keyless_documents_stay_out_of_the_vote(tmp_path):
+    root = make_sprint(tmp_path)
+    set_locale(root / "SPEC.md", "en", english=True)
+    set_locale(root / "PLAN.md", "vi")
+    assert flagged(check.check_paths([root])) == ["PLAN.md"]  # tie of two; SPEC.md wins; others have no key
+
+
+def test_invalid_uppercase_value_suggests_the_shipped_one(tmp_path):
+    root = make_sprint(tmp_path)
+    set_locale(root / "SPEC.md", "EN")
+    hit = findings(check.check_paths([root]), "locale-invalid")[0]
+    assert "gợi ý" in hit.message and "'en'" in hit.message.split("gợi ý", 1)[1]
+
+
+@pytest.mark.parametrize("value", ['""', "null", "~", ""])
+def test_invalid_empty_or_null_value_is_still_invalid(tmp_path, value):
+    root = make_sprint(tmp_path)
+    set_locale(root / "SPEC.md", value)
+    assert len(findings(check.check_paths([root]), "locale-invalid")) == 1
+
+
+def test_label_mixed_message_does_not_claim_a_template_table(tmp_path):
+    root = make_sprint(tmp_path)
+    tag_all(root, "vi")
+    retranslate(root / "SPEC.md", "en")
+    hit = findings(check.check_paths([root]), "locale-label-mixed")[0]
+    assert "ngôn ngữ khác" in hit.message
+
+
+def test_foreign_labels_in_code_fences_and_comments_stay_silent(tmp_path):
+    root = make_sprint(tmp_path)
+    tag_all(root, "en", english=True)
+    spec = root / "SPEC.md"
+    foreign = lab.translate("## Yêu cầu chức năng\n\n| Mã | Mô tả |\n|---|---|\n", "vi")
+    write_lf(spec, read(spec) + "\n```\n" + foreign + "```\n\n<!--\n" + foreign + "-->\n")
+    assert "locale-label-mixed" not in rules_of(check.check_paths([root]))
+
+
+def test_special_cases_guard_is_not_weaker():
+    """Every rule exempt from the broken.json guard in tests/test_check.py is named by at least one test besides the
+    exemption list itself (the quoted name appears more than once across the test files)."""
+    import test_check as tc
+    tests_dir = Path(__file__).resolve().parent
+    texts = [p.read_text(encoding="utf-8") for p in tests_dir.glob("test_*.py")]
+    for rule in sorted(tc.SPECIAL_CASES):
+        uses = sum(t.count(f'"{rule}"') for t in texts)
+        assert uses >= 2, f"{rule}: only named in the exemption list"

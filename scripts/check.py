@@ -1284,8 +1284,11 @@ class Engine:
         value = doc.data["locale"]
         line = doc.key_line("locale")
         if not isinstance(value, str) or not lab.valid_locale(value):
+            hint = ""
+            if isinstance(value, str) and lab.valid_locale(value.strip().lower()):
+                hint = f" (gợi ý: '{value.strip().lower()}')"
             self.add(doc.path, line, "locale-invalid",
-                     f"locale: {value!r} không thuộc các ngôn ngữ đã phát hành {list(lab.shipped())}")
+                     f"locale: {value!r} không thuộc các ngôn ngữ đã phát hành {list(lab.shipped())}{hint}")
             return
         self.locales.setdefault(doc.path.resolve().parent, []).append((doc.path, value, line))
         foreign = []
@@ -1297,17 +1300,28 @@ class Engine:
             first = foreign[0]
             other = "/".join(sorted({loc for s in foreign for loc, _ in s.entries}))
             self.add(doc.path, doc.line_no(first.line), "locale-label-mixed",
-                     f"locale: {value} nhưng {len(foreign)} nhãn máy đọc thuộc ngôn ngữ {other}, đầu tiên là '{first.text}'")
+                     f"locale: {value} nhưng {len(foreign)} nhãn máy đọc của ngôn ngữ khác ({other}), đầu tiên là '{first.text}'")
 
     def locale_folder_rules(self) -> None:
-        """Documents of one sprint folder with an explicit `locale` must agree; the first (by file name) sets the reference."""
+        """Documents of one sprint folder with an explicit `locale` must agree: the folder majority is the reference and
+        the others are flagged. A tie goes to the locale of SPRINT.md, then SPEC.md, then the first file by name."""
         for folder in sorted(self.locales):
             items = sorted(self.locales[folder], key=lambda item: c.display(item[0]))
-            ref_path, ref_value, _ = items[0]
-            for path, value, line in items[1:]:
-                if value != ref_value:
+            counts: dict = {}
+            for _, value, _ in items:
+                counts[value] = counts.get(value, 0) + 1
+            top = max(counts.values())
+            leaders = {value for value, n in counts.items() if n == top}
+            if len(leaders) == 1:
+                ref = next(iter(leaders))
+            else:
+                by_name = {item[0].name: item[1] for item in items}
+                ref = next((by_name[n] for n in ("SPRINT.md", "SPEC.md") if by_name.get(n) in leaders),
+                           next(value for _, value, _ in items if value in leaders))
+            for path, value, line in items:
+                if value != ref:
                     self.add(path, line, "locale-differs",
-                             f"locale: {value} khác locale: {ref_value} của {ref_path.name} trong cùng thư mục sprint")
+                             f"locale: {value} khác locale: {ref} của phần lớn tài liệu trong cùng thư mục sprint")
 
     def routing_rules(self, doc: Doc) -> None:
         """Read an explicit marker and its immediately following fenced JSON object."""
