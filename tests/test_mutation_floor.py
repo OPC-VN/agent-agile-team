@@ -212,6 +212,34 @@ def cwd_in_git_open(root: Path) -> None:
     edit(root, GUARD, "self.in_git = False if light else _is_git_path(self.cwd)", "self.in_git = False")
 
 
+def cd_ancestor_open(root: Path) -> None:
+    edit(root, GUARD, "ancestor = name in DELETE_COMMANDS or name in MOVE_COMMANDS or name in CD_COMMANDS", "ancestor = name in DELETE_COMMANDS or name in MOVE_COMMANDS")
+
+
+def relative_reach_open(root: Path) -> None:
+    edit(root, GUARD, "return not os.path.isabs(norm) and _reaches_state(norm, ctx, ancestor, unresolved)", "return False")
+
+
+def substitution_scan_open(root: Path) -> None:
+    edit(root, GUARD, "for inner in _substitutions(joined):", "for inner in []:")
+
+
+def heredoc_pipe_interpreter_open(root: Path) -> None:
+    edit(root, GUARD, "(interpreters and _pipes_into_interpreter(", "(interpreters and False and _pipes_into_interpreter(")
+
+
+def claude_spawn_open(root: Path) -> None:
+    edit(root, GUARD, "if CLAUDE_SPAWN.search(text) and SPAWN_FLAG", "if False and CLAUDE_SPAWN.search(text) and SPAWN_FLAG")
+
+
+def read_only_writers_open(root: Path) -> None:
+    edit(root, GUARD, "return not _writes_file(name, args)", "return True")
+
+
+def deadline_env_trusted(root: Path) -> None:
+    edit(root, GUARD, "return min(limit, DEADLINE_SECONDS) if math.isfinite(limit) and limit > 0 else DEADLINE_SECONDS", "return limit")
+
+
 def gc_config_open(root: Path) -> None:
     edit(root, GUARD, 'if sub in ("gc", "prune", "reflog", "maintenance") and any(', "if False and any(")
 
@@ -257,6 +285,14 @@ MUTATIONS = {
     "stash-all-open": Mutation(stash_all_open, "tests/test_agile_guard.py::test_guard_stash_all_and_clean_x_still_blocked", ("tests/test_agile_guard.py",)),
     "clean-force-open": Mutation(clean_force_open, f"{UNDO}::test_guard_stash_clean_blocked_in_both_ignore_states", (UNDO,)),
     "session-cap-formula-off": Mutation(session_cap_formula_off, "tests/test_check.py::test_delegation_session_cap_must_not_exceed_the_formula", ("tests/test_check.py",)),
+    # SPR-32 TK6h: bảy đột biến phủ các rào của vòng R3 (cd lên tổ tiên, đường tương đối sau cd, thay thế lệnh, heredoc vào trình thông dịch, `claude -p`, lệnh chỉ-đọc mà ghi, hạn nội bộ).
+    "cd-ancestor-open": Mutation(cd_ancestor_open, "tests/test_agile_guard_r3.py::test_rf1_cd_to_the_state_directory_or_an_ancestor_is_blocked", ("tests/test_agile_guard_r3.py",)),
+    "relative-reach-open": Mutation(relative_reach_open, "tests/test_agile_guard_r3.py::test_rf1_relative_arguments_after_a_cd_that_could_reach_the_state_directory_are_blocked", ("tests/test_agile_guard_r3.py",)),
+    "substitution-scan-open": Mutation(substitution_scan_open, "tests/test_agile_guard_r3.py::test_rf3_state_path_inside_a_substitution_or_a_heredoc_for_an_interpreter_is_blocked", ("tests/test_agile_guard_r3.py",)),
+    "heredoc-pipe-interpreter-open": Mutation(heredoc_pipe_interpreter_open, "tests/test_agile_guard_r3.py::test_rf3_state_path_inside_a_substitution_or_a_heredoc_for_an_interpreter_is_blocked", ("tests/test_agile_guard_r3.py",)),
+    "claude-spawn-open": Mutation(claude_spawn_open, "tests/test_agile_guard_r3.py::test_rf4_spawning_claude_with_an_agile_command_is_blocked", ("tests/test_agile_guard_r3.py",)),
+    "read-only-writers-open": Mutation(read_only_writers_open, "tests/test_agile_guard_r3.py::test_rf2_read_only_names_that_write_into_the_state_directory_are_blocked", ("tests/test_agile_guard_r3.py",)),
+    "deadline-env-trusted": Mutation(deadline_env_trusted, "tests/test_agile_guard_r3.py::test_rf5_invalid_deadline_env_falls_back_to_the_default", ("tests/test_agile_guard_r3.py",)),
 }
 
 

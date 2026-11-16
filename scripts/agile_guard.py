@@ -17,6 +17,11 @@ của nền tảng hay giá trị `AGENT_AGILE_STATE_DIR`; đường tương đ�
 `session-*.json` trong đó; (b) chạy `agile_state.py` với lệnh con đổi công tắc (`on|off|stop|always|manual`; `status`/`get` vẫn qua) hay chạy
 `agile_hook.py` (nhận JSON qua stdin); (c) `import agile_state`/`agile_hook` trong `python -c`/heredoc/văn bản lệnh; (d) đặt hay export
 `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` để đổi hướng trạng thái. Lệnh chỉ-đọc (`cat`, `ls`, `grep`…) vào thư mục trạng thái vẫn qua.
+TK6h (R3): (e) `cd`/`pushd`/`Set-Location`/`env -C`/`sudo -D` tới thư mục trạng thái HAY BẤT KỲ TỔ TIÊN của nó bị chặn; sau mọi `cd` (thư mục hiện hành không còn
+biết) đường tương đối bị chặn nếu có thể trỏ vào thư mục trạng thái từ một tổ tiên (`state/*`, `mv state x`, `*`); (f) lệnh trong nhóm chỉ-đọc mà ghi được (`sort -o`,
+`uniq a b`, `xxd a b`, `find -fprint`, `git diff --output`, `awk -i inplace`) không còn được coi là chỉ-đọc; (g) đường trạng thái trong `$(…)`, dấu huyền, `<(…)`
+và thân heredoc đưa vào trình thông dịch qua ống (`cat <<EOF | python`) bị chặn dù câu ngoài là `echo`; (h) `claude -p`/`--resume` kèm lệnh `/agile` hay
+`/agent-agile-team:agile` bị chặn; `AGILE_GUARD_DEADLINE_S` chỉ rút ngắn được hạn (nan/inf/<=0/chữ về 6 s).
 
 GIỚI HẠN ĐÃ BIẾT (nói thẳng): so khớp chuỗi LUÔN lách được bằng gián tiếp (`python -c` ghép tên lệnh/đường từ mảnh, file script viết trước
 rồi chạy sau, biến chưa biết giá trị, `getattr`, `eval` dựng chuỗi). Luật này là sàn chống TAI NẠN, không phải bằng chứng an ninh; cùng tài
@@ -49,6 +54,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import math
 import os
 import re
 import sys
@@ -93,6 +99,7 @@ DELETE_COMMANDS = frozenset({"rm", "ri", "del", "erase", "rmdir", "rd", "remove-
 CD_COMMANDS = frozenset({"cd", "chdir", "pushd", "popd", "set-location", "sl", "push-location", "pop-location"})
 CHDIR_OPTIONS = {"env": frozenset({"-C", "--chdir"}), "sudo": frozenset({"-D", "--chdir"})}  # dạng tách rời: giá trị ở token kế
 FIND_EXEC = frozenset({"-exec", "-execdir", "-ok", "-okdir"})
+FIND_WRITE = frozenset({"-fprint", "-fprint0", "-fprintf", "-fls"})  # `find` ghi kết quả ra file (TK6h RF2)
 MOVE_COMMANDS = frozenset({"mv", "move", "move-item", "mi", "ren", "rename", "rename-item", "rni", "robocopy"})  # đích dưới `.tmp/` → bỏ ngoại lệ dọn tạm cho phần xoá phía sau
 COPY_RECURSIVE_NAMES = frozenset({"cp", "copy-item", "cpi"})  # chỉ tính khi có cờ đệ quy
 LISTING_COMMANDS = frozenset({"get-childitem", "gci", "ls", "dir"})  # `… -Recurse | Remove-Item`
@@ -136,6 +143,16 @@ INTERPRETER_VALUE_FLAGS = frozenset({"-X", "-W", "--check-hash-based-pycs"})  # 
 DEADLINE_ENV = "AGILE_GUARD_DEADLINE_S"  # chỉ để test; mặc định DEADLINE_SECONDS
 DEADLINE_SECONDS = 6.0  # dưới hạn 10 s của hooks.json (hook hết giờ KHÔNG chặn): quá hạn này thì tự chặn, không để lệnh dài chạy không rào
 _deadline: float | None = None
+
+
+def deadline_seconds(env: "dict[str, str] | os._Environ[str]") -> float:
+    """Hạn nội bộ (giây). `AGILE_GUARD_DEADLINE_S` chỉ được RÚT NGẮN hạn: không phải số hữu hạn dương (nan, inf, <= 0, chữ, rỗng) hay lớn hơn mặc định thì
+    dùng mặc định `DEADLINE_SECONDS` (TK6h RF5: `nan`/`inf` từ khối `env` của settings từng tắt hạn)."""
+    try:
+        limit = float(env.get(DEADLINE_ENV) or DEADLINE_SECONDS)
+    except ValueError:
+        return DEADLINE_SECONDS
+    return min(limit, DEADLINE_SECONDS) if math.isfinite(limit) and limit > 0 else DEADLINE_SECONDS
 
 
 class _Deadline(Exception):
@@ -290,6 +307,9 @@ IMPORT_STATE = re.compile(
     r"|(?:spec_from_file_location|run_path)\b[^\n]{0,160}agile_(?:state|hook)", re.IGNORECASE)
 DOUBLE_SLASH = re.compile(r"/{2,}")
 RAW_SEPARATORS = re.compile(r"&&|\|\||[;|&\n\r]")  # như SEPARATORS nhưng KHÔNG tách ở ngoặc/dấu huyền: `(Get-Item p).Delete()` và `$(rm p)` giữ nguyên một câu
+CLAUDE_SPAWN = re.compile(r"(?<![\w.-])claude(?:\.\w+)?(?![\w./-])", re.IGNORECASE)  # TK6h RF4: tên chương trình `claude` (cả `/usr/bin/claude`, `claude.cmd`), không `.claude/`
+SPAWN_FLAG = re.compile(r"(?<![\w-])(?:-p|--print|--resume|-r|--continue|-c)(?![\w-])")
+AGILE_SLASH = re.compile(r"(?<![\w.])/(?:agent-agile-team:)?agile(?![\w-])", re.IGNORECASE)  # lệnh gạch chéo `/agile` hay `/agent-agile-team:agile`
 PY_OR_HEREDOC = re.compile(r"(?<![\w.-])(?:python[0-9.]*|py|pythonw)(?:\.exe)?(?![\w-])|<<", re.IGNORECASE)
 
 
@@ -371,7 +391,9 @@ def _state_ref_uncached(text: str, ctx: "Context", ancestor: bool) -> bool:
         if any(_glob_covers(probe, d, ancestor) for d in ctx.state_dirs):
             return True
     if unresolved or ctx.cwd_changed:
-        return bool(STATE_NAME.fullmatch(os.path.basename(norm.rstrip("/"))))
+        if STATE_NAME.fullmatch(os.path.basename(norm.rstrip("/"))):
+            return True
+        return not os.path.isabs(norm) and _reaches_state(norm, ctx, ancestor, unresolved)
     full = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm))
     candidates = {os.path.normcase(full)}
     try:
@@ -379,6 +401,32 @@ def _state_ref_uncached(text: str, ctx: "Context", ancestor: bool) -> bool:
     except OSError:
         return True
     return any(_under(c, d) or (ancestor and c != os.path.dirname(c) and _under(d, c)) for c in candidates for d in ctx.state_dirs)  # gốc ổ đĩa không tính là tổ tiên
+
+
+def _reaches_state(norm: str, ctx: "Context", ancestor: bool, anywhere: bool) -> bool:
+    """TK6h RF1: đường TƯƠNG ĐỐI mà thư mục hiện hành không còn biết (đã `cd`, hay đường mở đầu bằng biến lạ): nó có thể nằm trong thư mục trạng thái nếu
+    thư mục hiện hành là MỘT TỔ TIÊN của nó? Thử mọi tổ tiên `A` làm thư mục hiện hành: các thành phần của đường (`.`/`..` bỏ; có thể là mẫu `*`, `st*`, `**`)
+    khớp từng thành phần của phần còn lại `A → thư mục trạng thái`; đường dài hơn hay bằng = ở trong hay chính nó; ngắn hơn chỉ tính khi `ancestor`
+    (xoá/chuyển/cd: đường là thư mục bao nó). Một thành phần trần không có ký tự đại diện (`state`, `data`) chỉ tính khi `ancestor` và đúng tên thư mục trạng thái
+    (`mv state x`, `rm state`; `git commit -m state` không tính). `anywhere` (đường có biến chưa giải): đầu đường có thể bị bỏ. Chặn nhầm có chủ đích: sau
+    `cd`, lệnh ghi dùng ký tự đại diện trần (`mv * x`) hay thư mục tên trùng thư mục trạng thái (`state/…`)."""
+    parts = [p for p in os.path.normcase(norm).replace("\\", "/").split("/") if p not in ("", ".", "..")]
+    if not parts:
+        return False
+    bare = len(parts) == 1 and not GLOB_CHARS & set(parts[0])
+    for directory in ctx.state_dirs:
+        dir_parts = [p for p in directory.replace("\\", "/").split("/") if p]
+        if bare:
+            if ancestor and parts[0] == dir_parts[-1]:
+                return True
+            continue
+        for k in range(1, len(dir_parts)):
+            rest = dir_parts[k:]
+            for start in (range(len(parts)) if anywhere else (0,)):
+                sub = parts[start:]
+                if (len(sub) >= len(rest) or ancestor) and all(p == "**" or fnmatch.fnmatchcase(r, p) for p, r in zip(sub, rest)):
+                    return True
+    return False
 
 
 def _covers_state(text: str, ctx: "Context") -> bool:
@@ -394,6 +442,8 @@ def _raw_tamper(text: str) -> bool:
     """Luật trên VĂN BẢN lệnh nguyên (trước khi bỏ thân heredoc): (c) `import agile_state/agile_hook` trong lệnh có Python/heredoc,
     (d) đặt hay export `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` (TK6e S2: xét từng câu lệnh, bỏ câu chỉ-đọc như `grep -r CLAUDE_PROJECT_DIR= .`)."""
     if IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text):
+        return True
+    if CLAUDE_SPAWN.search(text) and SPAWN_FLAG.search(text) and AGILE_SLASH.search(text):  # TK6h RF4: phiên `claude -p`/`--resume` mang session_id riêng, hook áp lệnh cho phiên đó, không cho phiên này
         return True
     if not ENV_REDIRECT.search(text):
         return False
@@ -423,7 +473,12 @@ def _raw_state_tamper(text: str, ctx: "Context") -> bool:
     `python -c`/`node -e`/PowerShell `[IO.File]::Delete(…)`/`(Get-Item p).Delete()`. QUYẾT ĐỊNH: một câu lệnh KHÔNG chỉ-đọc mà nhắc tới đường đó bị chặn
     (kể cả để ghi chú trong thân heredoc đưa vào trình thông dịch); câu chỉ-đọc (`cat`, `ls`, `grep`…) và câu chép (`cp`, đích do luật tách token xét) qua.
     Chỉ nhận đường thư mục (không nhận tên file trần `session-x.json`: đã có luật tách token). Tách câu ở `&& || ; | &` và xuống dòng, không ở ngoặc."""
-    for segment in RAW_SEPARATORS.split(_join_and_strip(text, interpreters=True)):
+    joined = _join_and_strip(text, interpreters=True)
+    for inner in _substitutions(joined):  # TK6h RF3: `echo $(python -c "…")`, dấu huyền, `<(…)`: nội dung thay thế được xét như một lệnh riêng, kể cả khi câu ngoài là `echo`/`printf`
+        _tick()
+        if inner.strip() and _raw_state_tamper(inner, ctx):
+            return True
+    for segment in RAW_SEPARATORS.split(joined):
         _tick()
         if not segment.strip() or not _mentions_state(_expand(segment)[0], ctx):
             continue
@@ -468,7 +523,7 @@ def _tamper_item(tokens: list[str], ctx: "Context") -> str | None:
             script = SCRIPT_REF.search(tokens[position].replace("\\", "/"))
             if script and (script.group(1).lower() == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):
                 return TAMPER
-    ancestor = name in DELETE_COMMANDS or name in MOVE_COMMANDS
+    ancestor = name in DELETE_COMMANDS or name in MOVE_COMMANDS or name in CD_COMMANDS  # TK6h RF1: `cd` tới tổ tiên của thư mục trạng thái cũng là phá (đường tương đối sau đó vào được)
     ref_at: list[int] = []
     index = 0
     while index < len(tokens):
@@ -507,6 +562,7 @@ class Context:
         self.ref_cache: dict[tuple, bool] = {}  # kết quả `_state_ref` theo (chuỗi, ancestor, đã đổi thư mục)
         self.real_cache: dict[str, str] = {}  # `realpath` theo thư mục (RF3: một lần gọi hệ thống mỗi token là ~0,3 ms)
         self.in_git = False if light else _is_git_path(self.cwd)  # thư mục lệnh (hay đích `cd`) nằm trong `.git`: mọi lệnh xoá/chuyển bị chặn
+        self.state_cd = False  # `env -C`/`sudo -D` tới thư mục trạng thái hay tổ tiên của nó (đặt trong `_strip_prefixes`, xét ở `_segment_item`)
         self.cwd_changed = False  # đã gặp thao tác đổi thư mục (cd, pushd, env -C…, kể cả trong subshell/bash -c)
         self.tmp_moved = False  # đã gặp `mv`/`robocopy`/`cp -r`… với đích dưới `.tmp/`: phần xoá phía sau không còn ngoại lệ dọn tạm
 
@@ -705,6 +761,16 @@ def _changes_dir(name: str, token: str) -> bool:
     return token.startswith(short) or token.startswith("--ch") or bool(re.fullmatch(r"-[A-Za-z]+" + short[1], token))
 
 
+def _chdir_value(name: str, token: str, following: str) -> str:
+    """Thư mục mà `env -C`/`--chdir`, `sudo -D`/`--chdir` đổi tới: dạng `--chdir=dir`, `--chdir dir`, `-Cdir`, `-C dir`, cụm `-iC dir`."""
+    if token.startswith("--"):
+        return token.partition("=")[2] if "=" in token else following
+    short = {"env": "C", "sudo": "D"}[name]
+    if token == "-" + short or token.endswith(short) and re.fullmatch(r"-[A-Za-z]+", token):
+        return following
+    return token[2:]
+
+
 def _strip_prefixes(tokens: list[str], ctx: Context) -> tuple[list[str], bool]:
     """Bỏ tiền tố kèm cờ/đối số của nó (`timeout 60`, `env -i VAR=x`, `sudo -u x`, `nice -n 5`, `xargs -0`…).
     Trả (token còn lại, có gán GIT_DIR/GIT_WORK_TREE?)."""
@@ -739,6 +805,9 @@ def _strip_prefixes(tokens: list[str], ctx: Context) -> tuple[list[str], bool]:
                 index += 1
             elif token.startswith("-") and len(token) > 1:
                 if _changes_dir(name, token):  # env -C/--chdir, sudo -D/--chdir (mọi dạng, kể cả dính): đổi thư mục như cd
+                    target = _chdir_value(name, token, tokens[index + 1] if index + 1 < len(tokens) else "")
+                    if target and _state_ref(target, ctx, ancestor=True):  # TK6h RF1: như `cd` tới thư mục trạng thái hay tổ tiên của nó
+                        ctx.state_cd = True
                     ctx.enter()
                     cluster = bool(re.fullmatch(r"-[A-Za-z]+" + ("C" if name == "env" else "D"), token))
                     index += 2 if token in CHDIR_OPTIONS[name] or cluster else 1
@@ -781,13 +850,33 @@ def _find_item(args: list[str], ctx: Context, depth: int) -> str | None:
     return None
 
 
+def _writes_file(name: str, args: list[str]) -> bool:
+    """TK6h RF2: lệnh nằm trong danh sách chỉ-đọc nhưng cờ hay đối số làm nó GHI file: `sort -o`/`--output`, `uniq vào ra`, `xxd vào ra` (và `-r`),
+    `find -fprint*`/`-fls`, `awk -i inplace`/`print > file`/`system(…)`. Lệnh bị loại khỏi nhóm chỉ-đọc nên đối số trỏ vào thư mục trạng thái bị chặn."""
+    positional = [a for a in args if not a.startswith("-")]
+    if name == "sort":
+        return any(a == "--output" or a.startswith("--output=") or (re.fullmatch(r"-[A-Za-z]+", a) is not None and "o" in a) for a in args)
+    if name in ("uniq", "xxd"):
+        return len(positional) >= 2
+    if name == "find":
+        return any(a.lower() in FIND_WRITE for a in args)
+    if name == "awk":
+        return any(re.fullmatch(r"-i\w*", a) or "inplace" in a or ">" in a or "system" in a for a in args)
+    return False
+
+
+def _git_writes_file(args: list[str]) -> bool:
+    """`git diff|log|show --output=<file>` (cũng `--output <file>`) ghi kết quả ra file."""
+    return any(a == "--output" or a.startswith("--output=") for a in args)
+
+
 def _read_only(name: str, args: list[str], ctx: Context) -> bool:
     if name in READ_ONLY_COMMANDS:
-        return True
+        return not _writes_file(name, args)
     if name == "sed":
         return not any(a == "--in-place" or a.startswith("--in-place=") or (a.startswith("-") and _cluster(a.split("=")[0], "i")) or a.startswith("-i") for a in args)
     if name == "git":
-        return _git_parse(args)[0] in READ_ONLY_GIT
+        return _git_parse(args)[0] in READ_ONLY_GIT and not _git_writes_file(args)
     return False
 
 
@@ -947,11 +1036,11 @@ def _heredoc_marks(line: str, quote: str) -> tuple[list["re.Match[str]"], str]:
 
 
 def _substitutions(body: str) -> list[str]:
-    """Nội dung các `$(…)` (ngoặc cân bằng, bỏ `$((…))`) và cặp dấu huyền trong `body`: thứ shell sẽ chạy khi mở rộng thân heredoc."""
+    """Nội dung các `$(…)`, `<(…)`, `>(…)` (ngoặc cân bằng, bỏ `$((…))`) và cặp dấu huyền trong `body`: thứ shell sẽ chạy khi mở rộng thân heredoc."""
     found: list[str] = []
     index = 0
     while index < len(body):
-        if body.startswith("$(", index) and not body.startswith("$((", index):
+        if body.startswith(("$(", "<(", ">("), index) and not body.startswith("$((", index):
             depth, end = 1, index + 2
             while end < len(body) and depth:
                 depth += (body[end] == "(") - (body[end] == ")")
@@ -966,6 +1055,15 @@ def _substitutions(body: str) -> list[str]:
         else:
             index += 1
     return found
+
+
+def _pipes_into_interpreter(rest: str) -> bool:
+    """Phần còn lại của dòng sau `<<` có ống dẫn vào trình thông dịch (`| python`, `| sudo node -`)?"""
+    for stage_text in PIPE.split(rest)[1:]:
+        stage, _ = _strip_prefixes(tokenize(re.split(r"&&|;|\n|\|\|", stage_text)[0]), Context(set(), ".", light=True))
+        if stage and _interpreter_name(_exe_name(stage[0])):
+            return True
+    return False
 
 
 def _strip_heredoc_bodies(text: str, interpreters: bool = False) -> str:
@@ -989,6 +1087,7 @@ def _strip_heredoc_bodies(text: str, interpreters: bool = False) -> str:
         stage, _ = _strip_prefixes(tokenize(SEPARATORS.split(line[:marks[0].start()])[-1]), Context(set(), ".", light=True))
         reads_shell = bool(stage) and (_exe_name(stage[0]) in SHELL_WRAPPERS | EVAL_COMMANDS or (interpreters and _interpreter_name(_exe_name(stage[0]))))
         reads_shell = reads_shell or bool(PIPE_INTO_SHELL.search(line[marks[-1].end():]))
+        reads_shell = reads_shell or (interpreters and _pipes_into_interpreter(line[marks[-1].end():]))  # TK6h RF3: `cat <<EOF | python` (thân là mã, không phải dữ liệu)
         for mark in marks:
             delimiter = mark.group(2) or mark.group(3) or mark.group(4)
             body: list[str] = []
@@ -1095,6 +1194,8 @@ def _robocopy_purge_item(args: list[str], ctx: Context) -> str | None:
 
 def _segment_item(tokens: list[str], ctx: Context, depth: int) -> str | None:
     tokens, _ = _strip_prefixes(tokens, ctx)
+    if ctx.state_cd:
+        return TAMPER
     if not tokens:
         return None
     item = _tamper_item(tokens, ctx) or _command_item(tokens, ctx, depth)
@@ -1372,11 +1473,7 @@ def main(argv: list[str] | None = None, stdin: TextIO = sys.stdin, stdout: TextI
     raw = ""
     notes: list[str] = []
     global _deadline
-    try:
-        limit = float(os.environ.get(DEADLINE_ENV) or DEADLINE_SECONDS)
-    except ValueError:
-        limit = DEADLINE_SECONDS
-    _deadline = time.monotonic() + limit
+    _deadline = time.monotonic() + deadline_seconds(os.environ)
     try:
         raw = stdin.read()
         reason = _evaluate(raw, notes)

@@ -156,7 +156,7 @@ def test_rf3_long_command_is_analysed_in_bounded_time(tmp_path):
 
 def test_rf3_deadline_blocks_when_exceeded(tmp_path, monkeypatch):
     repo = on_repo(tmp_path)
-    monkeypatch.setenv(agile_guard.DEADLINE_ENV, "0")
+    monkeypatch.setattr(agile_guard, "deadline_seconds", lambda env: 0.0)  # TK6h RF5: `AGILE_GUARD_DEADLINE_S=0` nay về mặc định; hạn 0 chỉ đặt được ở đây
     rc, _, err = run("claude", claude("echo hi; echo there", repo))
     assert rc == 2 and "guard deadline: command too long to check" in err, (rc, err)
     rc, out, _ = run("antigravity", claude("echo hi; echo there", repo))
@@ -164,10 +164,11 @@ def test_rf3_deadline_blocks_when_exceeded(tmp_path, monkeypatch):
 
 
 def test_rf3_deadline_does_not_touch_a_dormant_guard_or_a_fast_command(tmp_path, monkeypatch):
-    monkeypatch.setenv(agile_guard.DEADLINE_ENV, "0")
+    real_deadline = agile_guard.deadline_seconds
+    monkeypatch.setattr(agile_guard, "deadline_seconds", lambda env: 0.0)  # TK6h RF5: `AGILE_GUARD_DEADLINE_S=0` nay về mặc định; hạn 0 chỉ đặt được ở đây
     off = make_repo(tmp_path)  # agile TẮT: thoát trước khi phân tích, không cần hạn
     assert_allowed(off, "echo hi; echo there")
-    monkeypatch.delenv(agile_guard.DEADLINE_ENV)
+    monkeypatch.setattr(agile_guard, "deadline_seconds", real_deadline)
     assert_allowed(on_repo(tmp_path / "second"), "echo hi; echo there")
 
 
