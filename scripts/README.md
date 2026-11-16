@@ -5,9 +5,9 @@ Ba công cụ cho dự án áp dụng, chỉ dùng thư viện chuẩn Python (3
 
 | Script | Việc |
 |---|---|
-| `init.py` | Dựng `.agile.json`, ba sổ gốc và khung sprint từ `templates/`; mặc định chạy thử, không ghi đè |
+| `init.py` | Dựng `.agile.json`, ba sổ gốc và khung sprint từ `templates/`; mặc định chạy thử, không ghi đè. `--locale vi\|en` (SPR-33): language of the machine-read labels of the files created, rendered from the Vietnamese templates by the shared `_labels.translate`; default is the repo `.agile.json` `locale`, then the user config, then `vi`. `locale: <value>` goes into every sprint document created when the locale is not `vi` or the flag is given (a plain Vietnamese run is byte-identical to before). A new `.agile.json` made together with `--locale` records it. On an existing sprint folder a conflicting `--locale` is refused (exit 2, nothing written) |
 | `check.py` | Kiểm chuẩn tài liệu; `--self` kiểm lõi sạch và ngân sách `AGENTS.md` của chính repo |
-| `index.py` | Sinh lại khối "Đang mở" ở đầu ba sổ gốc |
+| `index.py` | Sinh lại khối "Đang mở" ở đầu ba sổ gốc. SPR-33: reads the column names and open-status words of every shipped locale and writes the block in the locale of the registry itself (detected from its own headings and labels, not from the config; English columns, status words, empty sentence and notice for an English registry, unchanged output for a Vietnamese one) |
 | `agile_guard.py` | Hook `PreToolUse` của agile: từ chối lệnh shell thuộc danh sách loại khi công tắc agile BẬT (trạng thái ngoài dự án; không còn file dấu); đã đăng ký cho Claude qua `hooks/hooks.json`, Codex và Antigravity chưa (mục "Rào máy agile") |
 | `_agile_rules.py` | Rào agile gom một chỗ (SPR-16): hằng `AGILE_*`/`DELEGATION_*`, `FENCE_FILES`, `FLOOR_ZONES`/`FLOOR_FILES`, `zone_spans`, hàm `agile_problem(block)` mà `check.py` gọi; guard và `check` nhập từ đây, guard không nhập `check`; không chạy trực tiếp |
 | `floor_check.py` | `python -X utf8 scripts/floor_check.py --base <ref> [--head <ref>] [--mode strict\|report] [--json] [--root <repo>]`: so vùng giữa mốc `san-cung`, vị trí mốc và nội dung `FLOOR_FILES` của head với base; thoát 0 đạt / `bootstrap` / `report`, 1 vi phạm ở `strict`, 2 lỗi dùng. Bước CI `Floor vs base` giải `git archive <base> scripts` ra thư mục tạm rồi chạy **bản của base** (khe hở workflow-từ-head: xem `.github/workflows/verify.yml`; tới SPR-17 đây là rào hành vi có kiểm) |
@@ -22,7 +22,7 @@ python scripts/init.py <gốc-dự-án>                     # chạy thử: in "
 python scripts/init.py <gốc-dự-án> --apply             # ghi .agile.json + REQUESTS, SPRINTS, SPECS
 python scripts/init.py <gốc-dự-án> --apply --sprint <slug> (--title "<mục tiêu>" | --title-file <file>) [--tiny]
        [--size tiny|small|medium|large] [--risk normal|high] [--risk-tags a,b] [--request RQ-NNN] [--feature FS-NNN]
-       [--date YYYY-MM-DD]
+       [--date YYYY-MM-DD] [--locale vi|en]
 python scripts/check.py <file.md|.agile.json|thư-mục> [...] [--include-evidence] [--by-dir]   # thư mục: quét đệ quy *.md và mọi .agile.json
 python scripts/check.py <thư-mục-pilot> --routing-manifest <manifest.json>
 python scripts/check.py --self [--root <repo>]

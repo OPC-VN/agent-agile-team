@@ -565,13 +565,17 @@ def test_required_headings_resolve_to_their_keys():
 
 def test_index_constants_resolve_to_their_keys():
     m, i = _mod(), _index()
-    for state, word in i.SPRINT_LABEL.items():
-        assert m.exact(word, f"status.{state}") and m.label(f"status.{state}", "vi") == word, (state, word)
-    for state, word in i.FEATURE_LABEL.items():
-        assert m.label(f"status.{state}", "vi") == word, (state, word)
-    assert {m.label(f"status.{n}", "vi") for n in ("new", "in_progress")} == i.OPEN_REQUEST
-    for name, sentence in i.EMPTY.items():
-        assert m.label(f"phrase.empty_{name}", "vi") == sentence, name
+    # TK5: index.py holds label keys, not Vietnamese words; these are the words it printed at db1f34a, pinned byte for byte.
+    sprint_words = {"drafting": "đang viết SPEC/PLAN", "awaiting_gate_1": "chờ Cổng 1", "in_progress": "đang làm",
+                    "verifying": "đang kiểm định", "blocked": "vướng", "awaiting_gate_2": "chờ Cổng 2"}
+    assert set(i.SPRINT_LABEL) == set(sprint_words)
+    for state, key in i.SPRINT_LABEL.items():
+        assert key == f"status.{state}" and m.label(key, "vi") == sprint_words[state], state
+    assert {s: m.label(k, "vi") for s, k in i.FEATURE_LABEL.items()} == {"proposed": "đề xuất", "in_progress": "đang làm"}
+    assert {m.label(k, "vi") for k in i.OPEN_REQUEST} == {"mới", "đang làm"}
+    for name, sentence in {"requests": "Không có yêu cầu nào đang mở.", "specs": "Không có tính năng nào đang mở.",
+                           "sprints": "Không có sprint nào đang mở."}.items():
+        assert i.empty_block(name, "vi") == [sentence], name
     for text, key in [("Trạng thái", "column.status"), ("Mã", "column.code"), ("Tính năng", "column.feature"),
                       ("Mở", "column.opened"), ("Mục tiêu", "heading.goal"), ("Spec sống", "column.living_spec"),
                       ("Ngày", "column.date"), ("Tóm tắt", "column.summary"), ("Vòng", "column.round"), ("Thư mục", "column.folder")]:
