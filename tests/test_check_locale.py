@@ -22,10 +22,7 @@ VALID = FIXTURES / "valid"
 CASES = json.loads((FIXTURES / "broken.json").read_text(encoding="utf-8"))["cases"]
 
 # Rules whose label matching moves in a later TK3 batch; their en twins are not compared yet. Emptied at the end of batch c.
-PENDING = {
-    "conclusion-missing", "session-cap-missing", "session-cap-over",
-    "report-missing-ask-count", "conditional-pass-merged-main", "qa-not-independent", "report-fr-without-vr",
-    "ledger-missing-row", "ledger-stale", "ledger-unreadable", "ledger-unconfigured"}
+PENDING: set = set()
 
 # Notes the en copy of the valid fixture may carry (GC3). Empty until TK4 adds `locale` to KNOWN_KEYS.
 PERMITTED_EN_NOTES: set = set()
@@ -281,3 +278,171 @@ def test_delegated_quote_prefix_in_english(tmp_path):
     to_en(root2)
     hits2 = [f for f in check.check_paths([root2]).findings if f.rule in ("gate-delegation-invalid", "gate-signer-independence")]
     assert not any("phải bắt đầu" in f.message for f in hits2), [f.render() for f in hits2]
+
+
+# --- batch c: tiny sprint, conclusion, cap, ledger, phrase regexes (facts 1a) ---------------------------------
+
+from test_check import (_add_fr2, _set_report, ledger_project, ledger_rules, put, two_part_sprint)  # noqa: E402
+from test_check_stops import ASK_LINE, BULLETIN, _report  # noqa: E402
+
+EN_BULLETIN = """
+## Agile bulletin
+
+- Gate 1 · Pass · Gate Delegate agent-g · `evidence/gate-1-verdict.md`
+- **Number of turns the human had to answer:** 1 (Gate 1)
+- **Pushed / PR:** not pushed.
+- **Merge commit:** {merged}
+"""
+
+
+def test_en_tiny_two_part_sprint_and_conclusion(tmp_path):
+    (tmp_path / "en").mkdir()
+    text = lab.translate(two_part_sprint(), "en")
+    assert "## 1. Work plan" in text and "## 2. Result" in text and "> **Conclusion:**" in text
+    put(tmp_path / "en", "SPRINT.md", text)
+    assert [f.render() for f in check.check_paths([tmp_path / "en"]).findings] == []
+    broken = text.replace("## 2. Result", "## 2. Outcome")
+    put(tmp_path / "en", "SPRINT.md", broken)
+    assert "heading-missing" in {f.rule for f in check.check_paths([tmp_path / "en"]).findings}
+
+
+def test_en_conclusion_block_is_required(tmp_path):
+    root = make_sprint(tmp_path)
+    to_en(root)
+    path = root / "SPEC.md"
+    text = path.read_text(encoding="utf-8")
+    assert "> **Conclusion:**" in text and "conclusion-missing" not in {f.rule for f in check.check_paths([root]).findings}
+    write_lf(path, text.replace("> **Conclusion:**", "> **Verdict:**", 1))
+    assert "conclusion-missing" in {f.rule for f in check.check_paths([root]).findings}
+
+
+def test_en_ask_count_line(tmp_path):
+    ok = _report(tmp_path / "ok", created="2026-11-13", bulletin=EN_BULLETIN.format(merged="none."))
+    to_en(ok)
+    assert _rule_hits(ok, "report-missing-ask-count") == []
+    no_number = _report(tmp_path / "nn", created="2026-11-13", bulletin="\n- Number of turns the human had to answer: <fill in>\n")
+    to_en(no_number)
+    assert len(_rule_hits(no_number, "report-missing-ask-count")) == 1
+    missing = _report(tmp_path / "no", created="2026-11-13")
+    to_en(missing)
+    assert len(_rule_hits(missing, "report-missing-ask-count")) == 1
+
+
+@pytest.mark.parametrize("merged,flagged", [
+    ("merged the sprint branch into `main` (abc1234).", True),
+    ("`3f2a9c1d` into main", True),
+    ("merged into the main branch", True),
+    ("not merged into main; waiting for a human.", False),
+    ("unmerged, waiting for a human on main.", False),
+    ("nothing merged yet.", False),
+    ("none.", False),
+], ids=["sentence", "sha-line", "main-branch", "not-merged", "unmerged", "no-main", "none"])
+def test_en_conditional_pass_merged_main(tmp_path, merged, flagged):
+    if merged.startswith("`3f"):
+        bulletin = EN_BULLETIN.format(merged=merged)
+    else:
+        bulletin = EN_BULLETIN.format(merged="none.") + f"\n- Result: {merged}\n"
+    root = _report(tmp_path, created="2026-11-13", bulletin=bulletin, conditional=True)
+    to_en(root)
+    assert bool(_rule_hits(root, "conditional-pass-merged-main")) is flagged
+
+
+def test_merged_main_in_a_mixed_bulletin_and_legacy_heading(tmp_path):
+    """Accept-any-locale: a Vietnamese merged line under an English bulletin heading, and the legacy bulletin heading."""
+    root = _report(tmp_path / "a", created="2026-11-13", conditional=True,
+                   bulletin=EN_BULLETIN.format(merged="none.") + "\n- đã gộp nhánh vào `main`.\n")
+    assert len(_rule_hits(root, "conditional-pass-merged-main")) == 1
+    legacy = _report(tmp_path / "b", created="2026-11-13", conditional=True,
+                     bulletin=BULLETIN.format(ask=ASK_LINE, merged="đã gộp nhánh vào `main`."))
+    to_en(legacy)
+    assert len(_rule_hits(legacy, "conditional-pass-merged-main")) == 1
+
+
+def _cap_plan(tmp_path: Path, cap: int, *, english: bool, size: str = "small") -> Path:
+    root = make_sprint(tmp_path)
+    _new_delegated_plan(root, cap=cap)
+    _rewrite(root / "PLAN.md", "size: medium", f"size: {size}")
+    if english:
+        _rewrite(root / "PLAN.md", "Trần phiên: ", "Session cap: ")
+        to_en(root)
+    return root
+
+
+@pytest.mark.parametrize("english", [False, True], ids=["vi", "en"])
+def test_session_cap_line_and_over_note(tmp_path, english):
+    ok = _cap_plan(tmp_path / "ok", 8, english=english)
+    assert _rule_hits(ok, "session-cap-missing") == [] and _rule_hits(ok, "session-cap-over") == []
+    over = _cap_plan(tmp_path / "over", 20, english=english)
+    hits = _rule_hits(over, "session-cap-over")
+    assert len(hits) == 1 and hits[0].level == "Ghi chú" and _rule_hits(over, "session-cap-missing") == []
+    assert check.check_paths([over]).exit_code == 0
+    gone = _cap_plan(tmp_path / "gone", 8, english=english)
+    text = (gone / "PLAN.md").read_text(encoding="utf-8")
+    write_lf(gone / "PLAN.md", re.sub(r"^(?:Trần phiên|Session cap): .*\n\n", "", text, count=1, flags=re.M))
+    assert len(_rule_hits(gone, "session-cap-missing")) == 1
+
+
+def test_en_raise_cap_line_silences_the_over_note(tmp_path):
+    root = _cap_plan(tmp_path, 20, english=True)
+    assert len(_rule_hits(root, "session-cap-over")) == 1
+    log = ("\n## Decision log\n\n| Decision | Signed by | Evidence | Rollback command |\n|---|---|---|---|\n"
+           "| Raise cap 8 → 20 | agent-d · gate-delegate · T1 · Fable 5.2 | evidence/gate-1-verdict.md | restore Session cap |\n")
+    write_lf(root / "PLAN.md", (root / "PLAN.md").read_text(encoding="utf-8") + log)
+    assert _rule_hits(root, "session-cap-over") == []
+    other = _cap_plan(tmp_path / "o", 20, english=True)
+    write_lf(other / "PLAN.md", (other / "PLAN.md").read_text(encoding="utf-8") + log.replace("Raise cap", "Increase of the ceiling"))
+    assert len(_rule_hits(other, "session-cap-over")) == 1  # anchored: a different phrase does not silence it
+
+
+def test_en_estimate_heading_bounds_the_cap_line(tmp_path):
+    """The cap line counts only inside the Estimate section of a PLAN (an English heading is read like `Ước lượng`)."""
+    root = _cap_plan(tmp_path, 8, english=True)
+    text = (root / "PLAN.md").read_text(encoding="utf-8")
+    write_lf(root / "PLAN.md", text.replace("## Estimate", "## Estimate (extra)", 1))
+    assert len(_rule_hits(root, "session-cap-missing")) == 1
+
+
+def test_en_self_check_phrase_allows_conditional_pass_only(tmp_path):
+    root = make_sprint(tmp_path)
+    _set_report(root, "qa: [T3, agent-f]", "qa: [T3, agent-e]")
+    _set_report(root, "| 4 passed |", "| 4 passed; self-checked, not independent |")
+    to_en(root)
+    assert "qa-not-independent" in rules_of(check.check_paths([root]))  # verdict still pass
+    _set_report(root, "verdict: pass", "verdict: conditional_pass")
+    assert "qa-not-independent" not in rules_of(check.check_paths([root]))
+    plain = make_sprint(tmp_path / "p")
+    _set_report(plain, "qa: [T3, agent-f]", "qa: [T3, agent-e]")
+    to_en(plain)
+    assert "qa-not-independent" in rules_of(check.check_paths([plain]))
+
+
+def test_en_dropped_and_not_applicable_waive_a_requirement(tmp_path):
+    root = make_sprint(tmp_path)
+    _add_fr2(root, "### FR2 — Lọc theo ngày (→ US1) — dropped")
+    to_en(root)
+    assert "report-fr-without-vr" not in rules_of(check.check_paths([root]))
+    for tail in ("- dropped", "(dropped)", "— not dropped yet"):
+        other = make_sprint(tmp_path / tail.replace(" ", "_").replace("(", "").replace(")", "").replace("—", "x"))
+        _add_fr2(other, f"### FR2 — Lọc theo ngày (→ US1) {tail}")
+        to_en(other)
+        assert ("report-fr-without-vr" in rules_of(check.check_paths([other]))) is (tail == "— not dropped yet"), tail
+
+
+def test_en_ledger_table_is_read(tmp_path):
+    root, env = ledger_project(tmp_path)
+    report = check.check_paths([root], env=env)
+    assert [f.render() for f in report.findings] == []
+    store = tmp_path / "store" / "order-desk.md"
+    text = store.read_text(encoding="utf-8")
+    assert "| Sprint |" in text  # the header word is the same in both locales
+    write_lf(store, text.replace("| Sprint |", "| Sprinte |", 1))
+    assert "ledger-unreadable" in ledger_rules(check.check_paths([root], env=env))
+
+
+def test_phrase_regexes_are_anchored_in_english():
+    assert check.MERGED_MAIN.search("merged into main") and not check.MERGED_MAIN.search("unmerged into main")
+    assert not check.MERGED_MAIN.search("not merged into main") and check.MERGED_MAIN.search("đã gộp vào main")
+    assert check.ASK_COUNT_LINE.search("Number of turns the human had to answer: 2")
+    assert not check.ASK_COUNT_LINE.search("Number of turns the human had to answer: none")
+    assert check.DROPPED.search("— dropped") and not check.DROPPED.search("— dropped yet") and check.DROPPED.search("(bỏ)")
+    assert check.CONCLUSION.match("> **Conclusion:** ok") and not check.CONCLUSION.match("> **Conclusions:** ok")

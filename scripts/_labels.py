@@ -48,7 +48,13 @@ Vietnamese-only residual (deliberately NOT in the tables; check.py and _agile_ru
 today, and English documents carry them in Vietnamese until a later sprint):
   - old-scale words of check.py: OLD_VI (cao, trung binh, thap, nghiem trong, quan trong, nhe, with diacritics),
     OLD_CELL, OLD_CELL_UPPER and the OLD_FIELD / OLD_SRC_* regexes; they flag a retired scale, they are not labels;
-    how English Note and Blocker interact with the old scale is decided in TK3 (GC2).
+    English Note and Blocker (GC2, TK3): check.py resolves a severity word to a level key; `Blocker` and `Must fix` block like
+    the Vietnamese pair; `NOTE` in a severity cell is level.note only when the document's own frontmatter declares
+    `locale: en`, otherwise it stays an old-scale hit as before; `Block` is never a level.
+  - SEVERITY_HEADERS_VI of check.py (the Vietnamese-named columns whose Vietnamese old-scale words are flagged): the word set is
+    the vi labels of column.level; English severity column headers are recognised for the English old-scale words only.
+  - the NOT_APPLICABLE token (English in both locales) and the letter class that accepts the reason after it; the cell
+    separator used inside decision-log cells.
   - the legacy bulletin alias, the second entry of check.py BULLETIN_HEADINGS (kept for records written before the rename).
   - grant words of _agile_rules.py: AGILE_PREFIX, AGILE_GATES_BOTH, the level words and the dead branch/push constants.
   - rule messages printed by check.py and the summary words of its exit lines (output only), console lines of init.py.
