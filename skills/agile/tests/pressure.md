@@ -3,7 +3,7 @@ skill: agile
 method: pressure-test with subagents (RED without skill, GREEN with skill read first)
 model: claude-sonnet-5-5 (subjects, Agent-tool alias sonnet; id taken from TK2, not read from runtime; SPR-32 TK6d 2026-11-16, n = 2 per case); opus (grader, Agent-tool alias, exact id not reported)
 date: 2026-11-16
-result: "7/8 pass (AG-1 2/2, AG-2 2/2, AG-3 1/2 FAIL, AG-4 2/2); SPR-32 TK6d 2026-11-16, n = 2 per case (the scenarios header says n = 3), GREEN only, no RED run, grader opus independent of the runner; AG-3 r2 fails the clause that the status command runs with --project set to the project folder (reply never states it); simulated status output"
+result: "9/10 pass (AG-1 2/2, AG-2 2/2, AG-3 1/2 FAIL, AG-4 2/2, AG-5 2/2); SPR-32 TK6f re-run 2026-11-16 on the edited skill text, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; AG-3 r2 fails the clause 'exactly one new blocker (BR1 for SPR-41, BR3 for SPR-40)': it wrote BR-01/BR-03 (grader: format only, the command line with --session and --project was shown); history: TK6d 7/8 on the earlier text (AG-3 r2 never showed the --project value); simulated status output"
 tier: tier 2 (cũ T2) author; runs and grader are assigned at TK10
 skill_sha: 041b759e94379109fdf439e222d7ae1f3fdde4d6
 ---

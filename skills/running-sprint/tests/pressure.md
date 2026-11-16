@@ -8,7 +8,7 @@ skill_sha: 677a8711554fd18841e17246de8534d3612e3145
 historical_date: 2026-10-05
 date: 2026-11-16
 historical_result: 2/2 GREEN pass on the rerun after the intake-dialogue rule change of 2026-10-05 (rs-1, rs-6; n = 1; skill not edited); earlier 7/7 GREEN pass, RED on rs-7 partial, rs-5 partial, rs-6 passed already, rs-8 GREEN pass (no RED)
-result: "4/6 pass (OFF-3 2/2, ON-1 0/2 FAIL, STOP-1 2/2); SPR-32 TK6d 2026-11-16, n = 2 per case, GREEN only, grader opus independent of the runner; ON-1 fails on criterion 3 (no reply says the Implementer works by TDD) and r1 also on criterion 2 (effort missing from the ledger row); RED baseline in evidence/red-baseline.md (TK2: STOP-1 0/2); simulated state line"
+result: "5/6 pass (OFF-3 2/2, ON-1 1/2 FAIL, STOP-1 2/2); SPR-32 TK6f re-run 2026-11-16 on the edited text, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; ON-1 uses the relaxed criteria 2 and 3: r1 fails criterion 2 (reply does not say the ledger row carries role, tier, model; grader: borderline); history: TK6d 4/6 (ON-1 0/2 on the strict TDD and effort criteria); RED baseline in evidence/red-baseline.md (TK2: STOP-1 0/2); simulated state line"
 candidate_source_sha256: fe5d4e6dc3af8e35773d21a198e04569882a497652e063ca96fad8bac87c51b3
 candidate_tested: true
 agent_ids:
