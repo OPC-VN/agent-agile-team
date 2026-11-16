@@ -258,3 +258,28 @@ def test_help_text_is_english_and_names_the_shipped_locales(capsys):
 def test_locale_cli_helpers_are_the_state_source(tmp_path, monkeypatch):
     """init reads the user config through locale_cli, so AGENT_AGILE_STATE_DIR applies the same way."""
     assert locale_cli.user_config_path().parent == tmp_path.parent / (tmp_path.name + "-state")
+
+
+# --- GC3 read as "en findings == vi findings" (DN3): a date after PLAIN_SUMMARY_EFFECTIVE makes the rule run ------------------
+
+LATE = "2026-11-16"
+FINDING_SHAPES = {**SHAPES, "large_high": ["--size", "large", "--risk", "high", "--risk-tags", "auth,secret"]}
+
+
+def findings_of(root: Path) -> list:
+    from collections import Counter
+
+    report = check.check_paths([root])
+    return sorted(Counter((f.rule, f.level) for f in report.findings).items())
+
+
+@pytest.mark.parametrize("shape", sorted(FINDING_SHAPES))
+def test_en_findings_equal_vi_findings_on_a_date_where_plain_summary_runs(tmp_path, shape):
+    vi, en = tmp_path / "vi", tmp_path / "en"
+    vi.mkdir(), en.mkdir()
+    for root, extra in ((vi, []), (en, ["--locale", "en"])):
+        assert init.main([str(root), "--apply", "--date", LATE, "--sprint", "order-lookup", "--title", TITLE,
+                          *FINDING_SHAPES[shape], *extra]) == 0
+    assert findings_of(en) == findings_of(vi), shape
+    expected = [] if shape in ("tiny", "small") else [(("plain-summary", "Nên sửa"), 2)]  # the skeleton's empty summary section
+    assert findings_of(vi) == expected

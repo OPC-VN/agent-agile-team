@@ -588,7 +588,7 @@ def config_problems(cfg: dict) -> list[str]:
         import _labels  # nhập muộn: giữ thời gian khởi động của hook
 
         if not _labels.valid_locale(cfg["locale"]):
-            problems.append(f"locale: {cfg['locale']!r} phải là một trong {', '.join(_labels.shipped())}")
+            problems.append(f"locale: {repr(cfg['locale'])[:40]} phải là một trong {', '.join(_labels.shipped())}")
     return problems
 
 

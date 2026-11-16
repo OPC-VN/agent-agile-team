@@ -56,6 +56,9 @@ today, and English documents carry them in Vietnamese until a later sprint):
     `locale: en`, otherwise it stays an old-scale hit as before; `Block` is never a level.
   - SEVERITY_HEADERS_VI of check.py (the Vietnamese-named columns whose Vietnamese old-scale words are flagged): the word set is
     the vi labels of column.level; English severity column headers are recognised for the English old-scale words only.
+  - the pointer sentences of the ledger templates (the "Agent phiên mới" line that refers to the Open block, the lead-in
+    sentence above the Timeline / Catalog table) and the HTML comment hints: an English ledger written by init keeps them in
+    Vietnamese (D4); its machine-read headings, table headers and open block are English;
   - the NOT_APPLICABLE token (English in both locales) and the letter class that accepts the reason after it; the cell
     separator used inside decision-log cells.
   - the legacy bulletin alias, the second entry of check.py BULLETIN_HEADINGS (kept for records written before the rename).
@@ -83,13 +86,30 @@ LABELS_DIR = Path(__file__).resolve().parent.parent / "labels"
 
 _LOCALE_NAME = re.compile(r"[a-z]{2,3}")
 _NUMBERING = re.compile(r"^[0-9]+(?:\.[0-9]+)*\.?\s+")
-_HEADING = re.compile(r"^(#{1,6})([ \t]+)(\S.*?)[ \t]*$")
+_HEADING = re.compile(r"^(#{1,6})([ \t]+)(\S.*)$")  # applied to a right-stripped line by _match_heading
 _FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})\s*$")
-_SEPARATOR = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$")
+_SEPARATOR_CELL = re.compile(r":?-{3,}:?")
 _BOLD = re.compile(r"\*\*([^*\n]+?)\*\*(:?)")
 _CODE_SPAN = re.compile(r"`[^`\n]*`")
 _EM_DASH = " — "
+
+
+def _match_heading(line: str):
+    """Match of an ATX heading line (groups: hashes, blanks, text without trailing blanks), or None. Linear: trailing
+    blanks are stripped first instead of being matched by a lazy group, which was quadratic on long lines."""
+    return _HEADING.match(line.rstrip(" \t"))
+
+
+def _is_separator(line: str) -> bool:
+    """A table separator row such as `| --- | :---: |`: optional outer pipes, cells of three or more dashes with optional colons.
+    Split-based, so it is linear (the equivalent single regex backtracked quadratically on long blank runs)."""
+    body = line.strip()
+    if body.startswith("|"):
+        body = body[1:]
+    if body.endswith("|"):
+        body = body[:-1]
+    return all(_SEPARATOR_CELL.fullmatch(cell.strip()) for cell in body.split("|"))
 
 Table = Dict[str, Tuple[str, ...]]
 
@@ -402,7 +422,7 @@ def _candidates(text: str) -> Iterator[Tuple[str, int, int, int]]:
         if visible.lstrip().startswith("|"):
             if not prev_row:
                 following = lines[idx + 1].rstrip("\r") if idx + 1 < len(lines) else ""
-                if _SEPARATOR.match(following):
+                if _is_separator(following):
                     for a, b in _cells(visible):
                         a, b = _trim_span(visible, a, b)
                         if a < b:
@@ -410,7 +430,7 @@ def _candidates(text: str) -> Iterator[Tuple[str, int, int, int]]:
             prev_row = True
             continue
         prev_row = False
-        hm = _HEADING.match(visible)
+        hm = _match_heading(visible)
         if hm:
             yield "heading", idx, hm.start(3), hm.end(3)
             continue

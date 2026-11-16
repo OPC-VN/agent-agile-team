@@ -1288,7 +1288,7 @@ class Engine:
             if isinstance(value, str) and lab.valid_locale(value.strip().lower()):
                 hint = f" (gợi ý: '{value.strip().lower()}')"
             self.add(doc.path, line, "locale-invalid",
-                     f"locale: {value!r} không thuộc các ngôn ngữ đã phát hành {list(lab.shipped())}{hint}")
+                     f"locale: {repr(value)[:40]} không thuộc các ngôn ngữ đã phát hành {list(lab.shipped())}{hint}")
             return
         self.locales.setdefault(doc.path.resolve().parent, []).append((doc.path, value, line))
         foreign = []

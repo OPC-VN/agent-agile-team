@@ -20,8 +20,9 @@ resolves to `vi` and is reported in `problems`; `set --scope user` replaces it. 
 
 A non-interactive `set --scope user` (flag, CI or AGENT_AGILE_NONINTERACTIVE) writes nothing and exits 0 with
 `written: false` and a reason, so a headless "no answer" never marks the user as asked. `set --scope repo` is a
-deliberate configuration choice and is written in any session. It walks up from --root to the nearest .agile.json,
-rewrites it with 2-space indent (keys and their order are kept, hand formatting is not), and replaces a symlinked
+deliberate configuration choice and is written in any session. It looks for .agile.json at --root and above it, but never past the
+repository root (the first folder with .git; without any .git only --root itself counts), refuses with exit 2
+otherwise, rewrites it with 2-space indent (keys and their order are kept, hand formatting is not), and replaces a symlinked
 config with a regular file (os.replace swaps the link, not its target). A `locale` key that is JSON null in
 .agile.json or in the user config counts as an invalid value (like config_problems), not as "not declared".
 
@@ -72,12 +73,16 @@ def is_interactive(non_interactive_flag: bool = False, environ=None) -> bool:
     return not any(str(env.get(name) or "").strip() for name in NONINTERACTIVE_ENV)
 
 
-def write_atomic(path: Path, text: str) -> None:
-    """Write text (UTF-8, no BOM) next to its target and swap it in with os.replace; the original survives a failure."""
+def write_atomic(path: Path, text: str, mode: int = 0o600) -> None:
+    """Write text (UTF-8, no BOM) next to its target and swap it in with os.replace; the original survives a failure.
+    The temp file is created exclusively with `mode` (0o600 by default; a repo config passes its own mode)."""
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     tmp = path.parent / f".{path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
+    # O_EXCL: never write through a file or link somebody else put at the temp name; a failed open removes nothing.
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(tmp, flags, mode)
     try:
-        with open(tmp, "wb") as handle:
+        with os.fdopen(fd, "wb") as handle:
             handle.write(text.encode("utf-8"))
             handle.flush()
             os.fsync(handle.fileno())
@@ -105,10 +110,40 @@ def read_user_config():
     return (data or {}), None
 
 
+def user_locale_value():
+    """The raw `locale` of the user config (None when it declares none); a missing or corrupt file declares nothing."""
+    data, _problem = read_user_config()
+    return _layer_value(data)
+
+
 def find_repo_config(start: Path):
-    """Nearest .agile.json at or above start, or None."""
+    """Nearest .agile.json at or above start, or None (read-only lookups: `status`)."""
     current = start.resolve()
     for folder in (current, *current.parents):
+        candidate = folder / CONFIG_NAME
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _is_repo_root(folder: Path) -> bool:
+    return (folder / ".git").exists()
+
+
+def find_repo_config_bounded(start: Path):
+    """The .agile.json that `set --scope repo` may rewrite: at `start`, or above it but not past the repository root (the
+    first folder at or above `start` that holds `.git`). Without any `.git` only `start` itself counts, so the walk never
+    reaches a home folder or another repository."""
+    current = start.resolve()
+    chain = [current]
+    boundary = None
+    for folder in (current, *current.parents):
+        if _is_repo_root(folder):
+            boundary = folder
+            break
+    if boundary is not None:
+        chain = [f for f in (current, *current.parents) if f == boundary or boundary in f.parents]
+    for folder in chain:
         candidate = folder / CONFIG_NAME
         if candidate.is_file():
             return candidate
@@ -126,7 +161,13 @@ def read_repo_config(path: Path):
     return data, None
 
 
-_FRONT_LOCALE = re.compile(r"^locale[ \t]*:[ \t]*(.*?)[ \t]*$")
+_FRONT_LOCALE = re.compile(r"^locale[ \t]*:[ \t]*(.*)$")  # applied to a right-stripped line (_front_locale): linear
+
+
+def _front_locale(line: str):
+    """The raw value of a `locale:` front matter line, without surrounding blanks; None when the line is another key."""
+    match = _FRONT_LOCALE.match(line.rstrip(" \t"))
+    return match.group(1) if match else None
 
 
 def read_sprint_locale(path: Path):
@@ -141,9 +182,9 @@ def read_sprint_locale(path: Path):
     for line in lines[1:]:
         if line.strip() == "---":
             return found  # closed front matter
-        match = _FRONT_LOCALE.match(line.rstrip("\r"))
-        if match and found is None:
-            found = match.group(1).strip("'\"")
+        value = _front_locale(line.rstrip("\r"))
+        if value is not None and found is None:
+            found = value.strip("'\"")
     return None  # never closed: what was read is body text, not front matter
 
 
@@ -217,14 +258,19 @@ def do_set(args, interactive: bool = True) -> dict:
         return {"scope": "user", "locale": locale, "locale_asked": True, "written": True, "path": str(path),
                 "replaced_problem": problem}
     root = Path(args.root).resolve() if args.root else Path.cwd()
-    path = find_repo_config(root)
+    path = find_repo_config_bounded(root)
     if path is None:
-        raise UsageError(f"no {CONFIG_NAME} found at or above {str(root)[:120]!r}; --scope repo needs an initialised repo")
+        raise UsageError(f"no {CONFIG_NAME} found at {str(root)[:120]!r} or between it and the repository root (the folder with "
+                         ".git); --scope repo never edits a config outside the repository; pass --root of an initialised repo")
     data, problem = read_repo_config(path)
     if problem:
         raise UsageError(f"{problem}; fix it before setting the repo locale")
     data["locale"] = locale
-    write_atomic(path, _dump(data))
+    try:
+        keep_mode = path.stat().st_mode & 0o777
+    except OSError:
+        keep_mode = 0o644
+    write_atomic(path, _dump(data), mode=keep_mode)
     return {"scope": "repo", "locale": locale, "written": True, "path": str(path)}
 
 

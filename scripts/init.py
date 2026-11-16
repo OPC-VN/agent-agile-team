@@ -254,8 +254,7 @@ def plan_sprint(root: Path, cfg: dict, args, plan: Plan) -> None:
 
 def user_locale():
     """The raw `locale` of the user config, or None when it declares none; a missing or corrupt file declares nothing."""
-    data, _problem = locale_cli.read_user_config()
-    return locale_cli._layer_value(data)
+    return locale_cli.user_locale_value()
 
 
 def add_locale(text: str, locale: str) -> str:
