@@ -30,7 +30,7 @@ open), then the repo `.agile.json` key `locale`, then the user config key `local
 not recorded and the session is interactive; answering (or proceeding without an answer) runs `set --scope user`,
 which writes `locale_asked: true` (no answer stores `vi`), so the question is never asked a second time. A
 non-interactive run (`CI` or `AGENT_AGILE_NONINTERACTIVE` set) returns the resolved locale with `ask_needed: false`
-and records nothing. The script side is done; the skill text that makes an agent ask is not applied yet (it needs the owner's approval).
+and records nothing. The script side is done; the skill text that makes an agent ask (step 6 of `skills/agile/SKILL.md`) was applied after the owner's approval on 16/11 (commit `7949864`) and pressure-tested (GREEN 18/18, n = 2).
 
 **Adding a third locale:** add `labels/<code>.json` with exactly the same keys as `vi.json` (list-valued keys keep
 the same number of alternates, in the same positions) (the shipped list is the set of files in `labels/`), then run
