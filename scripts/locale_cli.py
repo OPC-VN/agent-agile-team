@@ -88,9 +88,21 @@ def write_atomic(path: Path, text: str, mode: int = 0o600) -> None:
             os.fsync(handle.fileno())
         os.replace(tmp, path)
     finally:
+        _remove_quietly(tmp)
+
+
+def _remove_quietly(tmp: Path) -> None:
+    """Remove a leftover temp file; a read-only one (Windows) is made writable first. A failure here is swallowed so
+    it never replaces the error that is already being raised."""
+    try:
+        tmp.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
         try:
+            os.chmod(tmp, 0o600)
             tmp.unlink()
-        except FileNotFoundError:
+        except OSError:
             pass
 
 

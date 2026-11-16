@@ -228,3 +228,50 @@ def test_user_locale_value_is_public_and_init_uses_it(tmp_path, monkeypatch):
     (tmp_path / "st" / "user-config.json").write_text('{"locale": "en"}', encoding="utf-8")
     assert locale_cli.user_locale_value() == "en" and init.user_locale() == "en"
     assert "_layer_value" not in Path(init.__file__).read_text(encoding="utf-8")
+
+
+# --- final review notes ---------------------------------------------------------------------------------------------
+
+
+def test_failed_replace_of_a_read_only_temp_reports_the_original_error_and_leaves_no_temp(tmp_path, monkeypatch):
+    def boom(src, dst):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(os, "replace", boom)
+    with pytest.raises(OSError, match="replace failed"):
+        locale_cli.write_atomic(tmp_path / ".agile.json", "{}\n", mode=0o444)  # a read-only config gives a read-only temp
+    monkeypatch.undo()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_cleanup_failure_never_hides_the_original_error(tmp_path, monkeypatch):
+    def boom(src, dst):
+        raise OSError("replace failed")
+
+    def stubborn(self, *a, **k):
+        raise PermissionError("cannot unlink")
+
+    monkeypatch.setattr(os, "replace", boom)
+    monkeypatch.setattr(Path, "unlink", stubborn)
+    with pytest.raises(OSError, match="replace failed"):
+        locale_cli.write_atomic(tmp_path / "f.json", "{}\n")
+    monkeypatch.undo()
+    for left in tmp_path.iterdir():  # the stubborn unlink left the temp; remove it so the temp dir stays clean
+        left.unlink()
+
+
+def test_a_git_file_counts_as_a_repository_root(state_env, tmp_path):
+    """A worktree or a submodule has `.git` as a file; the walk stops there too."""
+    outer = tmp_path / "outer"
+    cfg(outer, {"schema": 1, "keep": "me"})
+    wt = outer / "wt"
+    wt.mkdir()
+    (wt / ".git").write_text("gitdir: ../.git/worktrees/wt\n", encoding="utf-8")
+    sub = wt / "pkg"
+    sub.mkdir()
+    before = (outer / ".agile.json").read_bytes()
+    assert set_repo(state_env, sub).returncode == 2
+    assert (outer / ".agile.json").read_bytes() == before
+    cfg(wt)
+    assert set_repo(state_env, sub).returncode == 0
+    assert json.loads((wt / ".agile.json").read_text(encoding="utf-8"))["locale"] == "en"
