@@ -823,3 +823,10 @@ def test_symlink_in_place_of_state_file_is_a_problem(repo, state, tmp_path):  # 
     s = st.load_state(repo, "s1")
     assert s["state_problem"], kind
     assert s["effective_on"] is False and s["guard_must_stay_active"] is True
+
+
+def test_safe_text_strips_format_characters():  # SPR-32 TK6e RF7: bidi/zero-width (Unicode category Cf) can hide or reorder text in a context line
+    cf = [chr(code) for code in (0x202E, 0x200B, 0x2066, 0x2069, 0xFEFF, 0xAD)]  # built with chr(): a literal BOM in the source would trip test_source_has_no_literal_bom
+    text = "ab" + cf[0] + "cd" + cf[1] + "ef" + cf[2] + "gh" + cf[3] + cf[4] + "ij" + cf[5] + "kl"
+    assert st.safe_text(text) == "abcdefghijkl"
+    assert st.safe_text("tab" + cf[0] + cf[1]) == "tab"

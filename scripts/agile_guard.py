@@ -52,6 +52,7 @@ import json
 import os
 import re
 import sys
+import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # `typing.TextIO` only annotates (SPR-32 B4: not imported per tool call)
@@ -102,6 +103,7 @@ ROBOCOPY_FLAG = re.compile(r"/[A-Za-z]+(?::.*)?")
 UNSAFE_PATH_CHARS = set(",$%`~{}()<>!^\"'\n\r;|&")
 GLOB_CHARS = set("*?[")
 MAX_UNWRAP = 3
+DEADLINE = "deadline"  # lý do riêng: phân tích lệnh vượt hạn nội bộ (DEADLINE_SECONDS)
 NESTED = "nested"  # đơn vị chặn riêng: lồng shell quá sâu, không phân tích được
 TAMPER = "tamper"  # đơn vị chặn riêng: đụng tới công tắc agile (thư mục trạng thái, agile_state/agile_hook, biến đổi hướng)
 SPECIAL_ITEMS = frozenset({NESTED, TAMPER})
@@ -128,6 +130,21 @@ READ_ONLY_GIT = frozenset({"status", "log", "diff", "show", "ls-files", "check-i
 
 
 PYTHON_NAME = re.compile(r"^(?:py|python[0-9.]*)$")
+RUNNER_NAMES = frozenset({"uv", "uvx", "pipx", "poetry", "pdm", "hatch", "pipenv", "rye", "tox", "nox"})  # chạy Python qua công cụ môi trường: mọi token sau tên đều có thể là script
+INTERPRETER_NAMES = frozenset({"node", "nodejs", "deno", "bun", "perl", "ruby", "php", "lua", "osascript", "rscript", "groovy", "tclsh"})
+INTERPRETER_VALUE_FLAGS = frozenset({"-X", "-W", "--check-hash-based-pycs"})  # cờ của `python` nhận giá trị ở token kế (`-X utf8`)
+DEADLINE_ENV = "AGILE_GUARD_DEADLINE_S"  # chỉ để test; mặc định DEADLINE_SECONDS
+DEADLINE_SECONDS = 6.0  # dưới hạn 10 s của hooks.json (hook hết giờ KHÔNG chặn): quá hạn này thì tự chặn, không để lệnh dài chạy không rào
+_deadline: float | None = None
+
+
+class _Deadline(Exception):
+    """Phân tích lệnh vượt hạn nội bộ (DEADLINE_SECONDS): lệnh bị chặn với lý do riêng."""
+
+
+def _tick() -> None:
+    if _deadline is not None and time.monotonic() >= _deadline:
+        raise _Deadline()
 
 
 def known_exclusions() -> tuple[str, ...]:
@@ -268,9 +285,11 @@ ENV_REDIRECT = re.compile("|".join([
     r"(?:^|\s)(?:-u|--unset)[\s=]+" + _REDIRECT_ENV,  # env -u NAME
 ]), re.IGNORECASE)
 IMPORT_STATE = re.compile(
-    r"\bimport\s+[\w\s,.]*?\bagile_(?:state|hook)\b|\bfrom\s+(?:[\w.]+\.)?agile_(?:state|hook)\b"
+    r"\bimport\s{1,40}[\w\s,.]{0,200}?\bagile_(?:state|hook)\b|\bfrom\s+(?:[\w.]+\.)?agile_(?:state|hook)\b"
     r"|(?:__import__|import_module)\s*\(\s*['\"](?:[\w.]+\.)?agile_(?:state|hook)"
     r"|(?:spec_from_file_location|run_path)\b[^\n]{0,160}agile_(?:state|hook)", re.IGNORECASE)
+DOUBLE_SLASH = re.compile(r"/{2,}")
+RAW_SEPARATORS = re.compile(r"&&|\|\||[;|&\n\r]")  # như SEPARATORS nhưng KHÔNG tách ở ngoặc/dấu huyền: `(Get-Item p).Delete()` và `$(rm p)` giữ nguyên một câu
 PY_OR_HEREDOC = re.compile(r"(?<![\w.-])(?:python[0-9.]*|py|pythonw)(?:\.exe)?(?![\w-])|<<", re.IGNORECASE)
 
 
@@ -298,9 +317,35 @@ def _under(path: str, directory: str) -> bool:
     return path == directory or path.startswith(directory.rstrip(os.sep) + os.sep)
 
 
+def _glob_covers(path: str, directory: str, ancestor: bool) -> bool:
+    """Mẫu `path` (đã `normcase`, có ký tự đại diện) có thể trỏ vào thư mục trạng thái `directory`, hay (khi `ancestor`) vào một thư mục BAO nó?
+    So từng thành phần bằng `fnmatch`: mẫu dài hơn hay bằng thư mục = ở trong hay chính nó; ngắn hơn = tổ tiên. `**` khớp phần còn lại."""
+    pattern_parts = path.replace("\\", "/").split("/")
+    dir_parts = directory.replace("\\", "/").rstrip("/").split("/")
+    for pattern, name in zip(pattern_parts, dir_parts):
+        if pattern == "**":
+            return True
+        if not fnmatch.fnmatchcase(name, pattern):
+            return False
+    return len(pattern_parts) >= len(dir_parts) or ancestor
+
+
+def _real(full: str, ctx: "Context") -> str:
+    """`realpath` có nhớ theo thư mục: mục đang có thì giải thẳng; mục chưa có thì giải thư mục cha (một lần cho cả lệnh) rồi nối tên (RF3)."""
+    if os.path.lexists(full):
+        return os.path.realpath(full)
+    parent = os.path.dirname(full)
+    if parent == full:
+        return full
+    real_parent = ctx.real_cache.get(parent)
+    if real_parent is None:
+        real_parent = ctx.real_cache[parent] = os.path.realpath(parent)
+    return os.path.join(real_parent, os.path.basename(full))
+
+
 def _mentions_state(text: str, ctx: "Context") -> bool:
     """Chuỗi chứa đường của thư mục trạng thái hay dấu hiệu của nó (`agent-agile-team/state`, `state/agent-agile-team`)."""
-    low = text.replace("\\", "/").lower()
+    low = DOUBLE_SLASH.sub("/", text.replace("\\", "/").lower())  # `C:\\Users\\x` (gạch ngược kép trong chuỗi mã) cũng về `c:/users/x`
     return any(d.replace("\\", "/") in low for d in ctx.state_dirs) or bool(STATE_SIGNATURE.search(low))
 
 
@@ -310,16 +355,27 @@ def _state_ref(text: str, ctx: "Context", ancestor: bool = False) -> bool:
     trạng thái (cho lệnh xoá/chuyển). Chưa tính được đường (biến lạ, đã đổi thư mục) → so theo tên file trạng thái (đóng an toàn)."""
     if not text:
         return False
+    key = (text, ancestor, ctx.cwd_changed)  # RF3: cùng một chuỗi trong cùng lệnh (từ lặp) chỉ tính một lần
+    if key not in ctx.ref_cache:
+        ctx.ref_cache[key] = _state_ref_uncached(text, ctx, ancestor)
+    return ctx.ref_cache[key]
+
+
+def _state_ref_uncached(text: str, ctx: "Context", ancestor: bool) -> bool:
     expanded, unresolved = _expand(text)
     norm = expanded.replace("\\", "/")
     if _mentions_state(norm, ctx):
         return True
+    if GLOB_CHARS & set(norm) and not unresolved and (os.path.isabs(norm) or not ctx.cwd_changed):  # TK6e RF2: ký tự đại diện ở BẤT KỲ thành phần nào (không chỉ cuối)
+        probe = os.path.normcase(os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm)))
+        if any(_glob_covers(probe, d, ancestor) for d in ctx.state_dirs):
+            return True
     if unresolved or ctx.cwd_changed:
         return bool(STATE_NAME.fullmatch(os.path.basename(norm.rstrip("/"))))
     full = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm))
     candidates = {os.path.normcase(full)}
     try:
-        candidates.add(os.path.normcase(os.path.realpath(full)))
+        candidates.add(os.path.normcase(_real(full, ctx)))
     except OSError:
         return True
     return any(_under(c, d) or (ancestor and c != os.path.dirname(c) and _under(d, c)) for c in candidates for d in ctx.state_dirs)  # gốc ổ đĩa không tính là tổ tiên
@@ -336,8 +392,68 @@ def _covers_state(text: str, ctx: "Context") -> bool:
 
 def _raw_tamper(text: str) -> bool:
     """Luật trên VĂN BẢN lệnh nguyên (trước khi bỏ thân heredoc): (c) `import agile_state/agile_hook` trong lệnh có Python/heredoc,
-    (d) đặt hay export `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR`."""
-    return bool(ENV_REDIRECT.search(text) or (IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text)))
+    (d) đặt hay export `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` (TK6e S2: xét từng câu lệnh, bỏ câu chỉ-đọc như `grep -r CLAUDE_PROJECT_DIR= .`)."""
+    if IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text):
+        return True
+    if not ENV_REDIRECT.search(text):
+        return False
+    return any(ENV_REDIRECT.search(segment) and not _env_read_only(segment) for segment in RAW_SEPARATORS.split(text))
+
+
+def _env_read_only(segment: str) -> bool:
+    """Câu lệnh chỉ-đọc (tên lệnh đầu, KHÔNG bỏ tiền tố: `X=1 grep` vẫn là đặt biến) nhắc tên biến mà không đặt nó; có chuyển hướng `>`, `find -exec`,
+    `awk system` thì không."""
+    tokens = tokenize(segment)
+    if not tokens or ">" in segment:
+        return False
+    name, args = _exe_name(tokens[0]), tokens[1:]
+    if name == "find" and any(a in FIND_EXEC or a == "-delete" for a in args):
+        return False
+    if name == "awk" and "system" in segment:
+        return False
+    return _read_only(name, args, Context(set(), ".", light=True))
+
+
+def _interpreter_name(name: str) -> bool:
+    return bool(PYTHON_NAME.match(name)) or name in INTERPRETER_NAMES or name in SHELL_WRAPPERS
+
+
+def _raw_state_tamper(text: str, ctx: "Context") -> bool:
+    """TK6e RF1: đường thư mục trạng thái nằm trong VĂN BẢN lệnh (trước khi tách token), kể cả thân heredoc đưa vào trình thông dịch và chuỗi trong
+    `python -c`/`node -e`/PowerShell `[IO.File]::Delete(…)`/`(Get-Item p).Delete()`. QUYẾT ĐỊNH: một câu lệnh KHÔNG chỉ-đọc mà nhắc tới đường đó bị chặn
+    (kể cả để ghi chú trong thân heredoc đưa vào trình thông dịch); câu chỉ-đọc (`cat`, `ls`, `grep`…) và câu chép (`cp`, đích do luật tách token xét) qua.
+    Chỉ nhận đường thư mục (không nhận tên file trần `session-x.json`: đã có luật tách token). Tách câu ở `&& || ; | &` và xuống dòng, không ở ngoặc."""
+    for segment in RAW_SEPARATORS.split(_join_and_strip(text, interpreters=True)):
+        _tick()
+        if not segment.strip() or not _mentions_state(_expand(segment)[0], ctx):
+            continue
+        tokens = tokenize(segment)
+        stripped, _ = _strip_prefixes(list(tokens), Context(set(), ctx.cwd, light=True))
+        if stripped:
+            name, args = _exe_name(stripped[0]), stripped[1:]
+            if name in COPY_COMMANDS:
+                continue
+            if _read_only(name, args, ctx) and name != "awk":  # `find` qua đây: `-delete`/`-exec` do `_find_item` xét theo token (cùng lý do cũ)
+                continue
+        return True
+    return False
+
+
+def _script_positions(tokens: list[str]) -> list[int]:
+    """Vị trí token có thể là script ĐANG ĐƯỢC CHẠY (TK6e S1): token đầu; token đầu tiên không phải cờ ngay sau trình thông dịch Python (`python`, `python3`,
+    `py -3`, kể cả `-X utf8`, `-m`); mọi token sau tên công cụ môi trường (`uv run`, `poetry run`…). `git add scripts/agile_hook.py`, `cp`, `ruff check`
+    chỉ NHẮC tới script nên không tính."""
+    found = [0]
+    name = _exe_name(tokens[0])
+    if PYTHON_NAME.match(name):
+        index = 1
+        while index < len(tokens) and tokens[index].startswith("-") and len(tokens[index]) > 1:
+            index += 2 if tokens[index] in INTERPRETER_VALUE_FLAGS else 1
+        if index < len(tokens):
+            found.append(index)
+    elif name in RUNNER_NAMES:
+        found.extend(range(1, len(tokens)))
+    return found
 
 
 def _tamper_item(tokens: list[str], ctx: "Context") -> str | None:
@@ -348,14 +464,15 @@ def _tamper_item(tokens: list[str], ctx: "Context") -> str | None:
     name, args = _exe_name(tokens[0]), tokens[1:]
     read_only = _read_only(name, args, ctx)
     if not read_only:
-        for position, token in enumerate(tokens):
-            script = SCRIPT_REF.search(token.replace("\\", "/"))
+        for position in _script_positions(tokens):
+            script = SCRIPT_REF.search(tokens[position].replace("\\", "/"))
             if script and (script.group(1).lower() == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):
                 return TAMPER
     ancestor = name in DELETE_COMMANDS or name in MOVE_COMMANDS
     ref_at: list[int] = []
     index = 0
     while index < len(tokens):
+        _tick()
         token = tokens[index]
         redirect = REDIRECT.match(token)
         if redirect:
@@ -380,13 +497,16 @@ def _tamper_item(tokens: list[str], ctx: "Context") -> str | None:
 class Context:
     """Trạng thái một lần phân tích: mục đang chặn, thư mục lệnh chạy, các gốc repo, thư mục trạng thái, thư mục git đang làm việc."""
 
-    def __init__(self, active: set[str], cwd: str, state_dirs: tuple[str, ...] = (), session: str | None = None) -> None:
+    def __init__(self, active: set[str], cwd: str, state_dirs: tuple[str, ...] = (), session: str | None = None, light: bool = False) -> None:
         self.active = active
         self.state_dirs = tuple(state_dirs)
         self.cwd = os.path.abspath(cwd)
-        self.roots = list(dict.fromkeys(r for r in (find_repo_root(self.cwd), find_repo_root(session) if session else None) if r))
+        self.light = light  # bản nhẹ cho `_strip_prefixes` (chỉ cần `enter()`): không dò gốc repo trên đĩa (~0,3 ms mỗi câu lệnh, TK6e RF3)
+        self.roots = [] if light else list(dict.fromkeys(r for r in (find_repo_root(self.cwd), find_repo_root(session) if session else None) if r))
         self.root = self.roots[0] if self.roots else None
-        self.in_git = _is_git_path(self.cwd)  # thư mục lệnh (hay đích `cd`) nằm trong `.git`: mọi lệnh xoá/chuyển bị chặn
+        self.ref_cache: dict[tuple, bool] = {}  # kết quả `_state_ref` theo (chuỗi, ancestor, đã đổi thư mục)
+        self.real_cache: dict[str, str] = {}  # `realpath` theo thư mục (RF3: một lần gọi hệ thống mỗi token là ~0,3 ms)
+        self.in_git = False if light else _is_git_path(self.cwd)  # thư mục lệnh (hay đích `cd`) nằm trong `.git`: mọi lệnh xoá/chuyển bị chặn
         self.cwd_changed = False  # đã gặp thao tác đổi thư mục (cd, pushd, env -C…, kể cả trong subshell/bash -c)
         self.tmp_moved = False  # đã gặp `mv`/`robocopy`/`cp -r`… với đích dưới `.tmp/`: phần xoá phía sau không còn ngoại lệ dọn tạm
 
@@ -650,7 +770,7 @@ def _find_item(args: list[str], ctx: Context, depth: int) -> str | None:
             item = _segment_item(rest, ctx, depth)
             if item:
                 return item
-            stripped, _ = _strip_prefixes(list(rest), Context(set(), ctx.cwd))
+            stripped, _ = _strip_prefixes(list(rest), Context(set(), ctx.cwd, light=True))
             if stripped and not _read_only(_exe_name(stripped[0]), stripped[1:], ctx):
                 if any(_covers_state(t, ctx) for t in (starts or ["."])):
                     return TAMPER
@@ -848,24 +968,26 @@ def _substitutions(body: str) -> list[str]:
     return found
 
 
-def _strip_heredoc_bodies(text: str) -> str:
+def _strip_heredoc_bodies(text: str, interpreters: bool = False) -> str:
     """Thân heredoc đưa vào trình thông dịch không phải shell (`python -`, `node -`, `cat >`) là dữ liệu, không phân tích như lệnh;
     đưa vào `bash`/`sh`/`pwsh`/eval (kể cả `cat <<EOF | bash`) thì giữ lại để xét như lệnh lồng. Chỉ nhận `<<` ngoài nháy và comment;
-    heredoc không có dòng kết thúc khớp đúng nhãn thì giữ nguyên thân để phân tích. Nhãn không nháy (`<<X`, `<<-X`): shell vẫn mở rộng
+    heredoc không có dòng kết thúc khớp đúng nhãn thì giữ nguyên thân để phân tích. `interpreters` (TK6e RF1): giữ cả thân đưa vào `python`/`node`/`perl`…
+    (cho luật tìm đường thư mục trạng thái trong mã). Nhãn không nháy (`<<X`, `<<-X`): shell vẫn mở rộng
     `$(…)` và dấu huyền trong thân nên các lệnh đó được trích ra phân tích; nhãn có nháy (`<<'X'`, `<<"X"`, `<<\\X`) thì bỏ hẳn thân."""
     lines = text.split("\n")
     out: list[str] = []
     index = 0
     quote = ""
     while index < len(lines):
+        _tick()
         line = lines[index]
         out.append(line)
         index += 1
         marks, quote = _heredoc_marks(line, quote)
         if not marks:
             continue
-        stage, _ = _strip_prefixes(tokenize(SEPARATORS.split(line[:marks[0].start()])[-1]), Context(set(), "."))
-        reads_shell = bool(stage) and _exe_name(stage[0]) in SHELL_WRAPPERS | EVAL_COMMANDS
+        stage, _ = _strip_prefixes(tokenize(SEPARATORS.split(line[:marks[0].start()])[-1]), Context(set(), ".", light=True))
+        reads_shell = bool(stage) and (_exe_name(stage[0]) in SHELL_WRAPPERS | EVAL_COMMANDS or (interpreters and _interpreter_name(_exe_name(stage[0]))))
         reads_shell = reads_shell or bool(PIPE_INTO_SHELL.search(line[marks[-1].end():]))
         for mark in marks:
             delimiter = mark.group(2) or mark.group(3) or mark.group(4)
@@ -885,11 +1007,11 @@ def _strip_heredoc_bodies(text: str) -> str:
     return "\n".join(out)
 
 
-def _join_and_strip(text: str) -> str:
+def _join_and_strip(text: str, interpreters: bool = False) -> str:
     """Nối dòng (dấu gạch ngược hay dấu huyền + xuống dòng) TRƯỚC khi dò heredoc (để `bash` + gạch ngược + xuống dòng + `<<EOF` vẫn thấy `bash`), bỏ thân heredoc
     của trình không phải shell, rồi nối dòng thêm một lần cho phần còn lại. Hệ quả chấp nhận: dấu huyền/gạch ngược cuối dòng trong thân
     heredoc có nháy cũng bị nối, nên thân đó có thể không còn dòng kết thúc riêng và bị phân tích (chặn nhầm, an toàn)."""
-    return LINE_CONTINUATION.sub(" ", _strip_heredoc_bodies(LINE_CONTINUATION.sub(" ", text)))
+    return LINE_CONTINUATION.sub(" ", _strip_heredoc_bodies(LINE_CONTINUATION.sub(" ", text), interpreters))
 
 
 def _in_tmp_name(path: str) -> bool:
@@ -994,7 +1116,7 @@ def _pipe_to_shell(text: str, ctx: Context, depth: int) -> str | None:
     """`echo "git push" | bash`: vế trước ống (bỏ tên lệnh đầu) là chuỗi đưa vào shell."""
     parts = PIPE.split(text)
     for index in range(1, len(parts)):
-        stage, _ = _strip_prefixes(tokenize(re.split(r"&&|;|\n", parts[index])[0]), Context(set(), ctx.cwd))
+        stage, _ = _strip_prefixes(tokenize(re.split(r"&&|;|\n", parts[index])[0]), Context(set(), ctx.cwd, light=True))
         if not stage:
             continue
         name = _exe_name(stage[0])
@@ -1056,14 +1178,22 @@ def _analyze(text: str, ctx: Context, depth: int = 0) -> str | None:
         return "irreversible_delete"
     parts = SEP_KEEP.split(text)  # [lệnh, dấu ngăn, lệnh, …]
     listing: list[str] | None = None  # đường mà một `Get-ChildItem -Recurse` phía trước ống dẫn đang liệt kê
+    state_listed = False  # câu ngay trước ống dẫn liệt kê thư mục trạng thái hay thư mục bao nó (`ls <S>* | xargs rm`, TK6e RF2)
     for index in range(0, len(parts), 2):
+        _tick()
         if index and parts[index - 1] in CHAIN_BREAKS:
             listing = None
+        piped_from_state = state_listed and index > 0 and parts[index - 1] == "|"
+        state_listed = False
         tokens = tokenize(parts[index])
         item = _segment_item(list(tokens), ctx, depth)
-        stripped, _ = _strip_prefixes(list(tokens), Context(set(), ctx.cwd))
+        stripped, _ = _strip_prefixes(list(tokens), Context(set(), ctx.cwd, light=True))
         if stripped and not item:
             name = _exe_name(stripped[0])
+            if piped_from_state and (name in DELETE_COMMANDS or name in MOVE_COMMANDS):
+                return TAMPER
+            lists = name in LISTING_COMMANDS or name == "find" or name in ("get-item", "gi")
+            state_listed = lists and any(_state_ref(a, ctx, ancestor=True) for a in stripped[1:] if not a.startswith("-"))
             paths = _recursive_listing(name, stripped[1:])
             if paths is not None:
                 listing = paths
@@ -1171,6 +1301,8 @@ def _allow(fmt: str, stdout: TextIO) -> int:
 def reason_for(item: str, broken: bool) -> str:
     if item == TAMPER:
         return "agile: công tắc agile là rào — chỉ người dùng gõ /agile stop mới tắt được; lệnh không chạy"
+    if item == DEADLINE:
+        return "agile: guard deadline: command too long to check — lệnh không chạy"
     if item == NESTED:
         return "agile: lệnh lồng quá {} lớp shell, không phân tích được — cần người dùng nói trong chat — lệnh không chạy".format(MAX_UNWRAP)
     lead = "agile: trạng thái hỏng, " if broken else "agile: "
@@ -1208,12 +1340,15 @@ def _evaluate(raw: str, notes: list[str]) -> str | None:
         if name is not None and name.lower() not in SHELL_TOOLS:
             return None
         for text in _commands(payload):
-            if _raw_tamper(text):
+            context = Context(active, command_dir, state_dirs, session_dir)
+            if _raw_tamper(text) or _raw_state_tamper(text, context):
                 return reason_for(TAMPER, broken)
-            item = _analyze(text, Context(active, command_dir, state_dirs, session_dir))
+            item = _analyze(text, context)
             if item:
                 return reason_for(item, broken)
         return None
+    except _Deadline:
+        raise
     except Exception as exc:
         raise _Failed(type(exc).__name__, dirs) from exc
 
@@ -1236,9 +1371,17 @@ def main(argv: list[str] | None = None, stdin: TextIO = sys.stdin, stdout: TextI
     reason = None
     raw = ""
     notes: list[str] = []
+    global _deadline
+    try:
+        limit = float(os.environ.get(DEADLINE_ENV) or DEADLINE_SECONDS)
+    except ValueError:
+        limit = DEADLINE_SECONDS
+    _deadline = time.monotonic() + limit
     try:
         raw = stdin.read()
         reason = _evaluate(raw, notes)
+    except _Deadline:
+        reason = reason_for(DEADLINE, False)
     except _Failed as failed:
         if debug:
             import traceback  # lazy: debug only (SPR-32 B4 start-up cost)
@@ -1249,6 +1392,8 @@ def main(argv: list[str] | None = None, stdin: TextIO = sys.stdin, stdout: TextI
             import traceback  # lazy: debug only (SPR-32 B4 start-up cost)
             traceback.print_exc(file=stderr)
         reason = _unparsed_reason(type(exc).__name__, raw)
+    finally:
+        _deadline = None  # nội bộ main: test gọi hàm phân tích trực tiếp không bị hạn cũ làm hỏng
     if reason is None:
         for note in notes[:1]:  # một dòng nhắc file dấu cũ, không chặn
             stderr.write(note + "\n")

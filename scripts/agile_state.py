@@ -100,8 +100,12 @@ def state_dir(environ=None) -> Path:
 
 
 def safe_text(value, cap: int = TEXT_CAP) -> str:
-    """One line of plain text for a context line: control characters and newlines become spaces, capped (RF4)."""
-    text = "".join(" " if (ord(ch) < 32 or ord(ch) == 127 or 0x80 <= ord(ch) < 0xA0) else ch for ch in str(value))
+    """One line of plain text for a context line: control characters and newlines become spaces, Unicode format characters (category Cf) are removed, capped (RF4, RF7)."""
+    text = str(value)
+    if not text.isascii():  # lazy: ASCII-only text (the common case) never pays the import (SPR-32 B4 start-up cost)
+        import unicodedata
+        text = "".join(ch for ch in text if unicodedata.category(ch) != "Cf")  # TK6e RF7: bidi, zero-width, BOM, soft hyphen are removed, not blanked
+    text = "".join(" " if (ord(ch) < 32 or ord(ch) == 127 or 0x80 <= ord(ch) < 0xA0) else ch for ch in text)
     text = " ".join(text.split())
     return text if len(text) <= cap else text[: cap - 3] + "..."
 

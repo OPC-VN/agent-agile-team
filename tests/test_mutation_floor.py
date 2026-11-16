@@ -129,8 +129,39 @@ def subagent_dormant(root: Path) -> None:
 
 def env_redirect_open(root: Path) -> None:
     """SPR-32 B3: bỏ luật chặn đặt/export `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` (R1b-M1b)."""
-    edit(root, GUARD, "return bool(ENV_REDIRECT.search(text) or (IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text)))",
-         "return bool(IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text))")
+    edit(root, GUARD, "return any(ENV_REDIRECT.search(segment) and not _env_read_only(segment) for segment in RAW_SEPARATORS.split(text))", "return False")
+
+
+def activation_on_ignored(root: Path) -> None:
+    """SPR-32 TK6e S6: công tắc BẬT không còn làm rào bật (đường kích hoạt chính): rào ngủ khi agile BẬT mà trạng thái lành."""
+    edit(root, GUARD, 'if any(s["effective_on"] for s in states):', "if False:")
+
+
+def hook_stop_refused(root: Path) -> None:
+    """SPR-32 TK6e S6: hook từ chối (thoát 2) lệnh `/agile stop`; lối dừng duy nhất của người dùng không được bị chặn."""
+    edit(root, "scripts/agile_hook.py", "        out = run(payload)\n",
+         "        out = run(payload)\n        if str(payload.get('command_args')).strip().lower() == 'stop':\n            return 2\n")
+
+
+def hook_stop_ignored(root: Path) -> None:
+    """SPR-32 TK6e S6: `/agile stop` thành lệnh không làm gì (trạng thái không đổi)."""
+    edit(root, "scripts/agile_hook.py", "    if key not in ARG_TO_COMMAND:\n        return None\n",
+         "    if key not in ARG_TO_COMMAND or key == 'stop':\n        return None\n")
+
+
+def raw_state_scan_open(root: Path) -> None:
+    """SPR-32 TK6e RF1: bỏ luật tìm đường thư mục trạng thái trong văn bản lệnh (mã `python -c`, heredoc, PowerShell .NET)."""
+    edit(root, GUARD, "if _raw_tamper(text) or _raw_state_tamper(text, context):", "if _raw_tamper(text):")
+
+
+def glob_state_open(root: Path) -> None:
+    """SPR-32 TK6e RF2: ký tự đại diện ở phần thư mục không còn khớp thư mục trạng thái."""
+    edit(root, GUARD, "        if any(_glob_covers(probe, d, ancestor) for d in ctx.state_dirs):", "        if False:")
+
+
+def deadline_ignored(root: Path) -> None:
+    """SPR-32 TK6e RF3: hạn nội bộ không bao giờ quá hạn (lệnh dài chạy quá hạn hook thì không còn rào)."""
+    edit(root, GUARD, "if _deadline is not None and time.monotonic() >= _deadline:", "if False:")
 
 
 def git_dir_delete_open(root: Path) -> None:
@@ -178,7 +209,7 @@ def gc_any_expiry_open(root: Path) -> None:
 
 
 def cwd_in_git_open(root: Path) -> None:
-    edit(root, GUARD, "self.in_git = _is_git_path(self.cwd)", "self.in_git = False")
+    edit(root, GUARD, "self.in_git = False if light else _is_git_path(self.cwd)", "self.in_git = False")
 
 
 def gc_config_open(root: Path) -> None:
@@ -202,6 +233,13 @@ MUTATIONS = {
     "state-problem-open": Mutation(state_problem_open, f"{GUARDT}::test_corrupt_state_fails_guarded", (GUARDT,)),
     "subagent-dormant": Mutation(subagent_dormant, f"{GUARDT}::test_subagent_without_session_file_is_guarded_not_dormant", (GUARDT,)),
     "env-redirect-open": Mutation(env_redirect_open, f"{GUARDT}::test_redirecting_state_by_environment_blocked", (GUARDT,)),
+    # SPR-32 TK6e: đường kích hoạt chính, lối dừng của hook, và ba rào của vòng R2 (đường trạng thái trong mã, ký tự đại diện, hạn nội bộ).
+    "activation-on-ignored": Mutation(activation_on_ignored, "tests/test_agile_guard_open.py::test_agile_on_active_set_is_the_seven_always_blocked_items", ("tests/test_agile_guard_open.py",)),
+    "hook-stop-refused": Mutation(hook_stop_refused, "tests/test_agile_hook.py::test_stop_never_refused_even_when_off_or_corrupt", ("tests/test_agile_hook.py",)),
+    "hook-stop-ignored": Mutation(hook_stop_ignored, "tests/test_agile_hook.py::test_stop_never_refused_even_when_off_or_corrupt", ("tests/test_agile_hook.py",)),
+    "raw-state-scan-open": Mutation(raw_state_scan_open, "tests/test_agile_guard_r2.py::test_rf1_literal_state_path_inside_code_is_blocked", ("tests/test_agile_guard_r2.py",)),
+    "glob-state-open": Mutation(glob_state_open, "tests/test_agile_guard_r2.py::test_rf2_wildcard_in_directory_part_blocked", ("tests/test_agile_guard_r2.py",)),
+    "deadline-ignored": Mutation(deadline_ignored, "tests/test_agile_guard_r2.py::test_rf3_deadline_blocks_when_exceeded", ("tests/test_agile_guard_r2.py",)),
     "git-dir-delete-open": Mutation(git_dir_delete_open, f"{UNDO}::test_guard_delete_inside_git_always_blocked", (UNDO,)),
     "tmp-move-ignored": Mutation(tmp_move_ignored, f"{UNDO}::test_guard_move_into_tmp_then_delete_blocked", (UNDO,)),
     "pipeline-delete-open": Mutation(pipeline_delete_open, f"{UNDO}::test_guard_other_recursive_delete_forms_blocked", (UNDO,)),
