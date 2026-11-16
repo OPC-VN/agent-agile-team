@@ -135,10 +135,10 @@ def test_rf2_encoded_command_is_decoded_and_analysed(layout, cmd):
 
 @pytest.mark.parametrize("cmd", [
     "powershell -EncodedCommand " + E("Get-Date"), "pwsh -enc " + E("Write-Output hi"), "powershell -NoProfile -e " + E("Get-ChildItem ."),
-    "powershell -EncodedCommand !!!not-base64!!!", "powershell -EncodedCommand AAAA", "powershell -EncodedCommand", "pwsh -enc " + E("Get-Content notes.txt"),
+    "powershell -EncodedCommand AAAA", "powershell -EncodedCommand", "pwsh -enc " + E("Get-Content notes.txt"),
     "powershell -Command Get-Date", "powershell -ExecutionPolicy Bypass -File build.ps1",
 ])
-def test_rf2_harmless_or_undecodable_encoded_commands_stay_allowed(layout, cmd):
+def test_rf2_harmless_encoded_commands_stay_allowed(layout, cmd):  # TK6k: `!!!not-base64!!!` (không giải mã được) nay bị chặn, xem test_agile_guard_r5.py
     allowed(layout, cmd)
 
 

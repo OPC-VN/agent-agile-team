@@ -15,7 +15,7 @@ def read(rel):
 def test_changelog_agents_md_size_matches_the_file():
     raw = (REPO / "AGENTS.md").read_bytes()
     lines = raw.count(b"\n") + (0 if raw.endswith(b"\n") else 1)
-    match = re.search(r"`AGENTS\.md` rút gọn \(97 → (\d+) dòng, 10210 → (\d+) byte\)", read("CHANGELOG.md"))
+    match = re.search(r"`AGENTS\.md` rút gọn \(97 → (\d+) dòng, 10238 → (\d+) byte\)", read("CHANGELOG.md"))
     assert match, "CHANGELOG thiếu dòng số đo AGENTS.md"
     # CRLF trong bản chép làm việc dài hơn bản trong git: đếm byte trên nội dung đã đổi về LF
     assert (int(match.group(1)), int(match.group(2))) == (lines, len(raw.replace(b"\r\n", b"\n")))
@@ -42,7 +42,7 @@ def test_law_lists_the_accepted_residuals_of_r4_with_the_exact_example_commands(
 
 def test_law_describes_the_per_command_claude_rule_and_the_encoded_command_decode():
     law = read("method/agile.md")
-    assert "câu lệnh CHẠY `claude`" in law and "xét từng câu lệnh" in law and "hosts/claude" in law
+    assert "câu lệnh có token chương trình `claude`" in law and "xét từng câu lệnh" in law and "hosts/claude" in law  # TK6k: chữ của luật viết lại
     assert "-EncodedCommand" in law and "UTF-16LE" in law and "agile_st*.py" in law
     assert "claude -p `/agile`" not in law and "trong văn bản lệnh bị chặn (phiên con" not in law
 

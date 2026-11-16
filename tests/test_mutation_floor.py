@@ -229,21 +229,52 @@ def heredoc_pipe_interpreter_open(root: Path) -> None:
 
 
 def claude_spawn_open(root: Path) -> None:
-    edit(root, GUARD, "if _claude_spawns_agile(tokens):", "if False and _claude_spawns_agile(tokens):")
+    edit(root, GUARD, "if _claude_agile(text):  # TK6k", "if False and _claude_agile(text):  # TK6k")
 
 
 def claude_anywhere(root: Path) -> None:
-    """TK6i MF1: luật `claude -p` lại xét chữ `claude` ở BẤT KỲ token nào (không phải token lệnh): `grep -r "/agile" hosts/claude` bị chặn nhầm."""
-    edit(root, GUARD, "found = index if _claude_program(tokens[index]) else None", "found = next((i for i, t in enumerate(tokens) if 'claude' in t.lower()), None)")
-    edit(root, GUARD, "rest = tokens[found + 1:]", "rest = tokens")
+    """TK6i MF1 (retargeted TK6k): luật `claude -p` lại nhận mọi đường chứa chữ `claude` làm chương trình và xét cả vế mở đầu bằng `grep`: `grep -r "/agile" hosts/claude` bị chặn nhầm."""
+    edit(root, GUARD, "if not bare or not _claude_program(bare):", "if not bare or 'claude' not in bare.lower():")
+    edit(root, GUARD, 'return "/" not in norm or norm.startswith(', "return True or norm.startswith(")
+    edit(root, GUARD, "    return (name in READ_ONLY_COMMANDS and name not in (\"find\", \"awk\")) or name == \"git\"", "    return False")
 
 
 def encoded_command_open(root: Path) -> None:
-    edit(root, GUARD, "handled, item = _encoded_item(args, ctx, depth)", "handled, item = False, None")
+    edit(root, GUARD, "    item = _encoded_text_item(text, ctx, depth)\n", "    item = None\n")
 
 
 def script_glob_open(root: Path) -> None:
-    edit(root, GUARD, "if not GLOB_CHARS & set(base) or max(len(run)", "if True or max(len(run)")
+    edit(root, GUARD, "    if max(len(run) for run in re.split(", "    if False and max(len(run) for run in re.split(")
+
+
+def glob_tail_open(root: Path) -> None:
+    """TK6k RF2: đuôi ký tự đại diện có `{ } $ ' "` hay gạch ngược lại bị coi là không thể là file trạng thái: `rm state/*.{json,bak}` sau `cd` lọt."""
+    edit(root, GUARD, "    if any(ch in tail for ch in ", "    if False and any(ch in tail for ch in ")
+
+
+def claude_pipe_body_open(root: Path) -> None:
+    """TK6k RF1/RF2: prompt chỉ được tìm trong đối số của chính vế `claude`, không trong thân heredoc/here-string hay vế `echo`/chuỗi trần đứng trước trong ống."""
+    edit(root, GUARD, "if body_prompt or carried or any(AGILE_PROMPT.search(piece) for piece in args):", "if any(AGILE_PROMPT.search(piece) for piece in args):")
+
+
+def claude_spawner_open(root: Path) -> None:
+    """TK6k RF1: token `claude` chỉ được nhận ở vị trí lệnh (không sau `start`, `Start-Process`, `wsl`, `ssh`, `docker`, `npm exec --`)."""
+    edit(root, GUARD, "if _claude_token(token, at == 0) or (at == 0 and", "if (at == 0 and _claude_token(token, True)) or (at == 0 and")
+
+
+def encoded_undecodable_open(root: Path) -> None:
+    """TK6k RF1: giá trị `-EncodedCommand` không giải mã được lại cho qua (đóng khi lỗi bị bỏ)."""
+    edit(root, GUARD, "        return True, UNDECODABLE", "        return False, None")
+
+
+def encoded_prefix_dash_only(root: Path) -> None:
+    """TK6k RF4: cờ `-EncodedCommand` chỉ nhận tiền tố `-` (không `/` hay gạch ngang dài `–`)."""
+    edit(root, GUARD, r'ENCODED_FLAG = re.compile(r"[-/\u2013\u2014]{1,2}', r'ENCODED_FLAG = re.compile(r"[-]{1,2}')
+
+
+def script_sibling_open(root: Path) -> None:
+    """TK6k RF3: tên script có ký tự đại diện không còn được khớp với tên file thật cạnh rào (`python scripts/a*_s*.py off` lọt)."""
+    edit(root, GUARD, "    return _first_sibling_switch(base)", "    return None")
 
 
 def read_only_writers_open(root: Path) -> None:
@@ -305,9 +336,16 @@ MUTATIONS = {
     "substitution-scan-open": Mutation(substitution_scan_open, "tests/test_agile_guard_r3.py::test_rf3_state_path_inside_a_substitution_or_a_heredoc_for_an_interpreter_is_blocked", ("tests/test_agile_guard_r3.py",)),
     "heredoc-pipe-interpreter-open": Mutation(heredoc_pipe_interpreter_open, "tests/test_agile_guard_r3.py::test_rf3_state_path_inside_a_substitution_or_a_heredoc_for_an_interpreter_is_blocked", ("tests/test_agile_guard_r3.py",)),
     "claude-spawn-open": Mutation(claude_spawn_open, "tests/test_agile_guard_r3.py::test_rf4_spawning_claude_with_an_agile_command_is_blocked", ("tests/test_agile_guard_r3.py",)),
-    "claude-anywhere": Mutation(claude_anywhere, "tests/test_agile_guard_r4.py::test_mf1_mentions_and_path_fragments_without_a_claude_command_stay_allowed", ("tests/test_agile_guard_r4.py",)),
+    "claude-anywhere": Mutation(claude_anywhere, "tests/test_agile_guard_r5.py::test_r5_claude_mentions_and_other_prompts_stay_allowed", ("tests/test_agile_guard_r5.py",)),
     "encoded-command-open": Mutation(encoded_command_open, "tests/test_agile_guard_r4.py::test_rf2_encoded_command_is_decoded_and_analysed", ("tests/test_agile_guard_r4.py",)),
     "script-glob-open": Mutation(script_glob_open, "tests/test_agile_guard_r4.py::test_rf3_script_names_with_wildcards_that_match_the_switch_scripts_are_blocked", ("tests/test_agile_guard_r4.py",)),
+    # SPR-32 TK6k: sáu đột biến phủ các rào sửa ở vòng R5 (đuôi ký tự đại diện, prompt qua ống/thân heredoc, `claude` sau `start`/`ssh`, `-EncodedCommand` đóng khi lỗi và tiền tố, tên script theo tên file thật).
+    "glob-tail-open": Mutation(glob_tail_open, "tests/test_agile_guard_r5.py::test_r5_glob_tails_that_may_name_a_state_file_after_a_cd_are_blocked", ("tests/test_agile_guard_r5.py",)),
+    "claude-pipe-body-open": Mutation(claude_pipe_body_open, "tests/test_agile_guard_r5.py::test_r5_prompt_through_a_pipe_or_a_body_is_blocked", ("tests/test_agile_guard_r5.py",)),
+    "claude-spawner-open": Mutation(claude_spawner_open, "tests/test_agile_guard_r5.py::test_r5_claude_spawn_forms_with_an_agile_prompt_are_blocked", ("tests/test_agile_guard_r5.py",)),
+    "encoded-undecodable-open": Mutation(encoded_undecodable_open, "tests/test_agile_guard_r5.py::test_r5_encoded_command_value_that_cannot_be_decoded_is_blocked_with_a_clear_reason", ("tests/test_agile_guard_r5.py",)),
+    "encoded-prefix-dash-only": Mutation(encoded_prefix_dash_only, "tests/test_agile_guard_r5.py::test_r5_encoded_command_variants_that_powershell_accepts_are_decoded_and_blocked", ("tests/test_agile_guard_r5.py",)),
+    "script-sibling-open": Mutation(script_sibling_open, "tests/test_agile_guard_r5.py::test_r5_script_name_globs_that_expand_to_a_switch_script_are_blocked", ("tests/test_agile_guard_r5.py",)),
     "read-only-writers-open": Mutation(read_only_writers_open, "tests/test_agile_guard_r3.py::test_rf2_read_only_names_that_write_into_the_state_directory_are_blocked", ("tests/test_agile_guard_r3.py",)),
     "deadline-env-trusted": Mutation(deadline_env_trusted, "tests/test_agile_guard_r3.py::test_rf5_invalid_deadline_env_falls_back_to_the_default", ("tests/test_agile_guard_r3.py",)),
 }
