@@ -12,7 +12,8 @@ File này nạp ở MỌI phiên nên giữ ngắn. Chi tiết: `method/`, `role
 
 Gặp một trong năm việc sau thì **dừng đúng bước đó và hỏi người dùng**; khi agile BẬT thì theo vùng sàn bên dưới và `method/agile.md` mục 5:
 
-- đọc, ghi, in **secret**, hay đổi **xác thực/quyền** (`.env*`, khoá, token);
+- đọc, ghi, in **secret** (`.env*`, khoá, token);
+- đổi **xác thực/quyền**;
 - ghi dữ liệu hồ sơ người dùng (**USER**, **SOUL**, đời tư, tài chính, sức khoẻ) vào bộ nhớ hay tài liệu;
 - **xoá không đảo ngược** (xoá đệ quy, xoá `.git`, dữ liệu ngoài vùng tạm);
 - git **phá lịch sử** (force-push, `reset --hard`, `clean -fd[x]`, `filter-branch`, `reflog expire`, xoá nhánh chưa gộp).
@@ -79,9 +80,10 @@ và Không áp dụng không bao giờ là Đạt.
   không phá hoàn tác: `reflog expire`, `gc --prune=now`, `update-ref -d`, `filter-branch`/`-repo`, xoá tag/nhánh
   `backup/*` hay `.git`, `push --delete`/`+ref` (`method/git-conventions.md`).
 - Không sửa config linter/test hay hạ ngưỡng coverage (mặc định 80 % code mới/sửa) để qua kiểm.
-- Version do Gate Delegate quyết theo bảng phiên bản; không ghi đè CHANGELOG (chỉ thêm). Push, PR, gộp `main`, tag,
-  phát hành: chỉ khi PLAN có lời cấp + Cổng 2 Đạt, sau kiểm ruleset và quét secret
-  (`method/agile.md` mục 5); Đạt có điều kiện thì không.
+- Không ghi đè CHANGELOG (chỉ thêm). **Khi agile BẬT:** version do Gate Delegate quyết theo bảng phiên bản (chế độ `manual`: người dùng
+  ký, không có Gate Delegate); push, PR, gộp `main`, tag, phát hành: chỉ khi PLAN có lời cấp + Cổng 2 Đạt, sau kiểm ruleset và quét secret
+  (`method/agile.md` mục 5); Đạt có điều kiện thì không. **Khi agile TẮT:** không có cổng; người dùng quyết version, đẩy, PR, gộp, tag,
+  phát hành; agent không tự làm khi chưa được yêu cầu.
 - Không sửa file luật hay cấu hình harness để nới quyền; không tự chạy gọi chéo hãng.
 - File tạm trong `.tmp/`, xoá khi xong; không đọc, in, chép giá trị secret.
 <!-- san-cung:end -->

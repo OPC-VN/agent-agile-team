@@ -13,7 +13,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 NEEDLE = "autopilot"
 SKIP_DIRS = {".git", ".tmp", ".claude", "node_modules", "__pycache__", ".pytest_cache"}
-TEXT_SUFFIXES = {".md", ".py", ".json", ".txt", ".sh", ".toml", ".yml", ".yaml", ".cfg", ".ini", ".mdx", ".html", ""}
+TEXT_SUFFIXES = {".md", ".py", ".json", ".txt", ".sh", ".toml", ".yml", ".yaml", ".cfg", ".ini", ".mdx", ".html", "",
+                 ".ps1", ".js", ".cmd", ".bat", ".mjs", ".ts"}  # TK6e S7: thêm các đuôi script, không để chữ cũ lọt qua file không quét
 
 # (glob theo đường tương đối kiểu POSIX, số lần xuất hiện tối đa, lý do). Muốn thêm mục: nêu lý do ở thông điệp commit.
 ALLOWLIST: tuple[tuple[str, int, str], ...] = (
@@ -40,7 +41,7 @@ ALLOWLIST: tuple[tuple[str, int, str], ...] = (
     ("tests/test_agile_state.py", 2, "legacy: thử `legacy_markers`"),
     ("tests/test_agile_goal_command.py", 1, "danh sách từ cấm trong lệnh: `autopilot.json` không được in"),
     ("tests/test_commands.py", 4, "tên file của lệnh đã gỡ, thử rằng nó không quay lại"),
-    ("tests/test_legacy_allowlist.py", 99, "chính file này mang chữ cần tìm"),
+    ("tests/test_legacy_allowlist.py", 12, "chính file này mang chữ cần tìm"),
 )
 
 
@@ -103,7 +104,7 @@ def test_allowlist_entries_have_reasons_and_are_not_stale():
     assert len({e[0] for e in ALLOWLIST}) == len(ALLOWLIST), "mục trùng đường"
     live = _hits()
     for pattern, limit, _ in ALLOWLIST:
-        if limit == 0 or pattern == "tests/test_legacy_allowlist.py":
+        if limit == 0:
             continue
         used = sum(c for rel, c in live.items() if fnmatch.fnmatchcase(rel, pattern))
         assert used >= 1, f"mục {pattern} không còn khớp chữ nào: bỏ khỏi danh sách"
@@ -113,7 +114,7 @@ def test_allowlist_is_tight():
     """Trần không được rộng hơn số thật quá một khoảng nhỏ: tránh để chỗ trống cho chữ cũ lẻn vào."""
     live = _hits()
     for pattern, limit, _ in ALLOWLIST:
-        if pattern == "tests/test_legacy_allowlist.py" or limit == 0:
+        if limit == 0:
             continue
         used = sum(c for rel, c in live.items() if fnmatch.fnmatchcase(rel, pattern))
         assert limit - used <= 2, f"{pattern}: trần {limit}, thật {used}: hạ trần xuống sát"
