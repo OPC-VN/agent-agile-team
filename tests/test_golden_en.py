@@ -78,11 +78,15 @@ def test_negatives_cover_the_required_topics_and_are_counted():
     print(f"golden en: 2 clean roots (5 files), {len(NEGATIVES)} negative cases, {len(CASES) - len(NEGATIVES)} clean variant(s)")
 
 
+# The golden PLAN writes "Questions for the human" where en.json says "Human asks" (reviewer RF3: more natural English).
+HUMAN_HEADERS = {"column.human_asks"}
+
+
 def label_skeleton(text: str) -> list:
     """(kind, key, text) of every label span, minus table headers that reuse a heading key (en.json decision: the column
     "Rủi ro" is heading.risks, so translate writes the plural "Risks"; a person writes the singular "Risk", which no table
     names). Those headers are not machine-read; every other span must agree."""
-    return [(s.kind, s.key, s.text) for s in lab.scan(text) if not (s.kind == "header" and s.key.startswith("heading."))]
+    return [(s.kind, s.key, s.text) for s in lab.scan(text) if not (s.kind == "header" and (s.key.startswith("heading.") or s.key in HUMAN_HEADERS))]
 
 
 @pytest.mark.parametrize("name", SPRINT_FILES)

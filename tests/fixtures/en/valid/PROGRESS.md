@@ -26,7 +26,7 @@ links:
 
 # Order list export — Progress (PROGRESS)
 
-> **Conclusion:** 1 of 1 tasks Pass; verification round 1.
+> **Conclusion:** 1 of 1 task passed; verification round 1.
 
 ## 1. Task status table
 
@@ -37,7 +37,7 @@ links:
 ## 2. Log
 
 - **2026-02-01 10:00 +07** — TK1 (CSV export function) Pass. Ruling: use the standard CSV library — names can
-  contain commas — if wrong, one function needs rewriting.
+  contain commas — if this is wrong, we only have to rewrite one function.
 
 ## 3. Blockers
 

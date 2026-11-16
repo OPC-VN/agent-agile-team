@@ -51,7 +51,7 @@ links:
 ### TK1 — CSV export function (→ FR1.1, SC1)
 
 - **Role:** Implementer · T2.
-- **TK1.1 (write the test first):** inherits the pointer part of TK1 (CSV export function).
+- **TK1.1 (write the test first):** covers the test-first part of TK1 (CSV export function).
 
 ## Risks
 PLAN has 1 **risk** (RK):
@@ -65,6 +65,6 @@ None.
 
 ## Estimate
 
-| Task | Agent sessions | Human asks |
+| Task | Agent sessions | Questions for the human |
 |---|---|---|
 | TK1 (CSV export function) | 1 | 0 |
