@@ -23,7 +23,7 @@ CASES = json.loads((FIXTURES / "broken.json").read_text(encoding="utf-8"))["case
 
 # Rules whose label matching moves in a later TK3 batch; their en twins are not compared yet. Emptied at the end of batch c.
 PENDING = {
-    "conclusion-missing", "old-scale-label", "decision-log-missing", "session-cap-missing", "session-cap-over",
+    "conclusion-missing", "session-cap-missing", "session-cap-over",
     "report-missing-ask-count", "conditional-pass-merged-main", "qa-not-independent", "report-fr-without-vr",
     "ledger-missing-row", "ledger-stale", "ledger-unreadable", "ledger-unconfigured"}
 
@@ -138,3 +138,146 @@ def test_plan_goal_labels_english_and_missing_one(tmp_path):
     write_lf(root / "PLAN.md", broken)
     hits = [f for f in check.check_paths([root]).findings if f.rule == "plan-goal-block"]
     assert hits and "'Mục tiêu sprint:'" in hits[0].message  # message stays Vietnamese
+
+
+# --- batch b: severity keyed internally, old scale, decision log ---------------------------------------------
+
+from test_check import (DECISION_LOG_HEAD, DECISION_LOG_OK, SPRINT_LOG_OK, _new_delegated_plan,  # noqa: E402
+                        _new_delegated_report, _new_two_gate_sprint, _rewrite, _rule_hits)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_tiers(monkeypatch):
+    monkeypatch.delenv("AGENT_AGILE_TIERS", raising=False)
+
+
+def test_level_key_resolves_labels_of_every_locale():
+    pairs = [("Chặn", "level.blocker"), ("Phải sửa", "level.must_fix"), ("Nên sửa", "level.should_fix"), ("Ghi chú", "level.note"),
+             ("Blocker", "level.blocker"), ("Must fix", "level.must_fix"), ("Should fix", "level.should_fix"), ("Note", "level.note")]
+    for text, key in pairs:
+        assert check.level_key(text) == key, text
+    assert check.level_key("Block") is None and check.level_key("Blocking") is None and check.level_key("") is None
+
+
+def test_blocking_keys_are_the_two_blocking_levels():
+    assert check.BLOCKING_KEYS == {"level.blocker", "level.must_fix"}
+    assert check.BLOCKING == {"Chặn", "Phải sửa"}  # display form kept for existing callers
+
+
+@pytest.mark.parametrize("level,code", [("Blocker", 1), ("Must fix", 1), ("Chặn", 1), ("Phải sửa", 1),
+                                        ("Should fix", 0), ("Note", 0), ("Nên sửa", 0), ("Ghi chú", 0)])
+def test_exit_code_works_on_severity_keys(monkeypatch, level, code):
+    monkeypatch.setitem(check.RULES, "heading-missing", (level, "x"))
+    finding = check.Finding(Path("PLAN.md"), 1, "heading-missing", "m")
+    assert finding.level == level and finding.level_key == check.level_key(level)
+    assert check.Report(findings=[finding]).exit_code == code
+
+
+def _en_progress_with_table(tmp_path: Path, cell: str, locale_line):
+    root = make_sprint(tmp_path)
+    to_en(root)
+    path = root / "PROGRESS.md"
+    text = path.read_text(encoding="utf-8").rstrip("\n") + f"\n\n| Finding | Severity |\n|---|---|\n| x | {cell} |\n"
+    if locale_line:
+        assert "\n---\n" in text
+        text = text.replace("\n---\n", f"\n{locale_line}\n---\n", 1)
+    write_lf(path, text)
+    return root
+
+
+def _old_scale_hits(root: Path) -> list:
+    return [f for f in check.check_paths([root]).findings if f.rule == "old-scale-label"]
+
+
+@pytest.mark.parametrize("cell", ["NOTE", "Note"])
+def test_note_is_a_level_only_when_the_document_declares_en(tmp_path, cell):
+    """GC2: `NOTE` in a severity cell is the old scale unless the document's own frontmatter says `locale: en`."""
+    assert _old_scale_hits(_en_progress_with_table(tmp_path / "a", cell, "locale: en")) == []
+    declared_vi = _old_scale_hits(_en_progress_with_table(tmp_path / "b", cell, "locale: vi"))
+    undeclared = _old_scale_hits(_en_progress_with_table(tmp_path / "c", cell, None))
+    assert bool(declared_vi) is bool(undeclared) is (cell == "NOTE")  # `Note` was never flagged; `NOTE` stays flagged
+
+
+def test_blocker_is_a_level_and_block_is_still_the_old_scale(tmp_path):
+    for tag, locale_line in (("en", "locale: en"), ("none", None)):
+        assert _old_scale_hits(_en_progress_with_table(tmp_path / f"b{tag}", "Blocker", locale_line)) == []
+        assert len(_old_scale_hits(_en_progress_with_table(tmp_path / f"k{tag}", "Block", locale_line))) == 1
+    for word in ("Must fix", "Should fix"):
+        assert _old_scale_hits(_en_progress_with_table(tmp_path / word.replace(" ", ""), word, "locale: en")) == []
+
+
+def test_old_scale_words_stay_flagged_in_english_documents(tmp_path):
+    for word in ("critical", "High", "WARN"):
+        assert len(_old_scale_hits(_en_progress_with_table(tmp_path / word, word, "locale: en"))) == 1, word
+
+
+def test_english_severity_column_headers_are_recognised(tmp_path):
+    for header in ("Severity", "Level", "Severity level"):
+        root = make_sprint(tmp_path / header.replace(" ", ""))
+        to_en(root)
+        path = root / "PROGRESS.md"
+        write_lf(path, path.read_text(encoding="utf-8").rstrip("\n") + f"\n\n| Finding | {header} |\n|---|---|\n| x | critical |\n")
+        assert len(_old_scale_hits(root)) == 1, header
+
+
+def _decision_report(tmp_path: Path, log, english: bool) -> Path:
+    root = make_sprint(tmp_path)
+    _new_delegated_report(root, log=log)
+    if english:
+        to_en(root)
+    return root
+
+
+@pytest.mark.parametrize("english", [False, True], ids=["vi", "en"])
+def test_decision_log_complete_and_missing(tmp_path, english):
+    ok = _decision_report(tmp_path / "ok", DECISION_LOG_OK, english)
+    assert _rule_hits(ok, "decision-log-missing") == []
+    missing = _decision_report(tmp_path / "no", None, english)
+    assert len(_rule_hits(missing, "decision-log-missing")) == 1
+
+
+@pytest.mark.parametrize("row", [
+    "| Không có quyết định nào ngoài hai cổng. | — | — | — |\n",
+    "| Đạt Cổng 2 | agent-d · gate-delegate · T1 | evidence/gate-2-verdict.md | git revert abc1234 |\n",
+    "| Đạt Cổng 2 | agent-d · gate-delegate · T1 · Fable 5.2 | — | git revert abc1234 |\n",
+    "| Đạt Cổng 2 | agent-d · gate-delegate · T1 · Fable 5.2 | evidence/gate-2-verdict.md |  |\n",
+], ids=["placeholder", "no-model", "no-evidence", "no-undo"])
+def test_decision_log_row_twins(tmp_path, row):
+    for english in (False, True):
+        root = _decision_report(tmp_path / str(english), DECISION_LOG_HEAD + row, english)
+        assert len(_rule_hits(root, "decision-log-missing")) == 1, english
+
+
+def test_en_decision_log_table_is_translated_and_read(tmp_path):
+    root = _decision_report(tmp_path, DECISION_LOG_OK, True)
+    text = (root / "REPORT.md").read_text(encoding="utf-8")
+    assert "## Decision log" in text and "| Decision | Signed by | Evidence | Rollback command |" in text
+    assert _rule_hits(root, "decision-log-missing") == []
+
+
+@pytest.mark.parametrize("english", [False, True], ids=["vi", "en"])
+def test_sprint_file_decision_log_bullet_form(tmp_path, english):
+    (tmp_path / "ok").mkdir()
+    (tmp_path / "bare").mkdir()
+    ok = _new_two_gate_sprint(tmp_path / "ok", log=SPRINT_LOG_OK)
+    bare = _new_two_gate_sprint(tmp_path / "bare", log="\n- **Nhật ký quyết định:** Không có quyết định nào ngoài hai cổng.\n")
+    if english:
+        to_en(ok)
+        to_en(bare)
+        assert "- **Decision log:**" in (ok / "SPRINT.md").read_text(encoding="utf-8")
+    assert _rule_hits(ok, "decision-log-missing") == []
+    assert len(_rule_hits(bare, "decision-log-missing")) == 1
+
+
+def test_delegated_quote_prefix_in_english(tmp_path):
+    """The quote prefix is a label: `delegated approval:` is read like `duyệt thay:`."""
+    root = make_sprint(tmp_path)
+    _rewrite(root / "PLAN.md", 'gate_1_quote: "duyệt"\n', 'gate_1_quote: "delegated approval: pick option a"\n')
+    hits = _rule_hits(root, "gate-delegation-invalid")
+    assert len(hits) == 1 and "gate_1_quote bắt đầu" in hits[0].message  # human mode with a delegated quote
+    root2 = make_sprint(tmp_path / "ok")
+    _new_delegated_plan(root2)
+    _rewrite(root2 / "PLAN.md", "duyệt thay: chọn phương án a", "delegated approval: pick option a")
+    to_en(root2)
+    hits2 = [f for f in check.check_paths([root2]).findings if f.rule in ("gate-delegation-invalid", "gate-signer-independence")]
+    assert not any("phải bắt đầu" in f.message for f in hits2), [f.render() for f in hits2]

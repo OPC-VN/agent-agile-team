@@ -37,7 +37,13 @@ from _agile_rules import (AGILE_EXCLUSIONS, DATE, DELEGATION_KEYS, DELEGATION_OP
                               MOMENT, parse_moment)
 
 CHAN, PHAI, NEN, GHI = "Chặn", "Phải sửa", "Nên sửa", "Ghi chú"
-BLOCKING = {CHAN, PHAI}
+BLOCKING = {CHAN, PHAI}  # display forms (Vietnamese); exit_code works on the keys below
+BLOCKING_KEYS = {"level.blocker", "level.must_fix"}
+
+
+def level_key(level) -> str | None:
+    """Label key of a severity word of any shipped locale ("Chặn" and "Blocker" are both level.blocker), or None."""
+    return lab.key_of(level, groups=("level",)) if isinstance(level, str) else None
 
 RULES: dict[str, tuple[str, str]] = {
     "frontmatter-syntax": (CHAN, "frontmatter ngoài tập con YAML (lỗi đầu vào → thoát 2)"),
@@ -224,6 +230,8 @@ HEADING_LEVEL = re.compile(r"^(#{1,6})\s")  # dòng tiêu đề Markdown; cấp 
 HEX_SHA = re.compile(r"\b[0-9a-f]{7,40}\b")
 
 PLAN_GOAL_LABELS = ("Mục tiêu sprint:", "Kết quả mong muốn / xong khi:", "Rủi ro cần chú ý:")  # SPEC 7.8
+LOG_COLUMNS = ("column.signed_by", "column.evidence", "column.rollback_command")  # decision-log table columns
+_LOG_BULLET = re.compile(r"[-*]\s+(?:\*\*)?" + lab.alternation("heading.decision_log"), re.IGNORECASE)
 PLAN_GOAL_KEYS = ("field.plan_goal", "field.plan_desired_result", "field.plan_risk_watch")
 _PLAN_GOAL_HEADING = re.compile(r"^##\s+" + lab.alternation("heading.goal") + r"\s*$")
 INPUT_FIELD = "**Đầu vào:**"
@@ -885,6 +893,10 @@ class Finding:
     def level(self) -> str:
         return RULES[self.rule][0]
 
+    @property
+    def level_key(self) -> str | None:
+        return level_key(self.level)
+
     def render(self) -> str:
         return f"{c.display(self.path)}:{self.line}: {self.level} [{self.rule}] {self.message}"
 
@@ -900,7 +912,7 @@ class Report:
     def exit_code(self) -> int:
         if self.errors or any(f.rule in INPUT_RULES for f in self.findings):
             return 2
-        if any(f.level in BLOCKING for f in self.findings):
+        if any(f.level_key in BLOCKING_KEYS for f in self.findings):
             return 1
         return 0
 
@@ -1048,7 +1060,7 @@ def codes_at(line: str) -> list:
 
 def _is_level_header(cell: str) -> bool:
     name = cell.strip("*_ ").casefold()
-    return name.startswith("mức") or "severity" in name or name == "level"
+    return name.startswith("mức") or "severity" in name or name == "level" or _eq(name, "column.level")
 
 
 def prefix(code: str) -> str:
@@ -1289,9 +1301,12 @@ class Engine:
         """Nhãn thang cũ ở bốn chỗ: ô thuộc cột mức/severity của bảng; sau "Mức:"/"Severity:" trong dòng; nhãn kiểu
         nguồn trong câu (`CRITICAL`, `[HIGH]` đầu dòng, `confidence ≥ 80`). Chữ thường ngoài hai chỗ đầu không xét.
         `quoting` (file thử của skill chép nguyên văn đầu ra chủ thể thử): bỏ nhãn kiểu nguồn trong câu, giữ ô cột mức."""
+        declares_en = doc.data.get("locale") == "en"  # GC2: only the document's own frontmatter makes `Note` a level
         for cell in cells:
             bare = cell.strip("*_ ")
             if bare.casefold() in OLD_CELL or bare in OLD_CELL_UPPER:
+                if declares_en and level_key(bare) == "level.note":
+                    continue
                 self._old_scale_hit(doc, idx, bare)
                 return
         for cell in vi_cells:
@@ -1797,11 +1812,11 @@ class Engine:
         inside = False
         for line in doc.raw:
             if re.match(r"#{1,6}\s", line):
-                inside = line.lstrip("#").strip().casefold() == "nhật ký quyết định"
+                inside = _eq(line.lstrip("#").strip(), "heading.decision_log")
                 if inside:
                     yield True, line
                 continue
-            if re.match(r"[-*]\s+(?:\*\*)?nhật ký quyết định", line.casefold()):
+            if _LOG_BULLET.match(line.casefold()):
                 inside = True
                 yield True, line
                 continue
@@ -1822,13 +1837,14 @@ class Engine:
                 continue
             folded = [cell.casefold() for cell in cells]
             if header is None:
-                if "ai ký" in folded and "bằng chứng" in folded and "lệnh hoàn tác" in folded:
-                    header = {name: folded.index(name) for name in ("ai ký", "bằng chứng", "lệnh hoàn tác")}
+                found = {key: next((i for i, cell in enumerate(folded) if _eq(cell, key)), -1) for key in LOG_COLUMNS}
+                if all(i >= 0 for i in found.values()):
+                    header = found
                 continue
             if len(cells) <= max(header.values()):
                 continue
-            filled = [cells[i].strip() not in ("", "—", "-", "–") for i in (header["bằng chứng"], header["lệnh hoàn tác"])]
-            parts = [p for p in re.split(r"\s*·\s*", cells[header["ai ký"]]) if p.strip()]
+            filled = [cells[i].strip() not in ("", "—", "-", "–") for i in (header["column.evidence"], header["column.rollback_command"])]
+            parts = [p for p in re.split(r"\s*·\s*", cells[header["column.signed_by"]]) if p.strip()]
             if all(filled) and len(parts) >= 4:
                 model = parts[3].strip("` ")
                 if known is None or model_is_known(model, known):
