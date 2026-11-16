@@ -15,6 +15,28 @@ Ba công cụ cho dự án áp dụng, chỉ dùng thư viện chuẩn Python (3
 | `_labels.py` | Label tables loader (`labels/vi.json`, `labels/en.json`), matchers, `translate()` and `resolve_locale()` (SPR-33); not run directly |
 | `_common.py` | Thư viện chung: đọc frontmatter tập con YAML, che mã trong Markdown, đọc `.agile.json`; không chạy trực tiếp |
 
+## Locale and label tables (SPR-33)
+
+Documents keep one language per sprint. `labels/<code>.json` (shipped: `vi`, `en`) maps an immutable English key
+(for example `heading.plain_summary`) to the text a document shows in that locale; `_labels.py` loads the tables,
+and `check.py`, `index.py` and `init.py` match and write labels through it, so a label of any shipped locale is
+recognised (a mixed-language document is noted by `locale-label-mixed`, not rejected).
+
+**Locale layers, first hit wins:** `--locale` at sprint open, then the sprint front matter `locale` (frozen at
+open), then the repo `.agile.json` key `locale`, then the user config key `locale`, then `vi`. A document with no
+`locale` key resolves to `vi`. Inspect it with `locale_cli.py status`; store it with `locale_cli.py set --scope user|repo`.
+
+**Ask once:** `status` reports `ask_needed: true` only when no layer 1 to 4 holds a locale, `locale_asked` is
+not recorded and the session is interactive; answering (or proceeding without an answer) runs `set --scope user`,
+which writes `locale_asked: true` (no answer stores `vi`), so the question is never asked a second time. A
+non-interactive run (`CI` or `AGENT_AGILE_NONINTERACTIVE` set) returns the resolved locale with `ask_needed: false`
+and records nothing. The script side is done; the skill text that makes an agent ask is not applied yet (it needs the owner's approval).
+
+**Adding a third locale:** add `labels/<code>.json` with exactly the same keys as `vi.json` (list-valued keys keep
+the same number of alternates, in the same positions) (the shipped list is the set of files in `labels/`), then run
+`tests/test_labels.py` and `tests/test_locale_parity.py` (the parity suite builds a twin per shipped locale from the
+Vietnamese originals and compares findings). Hand-written golden fixtures for the new locale go in `tests/fixtures/<code>/`.
+
 ## Cách chạy
 
 ```text
