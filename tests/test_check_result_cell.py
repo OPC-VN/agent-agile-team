@@ -449,3 +449,36 @@ def test_not_run_word_inside_a_code_span_with_pipe_is_not_the_result_cell(tmp_pa
     _rewrite_command_cell(root, "`echo|Chưa chạy`")
     report, rules = run(root)
     assert rules == set(), [f.render() for f in report.findings]
+
+
+# --- gate_2: pass alone (verdict pending) is a trigger on its own -----------------------------------------------
+
+
+def test_sprint_kind_document_with_gate_2_pass_and_verdict_pending_fires(tmp_path):
+    root = tmp_path / "sprint"
+    root.mkdir()
+    text = redate(two_part_sprint())
+    old = "gate_2: pending\ngate_2_at: null\ngate_2_quote: null\n"
+    assert old in text and "verdict: pending" in text and "| Chưa chạy |" in text
+    text = text.replace(old, 'gate_2: pass\ngate_2_at: 2026-11-16 10:00 +07\ngate_2_quote: "ok"\n', 1)
+    write_lf(root / "SPRINT.md", text)
+    report, rules = run(root)
+    assert rules == {KEY}, [f.render() for f in report.findings]
+    row = "| VR1 (test câu báo lỗi) | SC1 | `pytest tests/test_ui.py` | Chưa chạy | Tech Reviewer · agent-d |"
+    assert [f.line for f in hits(report)] == [text.split("\n").index(row) + 1]
+
+
+def test_english_not_run_with_gate_2_pass_and_verdict_pending_fires(tmp_path):
+    root, line = build(tmp_path, "en", "Not run", verdict="pending", gate_2="pass", close_gate_2=True)
+    report, rules = run(root)
+    assert rules == {KEY}, [f.render() for f in report.findings]
+    assert [f.line for f in hits(report)] == [line]
+    assert "Not run" in hits(report)[0].message
+
+
+def test_english_bare_not_applicable_with_gate_2_pass_and_verdict_pending_fires(tmp_path):
+    root, line = build(tmp_path, "en", "Not applicable", last="", verdict="pending", gate_2="pass", close_gate_2=True)
+    report, rules = run(root)
+    assert rules == {KEY}, [f.render() for f in report.findings]
+    assert [f.line for f in hits(report)] == [line]
+    assert "Not applicable" in hits(report)[0].message and "lý do" in hits(report)[0].message
