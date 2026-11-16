@@ -108,7 +108,7 @@ def clean_force_open(root: Path) -> None:
 
 def state_switch_script_open(root: Path) -> None:
     """SPR-32 B3: bỏ luật chặn `agile_state.py on|off|stop|always|manual` (thay đột biến `stash-all-open` của bảo vệ file dấu đã gỡ)."""
-    edit(root, GUARD, 'if script and (script.group(1).lower() == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):', "if False:")
+    edit(root, GUARD, 'if kind and (kind == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):', "if False:")
 
 
 def state_path_open(root: Path) -> None:
