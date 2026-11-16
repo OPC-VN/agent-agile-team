@@ -315,13 +315,14 @@ SPAWN_FLAG = re.compile(r"(?:--print|--resume|--continue|-[a-z]{0,2}[prc][a-z]{0
 # TK6k: prompt BẮT ĐẦU (token, mảnh sau dấu phẩy, hay một DÒNG của thân heredoc/here-string) bằng `/agile` hay `/agent-agile-team:agile`, cho phép nháy/gạch ngược/cờ đứng trước
 AGILE_PROMPT = re.compile(r"^[\s\\`'\"({\[]*(?:-{1,2}[A-Za-z][\w-]*(?:=|\s+))*[\s\\`'\"]*/(?:agent-agile-team:)?agile(?![\w./\\:-])", re.IGNORECASE | re.MULTILINE)
 PRODUCER_COMMANDS = frozenset({"echo", "printf", "write-output", "write-host", "print"})  # `echo "/agile stop" | claude -p`: prompt đi qua ống
-PASSTHROUGH_COMMANDS = frozenset({"tee", "cat", "type"})  # đứng giữa ống, chuyển tiếp chữ (`echo … | tee x | claude -p`)
+PASSTHROUGH_COMMANDS = frozenset({"tee", "tee-object", "cat", "type"})  # đứng giữa ống, chuyển tiếp chữ (`echo … | tee x | claude -p`)
 CLAUDE_ALIAS = re.compile(r"(?:\balias\s+|\b(?:set|new)-alias\s+(?:-name\s+)?)([A-Za-z_][\w-]*)(?:\s*=\s*|\s+(?:-value\s+)?)['\"]?(?:[\w.~:\\/-]*[\\/])?claude(?:-code)?(?:\.\w+)?['\"]?(?![\w-])"
                           r"|(?<![\w-])([A-Za-z_]\w*)=['\"]?(?:[\w.~:\\/-]*[\\/])?claude(?:-code)?(?:\.\w+)?['\"]?(?![\w.-])", re.IGNORECASE)
 CLAUDE_SPAWNERS = frozenset({"ssh", "docker", "podman", "wsl", "kubectl", "su", "runuser", "start", "start-process", "saps", "start-job", "sajb",
                              "invoke-command", "icm", "script", "screen", "tmux", "watch", "at"})  # chạy chuỗi lệnh ở nơi khác: đối số có khoảng trắng là một lệnh
 ENCODED_FLAG_FULL = "encodedcommand"
-ENCODED_FLAG = re.compile(r"[-/\u2013\u2014]{1,2}([A-Za-z]+)(?:[:=](.*))?", re.DOTALL)  # `-enc`, `/enc`, `–enc` (gạch ngang dài); giá trị dính sau `:`/`=`
+ENCODED_FLAG = re.compile(r"[-/\u2013\u2014\u2015]{1,2}([A-Za-z]+)(?:[:=](.*))?", re.DOTALL)  # `-enc`, `/enc`, `–enc`, `―enc`: PowerShell 5.1 nhận `-` và U+2013..U+2015 làm tiền tố (đã thử: U+2010-2012, U+2212, U+FE58, U+FE63, U+FF0D không nhận); giá trị dính sau `:`/`=`
+ENCODED_DASH_START = re.compile(r"[-/\u2013\u2014\u2015]")  # mảnh bắt đầu như một cờ: `-ArgumentList '-NoProfile -enc <b64>'` (MỘT chuỗi) được tách ở khoảng trắng
 ENCODED_STOP = frozenset({"c", "co", "com", "comm", "comma", "comman", "command", "commandwithargs", "cwa", "f", "fi", "fil", "file"})  # sau `-Command`/`-File` không còn là cờ của PowerShell
 ENCODED_MAX_CHARS = 262144  # TK6i RF2: phần base64 dài hơn thì không giải mã (chặn như lồng quá sâu)
 ENCODED_NAMES = frozenset({"powershell", "pwsh"})
@@ -774,7 +775,7 @@ def _claude_agile(text: str, depth: int = 0) -> bool:
 
 
 def _encoded_flag(piece: str) -> tuple[bool, str]:
-    """(piece là cờ `-EncodedCommand`?, giá trị dính kèm sau `:`/`=`). Tiền tố: `-`, `/`, gạch ngang dài `–`/`—` (PowerShell nhận cả bốn); viết tắt từ `-e`
+    """(piece là cờ `-EncodedCommand`?, giá trị dính kèm sau `:`/`=`). Tiền tố: `-`, `/`, gạch ngang dài `–`/`—`/`―` (PowerShell nhận `-` và ba dấu này); viết tắt từ `-e`
     đến `-encodedcommand`, và `-ec`."""
     found = ENCODED_FLAG.fullmatch(piece)
     if not found:
@@ -796,11 +797,24 @@ def _decode_encoded(value: str) -> str | None:
     return raw[:len(raw) // 2 * 2].decode("utf-16-le", errors="replace")
 
 
+def _flag_words(pieces: list[str]) -> list[str]:
+    """TK6l (R-final): một mảnh bắt đầu như cờ và có khoảng trắng (`-ArgumentList '-NoProfile -EncodedCommand <b64>'`, MỘT chuỗi) được tách thành từ, như luật `claude`
+    tách `'-p /agile stop'`. Mảnh đứng ngay sau một cờ `-EncodedCommand` chưa có giá trị là giá trị (base64 có khoảng trắng bên trong): giữ nguyên."""
+    words: list[str] = []
+    for piece in pieces:
+        after_flag = bool(words) and _encoded_flag(words[-1]) == (True, "")
+        if not after_flag and ENCODED_DASH_START.match(piece.lstrip()) and re.search(r"\s", piece.strip()):
+            words.extend(piece.split())
+        else:
+            words.append(piece)
+    return words
+
+
 def _encoded_item(args: list[str], ctx: "Context", depth: int) -> tuple[bool, str | None]:
     """`powershell|pwsh -EncodedCommand <base64>` (cả `-e`, `-enc`, `-ec`, tiền tố `/` hay `–`, qua `Start-Process … -ArgumentList '-enc','<b64>'`): giải mã rồi xét
     văn bản đó như một lệnh (đệ quy tối đa MAX_UNWRAP lớp; quá dài bị chặn như lồng quá sâu). Giá trị có mà KHÔNG giải mã được (TK6k: đóng khi lỗi) thì chặn
     (`UNDECODABLE`); không có cờ, hay cờ không có giá trị, thì (False, None). Sau `-Command`/`-File` không còn là cờ của PowerShell."""
-    pieces = _pieces(args)
+    pieces = _flag_words(_pieces(args))
     for index, piece in enumerate(pieces):
         flag = ENCODED_FLAG.fullmatch(piece)
         if flag and flag.group(1).lower() in ENCODED_STOP:
@@ -973,6 +987,8 @@ def tokenize(segment: str) -> list[str]:
             else:
                 buf.append(ch)
         elif ch in "'\"":
+            if buf and buf[-1] == "$":  # TK6l: nháy ANSI-C/dịch của bash `$'/agile stop'`: bỏ `$` đứng ngay trước nháy mở
+                buf.pop()
             quote = ch
             started = True
         elif ch.isspace():

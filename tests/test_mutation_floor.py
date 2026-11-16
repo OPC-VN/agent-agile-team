@@ -269,7 +269,27 @@ def encoded_undecodable_open(root: Path) -> None:
 
 def encoded_prefix_dash_only(root: Path) -> None:
     """TK6k RF4: cờ `-EncodedCommand` chỉ nhận tiền tố `-` (không `/` hay gạch ngang dài `–`)."""
-    edit(root, GUARD, r'ENCODED_FLAG = re.compile(r"[-/\u2013\u2014]{1,2}', r'ENCODED_FLAG = re.compile(r"[-]{1,2}')
+    edit(root, GUARD, r'ENCODED_FLAG = re.compile(r"[-/\u2013\u2014\u2015]{1,2}', r'ENCODED_FLAG = re.compile(r"[-]{1,2}')
+
+
+def encoded_dash_bar_open(root: Path) -> None:
+    """TK6l (R-final): gạch ngang U+2015 (thanh ngang) không còn là tiền tố cờ: `powershell ―enc <b64>` lọt."""
+    edit(root, GUARD, r'ENCODED_FLAG = re.compile(r"[-/\u2013\u2014\u2015]{1,2}', r'ENCODED_FLAG = re.compile(r"[-/\u2013\u2014]{1,2}')
+
+
+def encoded_single_string_open(root: Path) -> None:
+    """TK6l (R-final): `-ArgumentList '-enc <b64>'` (MỘT chuỗi) không còn được tách ở khoảng trắng trước khi tìm cờ."""
+    edit(root, GUARD, "    pieces = _flag_words(_pieces(args))\n", "    pieces = _pieces(args)\n")
+
+
+def tee_object_open(root: Path) -> None:
+    """TK6l (R-final): `Tee-Object` (tên đầy đủ của alias `tee`) không còn chuyển tiếp prompt trong ống: `"/agile stop" | Tee-Object x | claude -p` lọt."""
+    edit(root, GUARD, 'PASSTHROUGH_COMMANDS = frozenset({"tee", "tee-object", "cat", "type"})', 'PASSTHROUGH_COMMANDS = frozenset({"tee", "cat", "type"})')
+
+
+def dollar_quote_open(root: Path) -> None:
+    """TK6l (R-final): nháy ANSI-C `$'/agile stop'` không còn được bỏ `$` ở bộ tách token: `claude -p $'/agile stop'` lọt."""
+    edit(root, GUARD, '            if buf and buf[-1] == "$":', '            if False and buf and buf[-1] == "$":')
 
 
 def script_sibling_open(root: Path) -> None:
@@ -345,6 +365,10 @@ MUTATIONS = {
     "claude-spawner-open": Mutation(claude_spawner_open, "tests/test_agile_guard_r5.py::test_r5_claude_spawn_forms_with_an_agile_prompt_are_blocked", ("tests/test_agile_guard_r5.py",)),
     "encoded-undecodable-open": Mutation(encoded_undecodable_open, "tests/test_agile_guard_r5.py::test_r5_encoded_command_value_that_cannot_be_decoded_is_blocked_with_a_clear_reason", ("tests/test_agile_guard_r5.py",)),
     "encoded-prefix-dash-only": Mutation(encoded_prefix_dash_only, "tests/test_agile_guard_r5.py::test_r5_encoded_command_variants_that_powershell_accepts_are_decoded_and_blocked", ("tests/test_agile_guard_r5.py",)),
+    "encoded-dash-bar-open": Mutation(encoded_dash_bar_open, "tests/test_agile_guard_rfinal.py::test_rfinal_every_dash_that_powershell_accepts_as_a_prefix_is_decoded_and_blocked", ("tests/test_agile_guard_rfinal.py",)),
+    "encoded-single-string-open": Mutation(encoded_single_string_open, "tests/test_agile_guard_rfinal.py::test_rfinal_a_single_string_argument_list_is_split_before_the_flag_is_looked_for", ("tests/test_agile_guard_rfinal.py",)),
+    "tee-object-open": Mutation(tee_object_open, "tests/test_agile_guard_rfinal.py::test_rfinal_tee_object_passes_the_prompt_on_like_tee", ("tests/test_agile_guard_rfinal.py",)),
+    "dollar-quote-open": Mutation(dollar_quote_open, "tests/test_agile_guard_rfinal.py::test_rfinal_bash_dollar_quotes_in_front_of_the_prompt_are_unwrapped", ("tests/test_agile_guard_rfinal.py",)),
     "script-sibling-open": Mutation(script_sibling_open, "tests/test_agile_guard_r5.py::test_r5_script_name_globs_that_expand_to_a_switch_script_are_blocked", ("tests/test_agile_guard_r5.py",)),
     "read-only-writers-open": Mutation(read_only_writers_open, "tests/test_agile_guard_r3.py::test_rf2_read_only_names_that_write_into_the_state_directory_are_blocked", ("tests/test_agile_guard_r3.py",)),
     "deadline-env-trusted": Mutation(deadline_env_trusted, "tests/test_agile_guard_r3.py::test_rf5_invalid_deadline_env_falls_back_to_the_default", ("tests/test_agile_guard_r3.py",)),
