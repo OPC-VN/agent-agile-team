@@ -108,10 +108,10 @@ def test_english_heading_must_match_whole_not_substring(tmp_path):
 
 
 def test_english_ascii_heading_collisions(tmp_path):
-    """The six ASCII headings keep prefix matching at a word boundary; `Planning` and `Preview` are not the part `PLAN`."""
+    """The _labels matchers anchor ASCII labels at a word boundary; check.py itself keeps substring for the Vietnamese side."""
     assert not lab.startswith("Planning notes", "heading.part_plan") and not lab.contains("Plan review notes", "heading.part_plan")
     assert lab.startswith("plan — extra", "heading.part_plan") and lab.startswith("PLAN", "heading.part_plan")
-    assert not check._has_heading("planning notes", "part_plan") and check._has_heading("plan — extra", "part_plan")
+    assert check._has_heading("plan — extra", "part_plan")  # check.py keeps the old substring test for Vietnamese labels (RF1)
 
 
 def test_mixed_locale_document_matches_by_accept_any_locale(tmp_path):
@@ -446,3 +446,63 @@ def test_phrase_regexes_are_anchored_in_english():
     assert not check.ASK_COUNT_LINE.search("Number of turns the human had to answer: none")
     assert check.DROPPED.search("— dropped") and not check.DROPPED.search("— dropped yet") and check.DROPPED.search("(bỏ)")
     assert check.CONCLUSION.match("> **Conclusion:** ok") and not check.CONCLUSION.match("> **Conclusions:** ok")
+
+
+# --- TK3 review round 1: old-record parity of the six ASCII headings, MERGED_MAIN negation, log bullet ----------
+
+SAMPLE_FOUR = FIXTURES.parent.parent / "samples" / "order-desk" / "docs" / "plans" / "2026-01-20-fix-not-found-text" / "SPRINT.md"
+
+
+def _four_part_with(tmp_path: Path, replacements: dict, size: str = "medium") -> list:
+    text = SAMPLE_FOUR.read_text(encoding="utf-8").replace("size: tiny", f"size: {size}", 1)
+    for old, new in replacements.items():
+        assert old in text, old
+        text = text.replace(old, new, 1)
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    write_lf(tmp_path / "SPRINT.md", text)
+    return [f for f in check.check_paths([tmp_path]).findings if f.rule == "heading-missing"]
+
+
+def test_old_records_keep_substring_headings_for_the_six_ascii_labels(tmp_path):
+    """RF1: `## Scope / SPEC`, `## Approval / progress`, `## Verification / handoff (REPORT)` matched as substrings before TK3."""
+    odd = {"## 1. SPEC": "## Scope / SPEC", "## 3. PROGRESS": "## Approval / progress", "## 4. REPORT": "## Verification / handoff (REPORT)"}
+    assert _four_part_with(tmp_path / "a", odd) == []
+    assert _four_part_with(tmp_path / "b", {"## 2. PLAN": "## Review of the PLAN"}) == []
+    for heading, key in [("scope / spec", "part_spec"), ("approval / progress", "part_progress"), ("verification / handoff (report)", "part_report"),
+                         ("tổng kết — review & retro", "review_retro"), ("2 timeline", "timeline"), ("khung timeline", "timeline")]:
+        assert check._has_heading(heading, key), heading
+    assert not check._has_heading("shipping notes", "part_spec")
+    # the old four-part detection was a plain prefix of the casefolded heading
+    assert check._heading_starts("specification of x", "part_spec") and check._heading_starts("plan — extra", "part_plan")
+    assert not check._heading_starts("review of the plan", "part_plan")
+
+
+def test_review_retro_inside_a_longer_vietnamese_heading_still_matches(tmp_path):
+    root = make_sprint(tmp_path)
+    path = root / "REPORT.md"
+    text = path.read_text(encoding="utf-8")
+    assert "## 7. Review & Retro" in text
+    write_lf(path, text.replace("## 7. Review & Retro", "## 7. Tổng kết — Review & Retro", 1))
+    assert "heading-missing" not in rules_of(check.check_paths([root]))
+
+
+@pytest.mark.parametrize("sentence", [
+    "has not been merged into main", "not yet merged into main", "was never merged into main",
+    "will not be merged into the main branch", "hasn't been merged into main", "isn't merged to main", "no, merged nowhere near main"
+])
+def test_negated_merge_wordings_do_not_match(sentence):
+    assert not check.MERGED_MAIN.search(sentence), sentence
+
+
+@pytest.mark.parametrize("sentence", [
+    "merged into main", "branch merged into main (abc1234)", "the sprint branch was merged into the main branch",
+    "đã gộp vào main", "everything is merged to main now"
+])
+def test_positive_merge_wordings_match(sentence):
+    assert check.MERGED_MAIN.search(sentence), sentence
+
+
+def test_decision_logging_bullet_does_not_open_a_decision_log_section():
+    assert not check._LOG_BULLET.match("- decision logging notes")
+    assert check._LOG_BULLET.match("- **decision log:** x") and check._LOG_BULLET.match("- decision log")
+    assert check._LOG_BULLET.match("- **nhật ký quyết định:** x")

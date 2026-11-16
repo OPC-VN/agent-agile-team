@@ -18,10 +18,13 @@ Matching accepts the labels of every shipped locale (a label is resolved to its 
 blanks are ignored; nothing else (GC1: an English label never matches as a bare substring). A text that is exactly a
 label of another key in a non-substring locale is never matched by contains/startswith of a different key, so the
 Vietnamese label "Review" cannot hijack the English heading "Review focus". Vietnamese matching also folds NFC
-and runs of blanks (_squash), a small widening of today's byte-exact casefold substring test. The index.py substring
-test for the ASCII required headings becomes anchored here: SPEC, PLAN, PROGRESS, REPORT (sprint), Timeline (requests,
-sprints) and "Review & Retro" (report) are matched by check.py as substrings today (check.py heading_rules); the numbered
-form "2. Timeline" still matches. TK3 must use startswith() for these six, not contains().
+and runs of blanks (_squash), a small widening of today's byte-exact casefold substring test.
+The ASCII required headings SPEC, PLAN, PROGRESS, REPORT (sprint), Timeline (requests, sprints) and "Review & Retro" (report) are
+matched by check.py as substrings of the casefolded heading in records written before this module (for example
+"## Scope / SPEC", "## Verification / handoff (REPORT)"). check.py therefore keeps that exact substring test for the Vietnamese
+side of these keys (parity for old records) and applies anchored matching (contains/startswith here) only to the labels of other
+locales. The anchored behaviour of this module (word-boundary prefix for ASCII labels) is for new documents and tools, not a
+replacement of check.py's old-record test.
 
 translate(text, locale) and scan(text) share one walker. It skips front matter, code fences, HTML comments and table
 data rows, and looks only at headings (numbering kept), table header rows and bold field labels ("**Label:**" at any

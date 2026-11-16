@@ -190,10 +190,6 @@ REQUIRED_HEADING_KEYS = {
     "specs": ("open", "catalog"),
 }
 SPRINT_TINY_KEYS = ("tiny_plan", "result")
-# ASCII labels that check.py has always matched as a prefix of the heading (SPEC, PLAN, ..., Timeline): prefix at a word boundary.
-PREFIX_HEADINGS = {"part_spec", "part_plan", "part_progress", "part_report", "timeline", "review_retro"}
-
-
 @functools.lru_cache(maxsize=None)
 def _alts(key: str) -> tuple:
     """Every label of a key in every shipped locale (accept-any-locale matching, SPR-33 D2)."""
@@ -236,13 +232,40 @@ def _starts_fold(text: str, key: str) -> bool:
     return any(folded.startswith(label.casefold()) for label in _alts(key))
 
 
+def _vi_alts(key: str) -> tuple:
+    return tuple(text.casefold() for loc in lab.SUBSTRING_LOCALES for text in lab.labels_of(key).get(loc, ()))
+
+
+def _other_locales() -> tuple:
+    return tuple(loc for loc in lab.shipped() if loc not in lab.SUBSTRING_LOCALES)
+
+
 def _has_heading(heading: str, key: str) -> bool:
-    """A level-2 heading (numbering removed) carries the label: accented Vietnamese labels as a substring as today, the
-    ASCII labels of PREFIX_HEADINGS as a prefix, every other (English) label as the whole heading (GC1)."""
-    return lab.startswith(heading, f"heading.{key}") if key in PREFIX_HEADINGS else lab.contains(heading, f"heading.{key}")
+    """A level-2 heading (numbering removed, casefolded) carries the label of `heading.<key>`. Vietnamese labels keep the
+    test check.py used before SPR-33, a casefold substring (even the ASCII ones: `## Scope / SPEC` of old records);
+    labels of the other locales (English) must be the whole heading (GC1)."""
+    return any(text in heading for text in _vi_alts(f"heading.{key}")) or lab.contains(heading, f"heading.{key}", _other_locales())
+
+
+def _heading_starts(heading: str, key: str) -> bool:
+    """Four-part sprint detection: the heading starts with the label (Vietnamese: plain prefix as before; English: at a word boundary)."""
+    return any(heading.startswith(text) for text in _vi_alts(f"heading.{key}")) or lab.startswith(heading, f"heading.{key}", "", _other_locales())
+
+
+def _phrase_for(key: str, locales) -> str:
+    """Like _phrase, limited to the labels of the given locales."""
+    parts = []
+    for loc in locales:
+        for text in lab.labels_of(key).get(loc, ()):
+            parts.append(re.escape(text) if not text.isascii() else r"(?<!\w)" + re.escape(text) + r"(?!\w)")
+    return "(?:" + "|".join(sorted(set(parts), key=lambda t: (-len(t), t))) + ")"
 
 ASK_COUNT_LINE = re.compile(_phrase("field.ask_count") + r"[^0-9\n]*[0-9]", re.IGNORECASE)  # FR7.4: dòng đếm lượt có số
-MERGED_MAIN = re.compile(r"(?<!not )(?<!n't )" + _phrase("phrase.merged") + r"[^.\n]*(?:\bmain\b|" + _phrase("phrase.main_branch") + ")", re.IGNORECASE)  # "not merged into main" is not a merge  # FR7.2: bản tin khai đã gộp vào nhánh chính (chữ đã hạ về chữ thường)
+_NEGATION = r"(?:\bnot\b|n't|\bnever\b|\bno\b|\bnowhere\b|\bwithout\b)"
+MERGED_MAIN = re.compile(  # Vietnamese: as before; English: a clause (between full stops) without any negation
+    _phrase_for("phrase.merged", ("vi",)) + r"[^.\n]*(?:\bmain\b|" + _phrase_for("phrase.main_branch", ("vi",)) + ")|"
+    + r"(?<![^.\n])(?![^.\n]*" + _NEGATION + r")[^.\n]*?" + _phrase_for("phrase.merged", _other_locales())
+    + r"[^.\n]*(?:\bmain\b|" + _phrase_for("phrase.main_branch", _other_locales()) + ")", re.IGNORECASE)
 MERGE_COMMIT_LINE = re.compile(r"^[\s>*_-]*" + _phrase("field.merge_commit"), re.IGNORECASE)  # dòng nhãn "Commit gộp": có mã băm thì là đã gộp
 BULLETIN_HEADINGS = ("bản tin agile", "bản tin autopilot")  # legacy: old records (mục cũ "Bản tin autopilot" vẫn được đọc; chữ đã hạ về chữ thường)
 _BULLETIN = re.compile("(?:" + _phrase("heading.bulletin") + "|" + "|".join(re.escape(h) for h in BULLETIN_HEADINGS[1:]) + ")", re.IGNORECASE)  # [1:] = legacy alias, Vietnamese only
@@ -252,7 +275,7 @@ HEX_SHA = re.compile(r"\b[0-9a-f]{7,40}\b")
 PLAN_GOAL_LABELS = ("Mục tiêu sprint:", "Kết quả mong muốn / xong khi:", "Rủi ro cần chú ý:")  # SPEC 7.8
 LOG_COLUMNS = ("column.signed_by", "column.evidence", "column.rollback_command")  # decision-log table columns
 _CAP_LINE = re.compile(r"\s*(?:[-*]\s*)?(?:\*\*)?" + _phrase("field.session_cap") + r":?(?:\*\*)?:?\s*(\d+)\b", re.IGNORECASE)
-_LOG_BULLET = re.compile(r"[-*]\s+(?:\*\*)?" + lab.alternation("heading.decision_log"), re.IGNORECASE)
+_LOG_BULLET = re.compile(r"[-*]\s+(?:\*\*)?" + _phrase("heading.decision_log"), re.IGNORECASE)
 PLAN_GOAL_KEYS = ("field.plan_goal", "field.plan_desired_result", "field.plan_risk_watch")
 _PLAN_GOAL_HEADING = re.compile(r"^##\s+" + lab.alternation("heading.goal") + r"\s*$")
 INPUT_FIELD = "**Đầu vào:**"
@@ -2037,7 +2060,7 @@ class Engine:
         size = doc.data.get("size")
         if size in ("small", "medium", "large"):
             return four
-        four_part = any(lab.startswith(h, f"heading.{key}") for key, _ in four[:3] for h in headings)  # bắt đầu bằng SPEC/PLAN/PROGRESS (đã bỏ số thứ tự)
+        four_part = any(_heading_starts(h, key) for key, _ in four[:3] for h in headings)  # bắt đầu bằng SPEC/PLAN/PROGRESS (đã bỏ số thứ tự)
         return four if four_part else tuple(zip(SPRINT_TINY_KEYS, SPRINT_TINY_HEADINGS))
 
     # -- tiêu đề --
