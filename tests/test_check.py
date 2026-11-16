@@ -2917,6 +2917,10 @@ def _new_two_gate_sprint(tmp_path: Path, *, cap_line: str | None = "Trần phiê
         text = text.replace(old, new, 1)
     if cap_line:
         text = text.replace("## 1. Kế hoạch\n\n", "## 1. Kế hoạch\n\n" + cap_line + "\n\n", 1)
+    # SPR-34: gate_2 is pass here, so the VR row must not say Chưa chạy (vr-result-not-pass)
+    old = "`pytest tests/test_ui.py` | Chưa chạy |"
+    assert old in text
+    text = text.replace(old, "`pytest tests/test_ui.py` | Đạt |", 1)
     write_lf(path, text + (log or ""))
     _write_verdict(root, 1, "duyệt thay: sửa chữ — xem mục Bản ghi duyệt thay")
     _write_verdict(root, 2, "duyệt thay: Đạt — xem mục Bản ghi duyệt thay")

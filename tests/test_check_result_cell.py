@@ -396,8 +396,12 @@ def test_only_the_first_result_column_counts(tmp_path):
     root, _ = build(tmp_path, "vi", "Đạt")
     path = root / "REPORT.md"
     text = path.read_bytes().decode("utf-8")
-    text = text.replace("| Kết quả | Người kiểm | Bằng chứng |", "| Kết quả | Kết quả lần 2 | Bằng chứng |", 1)
-    text = text.replace("| Đạt | QA · agent-f | 4 passed |", "| Đạt | Chưa chạy | 4 passed |", 1)
+    old = "| Kết quả | Người kiểm | Bằng chứng |"
+    assert old in text
+    text = text.replace(old, "| Kết quả | Kết quả lần 2 | Bằng chứng |", 1)
+    old = "| Đạt | QA · agent-f | 4 passed |"
+    assert old in text
+    text = text.replace(old, "| Đạt | Chưa chạy | 4 passed |", 1)
     write_lf(path, text)
     report, rules = run(root)
     assert rules == set(), [f.render() for f in report.findings]
@@ -422,3 +426,26 @@ def test_spec_or_plan_kind_document_with_a_vr_table_is_not_read(tmp_path, name):
     write_lf(path, text.rstrip("\n") + table)
     _, rules = run(root)
     assert KEY not in rules  # "contains": the stray VR table may raise other existing rules in a SPEC/PLAN
+
+
+def _rewrite_command_cell(root: Path, new_cell: str) -> None:
+    path = root / "REPORT.md"
+    text = path.read_bytes().decode("utf-8")
+    old = "| `pytest` |"
+    assert old in text
+    write_lf(path, text.replace(old, f"| {new_cell} |", 1))
+
+
+def test_pipe_inside_code_span_before_result_column_does_not_shift_it(tmp_path):
+    root, line = build(tmp_path, "vi", "Chưa chạy")
+    _rewrite_command_cell(root, "`a|b`")
+    report, rules = run(root)
+    assert rules == {KEY}, [f.render() for f in report.findings]
+    assert [f.line for f in hits(report)] == [line]
+
+
+def test_not_run_word_inside_a_code_span_with_pipe_is_not_the_result_cell(tmp_path):
+    root, _ = build(tmp_path, "vi", TABLE["vi"]["pass"])
+    _rewrite_command_cell(root, "`echo|Chưa chạy`")
+    report, rules = run(root)
+    assert rules == set(), [f.render() for f in report.findings]

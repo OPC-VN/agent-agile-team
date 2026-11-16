@@ -73,6 +73,7 @@ RULES: dict[str, tuple[str, str]] = {
     "report-fr-without-vr": (PHAI, "`FR` của SPEC không có `VR` nào trỏ tới nó hoặc kịch bản con (trừ `bỏ`/NOT_APPLICABLE)"),
     "self-review": (CHAN, "một nhãn agent vừa giữ vai thực thi vừa giữ vai kiểm định"),
     "qa-not-independent": (PHAI, "QA trùng nhãn với implementer/architect mà không khai tự kiểm, hoặc khai tự kiểm mà verdict là pass"),
+    "vr-result-not-pass": (NEN, "dòng `VR` ghi 'Chưa chạy' (hoặc 'Không áp dụng' không kèm lý do) ở cột Kết quả trong khi `verdict` hoặc `gate_2` là pass"),
     "roles-invalid": (PHAI, "`roles` sai hình: vai lạ, tier ngoài T1–T3, thiếu nhãn agent"),
     "gate-invalid": (PHAI, "cổng đã kết luận mà thiếu thời điểm/câu nguyên văn, hoặc trạng thái vượt cổng"),
     "gate-delegation-invalid": (PHAI, "duyệt thay thiếu lời cấp/phạm vi/hạn/bản ghi, quá hạn, đã thu hồi, người duyệt không phải T1, hoặc vào vùng cấm"),
@@ -197,6 +198,32 @@ SPRINT_TINY_KEYS = ("tiny_plan", "result")
 def _alts(key: str) -> tuple:
     """Every label of a key in every shipped locale (accept-any-locale matching, SPR-33 D2)."""
     return tuple(text for texts in lab.labels_of(key).values() for text in texts)
+
+
+def _norm_cell(text: str) -> str:
+    """Ô bảng để so chữ đầu: bỏ `*`, `_`, dấu huyền và khoảng trắng ngoài, gộp khoảng trắng trong, NFC, casefold."""
+    plain = re.sub(r"[*_`]", "", text).strip()
+    return unicodedata.normalize("NFC", " ".join(plain.split())).casefold()
+
+
+def _starts_with_word(cell: str, word: str) -> bool:
+    """Ô (đã chuẩn hoá) là `word` hoặc mở đầu bằng `word` rồi tới ký tự không phải chữ/số."""
+    if not word or not cell.startswith(word):
+        return False
+    return len(cell) == len(word) or not (cell[len(word)].isalpha() or cell[len(word)].isdigit())
+
+
+def _raw_cells(doc: Doc, idx: int) -> list[str] | None:
+    """Ô của dòng bảng `idx`: ranh giới lấy từ dòng đã che (như `_definitions`, `|` trong dấu code không tách ô), nội dung cắt từ dòng gốc."""
+    masked = doc.masked[idx]
+    if c.table_cells(masked) is None:
+        return None
+    raw = doc.raw[idx]
+    if len(raw) != len(masked):
+        return c.table_cells(masked)
+    pipes = [m.start() for m in re.finditer(r"(?<!\\)\|", masked)]
+    ends = pipes[1:] + ([] if masked.rstrip().endswith("|") else [len(masked)])
+    return [raw[a + 1:b].strip() for a, b in zip(pipes, ends)]
 
 
 def _eq(text: str, key: str) -> bool:
@@ -2304,6 +2331,7 @@ class Engine:
                     self.add(doc.path, line, "report-sc-without-vr", f"{d.code} của SPEC chưa có VR nào")
         if spec is not None and doc.kind == "report":
             self._fr_coverage(doc, spec, vr_rows)
+        self._result_cell_rules(doc, vr_rows)
         roles = doc.data.get("roles")
         if not vr_rows or not isinstance(roles, dict):
             return
@@ -2322,6 +2350,44 @@ class Engine:
         elif doc.data.get("verdict") == "pass":
             self.add(doc.path, doc.key_line("verdict"), "qa-not-independent",
                      "VR tự kiểm, chưa độc lập: verdict tối đa conditional_pass")
+
+    def _result_cell_rules(self, doc: Doc, vr_rows: list) -> None:
+        """`vr-result-not-pass` (SPR-34, RQ-137): dưới `verdict: pass` hoặc `gate_2: pass`, ô Kết quả của dòng `VR` không được
+        mở đầu bằng 'Chưa chạy', và 'Không áp dụng' phải kèm lý do. Chỉ xét từ đầu ô, chỉ bảng VR đã đăng ký."""
+        if not vr_rows or "pass" not in (doc.data.get("verdict"), doc.data.get("gate_2")):
+            return
+        result_words = [_norm_cell(w) for w in _alts("heading.result")]
+        not_run = [(w, _norm_cell(w)) for w in _alts("status.not_run")]
+        not_applicable = [(w, _norm_cell(w)) for w in (*_alts("status.not_applicable"), NOT_APPLICABLE)]
+        for d in vr_rows:
+            idx = d.line - doc.start
+            cells = _raw_cells(doc, idx)
+            if cells is None:
+                continue
+            top = idx
+            while top > 0 and (_raw_cells(doc, top - 1) is not None):
+                top -= 1
+            while top < idx and c.is_separator_row(_raw_cells(doc, top) or []):
+                top += 1
+            header = _raw_cells(doc, top) or []
+            column = next((i for i, h in enumerate(header) if any(_starts_with_word(_norm_cell(h), w) for w in result_words)), None)
+            if column is None or column >= len(cells):
+                continue
+            cell = _norm_cell(cells[column])
+            for word, folded in not_run:
+                if _starts_with_word(cell, folded):
+                    self.add(doc.path, d.line, "vr-result-not-pass",
+                             f"`{d.code}` ghi {word} nhưng verdict/gate_2 là pass: Chưa chạy không bao giờ là Đạt "
+                             "(kết luận tối đa conditional_pass)")
+                    break
+            else:
+                for word, folded in not_applicable:
+                    if _starts_with_word(cell, folded):
+                        rest = cell[len(folded):]
+                        if not any(ch.isalnum() for ch in rest) and (column == len(cells) - 1 or not cells[-1].strip()):
+                            self.add(doc.path, d.line, "vr-result-not-pass",
+                                     f"`{d.code}` ghi {word} không kèm lý do nhưng verdict/gate_2 là pass")
+                        break
 
     def _fr_coverage(self, doc: Doc, spec: Doc, vr_rows: list) -> None:
         """Mỗi `FRn` của SPEC có `VR` trỏ tới `FRn` hoặc kịch bản `FRn.m`; miễn khi `bỏ` hoặc NOT_APPLICABLE."""
