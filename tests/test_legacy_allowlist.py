@@ -18,7 +18,7 @@ TEXT_SUFFIXES = {".md", ".py", ".json", ".txt", ".sh", ".toml", ".yml", ".yaml",
 
 # (glob theo đường tương đối kiểu POSIX, số lần xuất hiện tối đa, lý do). Muốn thêm mục: nêu lý do ở thông điệp commit.
 ALLOWLIST: tuple[tuple[str, int, str], ...] = (
-    ("CHANGELOG.md", 46, "lịch sử phát hành: bản ghi cũ không sửa"),
+    ("CHANGELOG.md", 61, "lịch sử phát hành: bản ghi cũ không sửa; mục BREAKING của SPR-32 nêu tên cũ"),
     ("docs/architecture/adr/0001-*", 9, "ADR 0001 là bản ghi lịch sử, không sửa"),
     ("scripts/_agile_rules.py", 3, "legacy: tiền tố lời cấp cũ `bật autopilot` mà hồ sơ cũ còn mang (SC6.1, SC10.3)"),
     ("scripts/check.py", 3, "legacy: tên mục cũ `Bản tin autopilot` của hồ sơ cũ (SC6.1, SC10.3)"),
