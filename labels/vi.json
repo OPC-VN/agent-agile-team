@@ -210,5 +210,7 @@
   "status.awaiting_gate_1": "chờ Cổng 1",
   "status.verifying": "đang kiểm định",
   "status.blocked": "vướng",
-  "status.awaiting_gate_2": "chờ Cổng 2"
+  "status.awaiting_gate_2": "chờ Cổng 2",
+  "status.not_run": "Chưa chạy",
+  "status.not_applicable": "Không áp dụng"
 }

@@ -210,5 +210,7 @@
   "status.awaiting_gate_1": "awaiting Gate 1",
   "status.verifying": "verifying",
   "status.blocked": "blocked",
-  "status.awaiting_gate_2": "awaiting Gate 2"
+  "status.awaiting_gate_2": "awaiting Gate 2",
+  "status.not_run": "Not run",
+  "status.not_applicable": "Not applicable"
 }

@@ -65,7 +65,8 @@ today, and English documents carry them in Vietnamese until a later sprint):
   - grant words of _agile_rules.py: AGILE_PREFIX, AGILE_GATES_BOTH, the level words and the dead branch/push constants.
   - rule messages printed by check.py and the summary words of its exit lines (output only), console lines of init.py.
   - prose, HTML comment hints, example rows and example headings of the templates; status words used as table data
-    (Chua chay, Dang lam, Dat, Khong dat, Khong ap dung) and the cell separator used in decision-log tables.
+    (Dang lam, Dat, Khong dat; Chua chay and Khong ap dung are in the tables as status.not_run and status.not_applicable,
+    match-only because the status group is not in WALK_GROUPS) and the cell separator used in decision-log tables.
 """
 
 from __future__ import annotations
