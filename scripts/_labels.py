@@ -19,7 +19,9 @@ blanks are ignored; nothing else (GC1: an English label never matches as a bare 
 label of another key in a non-substring locale is never matched by contains/startswith of a different key, so the
 Vietnamese label "Review" cannot hijack the English heading "Review focus". Vietnamese matching also folds NFC
 and runs of blanks (_squash), a small widening of today's byte-exact casefold substring test. The index.py substring
-test for the ASCII heading "Timeline" becomes anchored; the numbered form "2. Timeline" still matches.
+test for the ASCII required headings becomes anchored here: SPEC, PLAN, PROGRESS, REPORT (sprint), Timeline (requests,
+sprints) and "Review & Retro" (report) are matched by check.py as substrings today (check.py heading_rules); the numbered
+form "2. Timeline" still matches. TK3 must use startswith() for these six, not contains().
 
 translate(text, locale) and scan(text) share one walker. It skips front matter, code fences, HTML comments and table
 data rows, and looks only at headings (numbering kept), table header rows and bold field labels ("**Label:**" at any
@@ -494,3 +496,37 @@ def translate(text: str, locale) -> str:
             line = line[:start] + new + line[end:]
         lines[idx] = line
     return "\n".join(lines)
+
+
+# --- locale resolution (D5) -----------------------------------------------------------------------------------
+
+LAYER_NAMES = ("explicit", "sprint", "repo", "user")  # highest priority first; below them comes the default
+
+
+class Resolution(NamedTuple):
+    """Result of resolve_locale(): the locale, the layer that supplied it, and every candidate that was skipped."""
+
+    locale: str
+    source: str  # one of LAYER_NAMES, or "default"
+    ignored: List[Tuple[str, object, str]]  # (layer, value, reason) for each invalid lower-layer candidate
+
+
+def resolve_locale(explicit=None, sprint=None, repo=None, user=None, labels_dir=None) -> Resolution:
+    """Pick the locale: explicit --locale, then the sprint frontmatter value (frozen at open), then the repo
+    .agile.json key, then the user config key, then "vi". None means "not declared in that layer".
+
+    Pure function: it reads no file; callers pass the raw values. A value that is not a shipped locale is an error in
+    the explicit layer (LabelError) and is skipped with a reason in the lower layers, so a damaged config never
+    crashes a run. A record that declares nothing resolves to "vi".
+    """
+    candidates = (("explicit", explicit), ("sprint", sprint), ("repo", repo), ("user", user))
+    ignored: List[Tuple[str, object, str]] = []
+    for layer, value in candidates:
+        if value is None:
+            continue
+        if valid_locale(value, labels_dir):
+            return Resolution(value, layer, ignored)
+        if layer == "explicit":
+            require_locale(value, labels_dir)  # raises LabelError with the shipped list
+        ignored.append((layer, value, f"not a shipped locale (shipped: {', '.join(shipped(labels_dir)) or 'none'})"))
+    return Resolution(DEFAULT_LOCALE, "default", ignored)
