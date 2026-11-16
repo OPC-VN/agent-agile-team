@@ -1,0 +1,200 @@
+{
+ "about": "Hand-written English negatives (SPR-33 GC8). Each case applies the listed replacements to a copy of fixtures/en/<root> and expects exactly these rule keys and this exit code; an empty rule list is a variant that must stay clean.",
+ "cases": [
+  {
+   "name": "heading-renamed",
+   "root": "valid",
+   "file": "PLAN.md",
+   "replaces": [
+    [
+     "\n## Risks\n",
+     "\n## Hazards\n"
+    ]
+   ],
+   "rules": [
+    "heading-missing"
+   ],
+   "exit": 1,
+   "why": "The required Risks heading is renamed, so it is missing."
+  },
+  {
+   "name": "heading-renamed-tiny",
+   "root": "tiny",
+   "file": "SPRINT.md",
+   "replaces": [
+    [
+     "## 2. Result",
+     "## 2. Outcome"
+    ]
+   ],
+   "rules": [
+    "heading-missing"
+   ],
+   "exit": 1,
+   "why": "A combined sprint needs its Result part under that name."
+  },
+  {
+   "name": "summary-heading-renamed",
+   "root": "valid",
+   "file": "REPORT.md",
+   "replaces": [
+    [
+     "## Summary for non-specialists",
+     "## Summary"
+    ]
+   ],
+   "rules": [
+    "heading-missing"
+   ],
+   "exit": 1,
+   "why": "The plain-language summary heading is the full label, not a shorter word."
+  },
+  {
+   "name": "level-not-on-the-scale",
+   "root": "valid",
+   "file": "REPORT.md",
+   "replaces": [
+    [
+     "| Note |",
+     "| Minor |"
+    ]
+   ],
+   "rules": [
+    "old-scale-label"
+   ],
+   "exit": 1,
+   "why": "A level cell must be Blocker, Must fix, Should fix or Note."
+  },
+  {
+   "name": "level-from-the-old-scale",
+   "root": "valid",
+   "file": "REPORT.md",
+   "replaces": [
+    [
+     "| Note |",
+     "| High |"
+    ]
+   ],
+   "rules": [
+    "old-scale-label"
+   ],
+   "exit": 1,
+   "why": "An old-scale word stays flagged in an English document."
+  },
+  {
+   "name": "note-uppercase-without-locale",
+   "root": "valid",
+   "file": "REPORT.md",
+   "replaces": [
+    [
+     "| Note |",
+     "| NOTE |"
+    ],
+    [
+     "locale: en\n",
+     ""
+    ]
+   ],
+   "rules": [
+    "old-scale-label"
+   ],
+   "exit": 1,
+   "why": "GC2: NOTE is a level only when the document declares locale en; with no locale key it is the old scale."
+  },
+  {
+   "name": "note-uppercase-under-locale-en",
+   "root": "valid",
+   "file": "REPORT.md",
+   "replaces": [
+    [
+     "| Note |",
+     "| NOTE |"
+    ]
+   ],
+   "rules": [],
+   "exit": 0,
+   "why": "GC2 counterpart: the same cell is clean when the document declares locale en."
+  },
+  {
+   "name": "conclusion-label-missing",
+   "root": "valid",
+   "file": "SPEC.md",
+   "replaces": [
+    [
+     "> **Conclusion:**",
+     "> **Verdict:**"
+    ]
+   ],
+   "rules": [
+    "conclusion-missing"
+   ],
+   "exit": 1,
+   "why": "The conclusion block needs the Conclusion label."
+  },
+  {
+   "name": "goal-field-missing",
+   "root": "valid",
+   "file": "PLAN.md",
+   "replaces": [
+    [
+     "- **Sprint goal:** export the order list to CSV with every column.\n",
+     ""
+    ]
+   ],
+   "rules": [
+    "plan-goal-block"
+   ],
+   "exit": 0,
+   "why": "The PLAN goal block needs the Sprint goal field."
+  },
+  {
+   "name": "labels-of-another-locale",
+   "root": "valid",
+   "file": "PLAN.md",
+   "replaces": [
+    [
+     "\n## Goal\n",
+     "\n## Mục tiêu\n"
+    ]
+   ],
+   "rules": [
+    "locale-label-mixed"
+   ],
+   "exit": 0,
+   "why": "A Vietnamese heading in a document that declares en is read, but noted."
+  },
+  {
+   "name": "declared-locale-differs",
+   "root": "valid",
+   "file": "PROGRESS.md",
+   "replaces": [
+    [
+     "locale: en",
+     "locale: vi"
+    ]
+   ],
+   "rules": [
+    "locale-differs",
+    "locale-label-mixed"
+   ],
+   "exit": 0,
+   "why": "A sprint folder whose documents declare different locales; the English labels also disagree with the declared vi."
+  },
+  {
+   "name": "declared-locale-unknown",
+   "root": "valid",
+   "file": "PROGRESS.md",
+   "replaces": [
+    [
+     "locale: en",
+     "locale: fr"
+    ]
+   ],
+   "rules": [
+    "locale-invalid"
+   ],
+   "exit": 1,
+   "why": "A locale that is not shipped is invalid."
+  }
+ ]
+}

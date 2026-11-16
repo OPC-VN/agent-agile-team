@@ -50,3 +50,13 @@ Test chống rò (lõi không chứa dấu riêng của bất kỳ máy, ngườ
   [`scripts/README.md`](../scripts/README.md) mục "Phạm vi `--self`".
 - **Khi thiếu biến, file không đọc được hoặc rỗng:** test chống rò báo **Chưa chạy** (skip có lý do), không
   báo Đạt; `check.py --self` in `WARNING NOT_CONFIGURED`.
+
+## Locale parity and English golden fixtures (SPR-33)
+
+| File | What it checks |
+|---|---|
+| `test_locale_parity.py` | SC-A: every valid root (`fixtures/`, `templates/`, `samples/`, found on disk) and every case of `fixtures/broken.json` runs on the Vietnamese original and on a twin per other shipped locale, made by `_labels.translate` plus the `locale:` line `init --locale` writes. Valid roots must give the same findings (rule, severity, count); negatives must give the same rule keys and exit code. A third shipped locale is included automatically. |
+| `test_golden_en.py` | GC8: `fixtures/en/` is hand-written English, not produced by `translate`: `valid/` (a full four-file sprint), `tiny/SPRINT.md` and `broken.json` (negatives with exact rule keys, plus one clean variant). The set is clean, each negative gives exactly its rules, and its label spans equal those `translate` gives the Vietnamese originals. |
+
+`fixtures/en/` is excluded from the parity roots (it has no Vietnamese original). Table headers that reuse a heading key
+(`Risks`, `Tasks`) are not compared against hand-written singular headers; they are not machine-read.
