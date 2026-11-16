@@ -161,5 +161,3 @@ def test_rf5_deadline_env_cannot_extend_beyond_the_default(value):
 
 def test_rf5_missing_env_gives_the_default():
     assert agile_guard.deadline_seconds({}) == agile_guard.DEADLINE_SECONDS
-
-
