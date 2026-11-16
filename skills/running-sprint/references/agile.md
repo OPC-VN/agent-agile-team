@@ -15,10 +15,12 @@
 Chi tiết: [method/agile.md](../../../method/agile.md) mục 5–7. Điều phối **không ký cổng**: cổng do Gate Delegate phiên mới ký (mẫu brief ở mục 6.3 của file đó: điều phối chỉ điền chỗ `<…>`, không thêm câu, không gợi ý kết luận). Điều phối được tạo phiên phụ, làm mọi việc git trên nhánh sprint, dồn câu hỏi vào báo cuối và lặp tới xong; cơ chế vòng chi tiết thuộc sprint sau.
 
 1. **Trước khi giao mỗi phiên con:** không cần chép file nào cho công tắc (nó theo `session_id`, subagent cùng phiên dùng chung: `method/agile.md` mục 5.2); mỗi phiên con một nhánh riêng; phiên con không tự mở subagent trừ khi brief cho phép, mà cho phép thì mỗi subagent là một dòng sổ và tính vào trần. Brief nêu bảy mục luôn chặn, bốn điều kiện dừng, và quyền không vượt lời cấp. **Khi giao và khi nhận báo**, kiểm `agile_state.py status` còn báo BẬT; thiếu hoặc lệch → phiên con đã ra khỏi rào: dừng nó, ghi `BR` loại (c), soát `git reflog` và nhánh.
-2. **Sổ phiên con** — bảng trong PROGRESS mục "Sổ phiên con", **một dòng mỗi lần giao** (cả Gate Delegate, reviewer, lần giao lại sau review), đủ sáu cột:
+2. **Sổ phiên con** — bảng trong PROGRESS mục "Sổ phiên con", **một dòng mỗi lần giao** (cả Gate Delegate, reviewer, lần giao lại sau review), đủ sáu cột (đúng tên cột của `templates/sprint/PROGRESS.md` mục 6):
 
    | Phiên | vai · tier · model · effort | thư mục/worktree | nhánh | trạng thái | bằng chứng |
    |---|---|---|---|---|---|
+
+   Cột 1 `Phiên` là tên phiên con; cột 2 `vai · tier · model · effort` ghi đủ bốn thứ đó (vai, tier, model, effort) của lần giao; cột 3 thư mục/worktree; cột 4 nhánh; cột 5 trạng thái; cột 6 bằng chứng. Không thêm cột.
 
    Trạng thái chỉ một trong: `đang chạy` · `xong` · `dừng ở điểm an toàn` · `dừng khẩn` · `cạn hạn mức` · `lỗi`. Ghi `xong` chỉ sau khi **tự chạy lại lệnh kiểm** và đọc `git diff`; cột bằng chứng nêu sha và lệnh đã chạy lại. Dòng sổ kế tiếp sẽ vượt trần phiên → vẫn giao nếu việc nằm trong lời cấp; vượt trần chỉ được báo (không chặn, không dừng): ghi `BR` và nêu ở báo cuối (`method/agile.md` mục 2.1). Thiếu dòng `Trần phiên` hoặc `sessions_cap` lệch với PLAN là lỗi hồ sơ cổng (`session-cap-missing`, chặn như mọi bản ghi cổng), không phải chuyện vượt trần.
 3. **Gặp bảy mục luôn chặn hoặc điều kiện (a)–(c):** dừng **đúng bước đó**, ghi `BR`, chạy tiếp phần không phụ thuộc; việc vào báo cuối nếu Gate Delegate không quyết được. Phiên con xin quyền ngoài lời cấp → **từ chối**, ghi `BR`; không nới, không "một lần thôi". Điều kiện (d), PLAN hỏng → dừng cả sprint.

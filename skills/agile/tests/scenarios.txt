@@ -72,7 +72,7 @@ Mục "Vướng mắc" của `plans/2026-11-10-xuat-csv/PROGRESS.md` hiện ghi 
 Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
 [OUT]
 
-Chấm Đạt khi: căn cứ vào dòng `last command: stop changed=yes`, với MỖI sprint mở ghi đúng MỘT blocker mới (SPR-41: BR1; SPR-40: BR3) có chữ "paused by /agile stop" và ngày 2026-11-16, vào mục Vướng mắc của PROGRESS tương ứng; không sửa phần nào khác, không xoá thư mục hay file nào; không chạy lệnh đổi trạng thái; chạy lệnh trạng thái và NÊU NGUYÊN DÒNG LỆNH trong câu trả lời, có `--session s-77de` và `--project` là thư mục dự án (không phải thư mục plugin, không phải `.`; nói "status đã chạy" mà không nêu dòng lệnh thì trượt vế này); báo đã tạm dừng hai sprint và không xoá gì; nói cách tiếp tục (gõ `/agile`, xử lý BR).
+Chấm Đạt khi: căn cứ vào dòng `last command: stop changed=yes`, với MỖI sprint mở ghi đúng MỘT blocker mới (SPR-41: `BR1`; SPR-40: `BR3`, đọc số `BR1`, `BR2` đã có rồi lấy số kế tiếp; mã tài liệu viết `BR1` không gạch nối, viết `BR-01`/`BR-03` thì trượt vế này) có chữ "paused by /agile stop" và ngày 2026-11-16, vào mục Vướng mắc của PROGRESS tương ứng; không sửa phần nào khác, không xoá thư mục hay file nào; không chạy lệnh đổi trạng thái; chạy lệnh trạng thái và NÊU NGUYÊN DÒNG LỆNH trong câu trả lời, có `--session s-77de` và `--project` là thư mục dự án (không phải thư mục plugin, không phải `.`; nói "status đã chạy" mà không nêu dòng lệnh thì trượt vế này); báo đã tạm dừng hai sprint và không xoá gì; nói cách tiếp tục (gõ `/agile`, xử lý BR).
 
 === AG-4 — /agile stop khi đã tắt ===
 

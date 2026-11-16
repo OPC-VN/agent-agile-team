@@ -62,11 +62,12 @@ The hook prints nothing to you; the outcome is recorded in the state and shown b
    blocker, no file edit). A missing line, a command other than `stop`, or a status showing ON means the stop did not
    happen: say so and stop there (step 4 of section 2).
 2. **`changed=yes` and at least one `open sprint:` line:** for **each** open sprint append **one** blocker row to the
-   blocker section (section 3, "Vướng mắc") of that sprint's `PROGRESS.md`: the next free `BR-NN`, text
-   `paused by /agile stop`, today's date, status `mở`. A sprint with `SPRINT.md` instead of `PROGRESS.md` gets the same
+   blocker section (section 3, "Vướng mắc") of that sprint's `PROGRESS.md`: the next free `BR<number>` (document
+   codes have no hyphen: read the `BR` numbers already in that PROGRESS, including closed ones, and take the next, e.g. `BR3`
+   after `BR1`, `BR2`; `BR1` when there is none), text `paused by /agile stop`, today's date, status `mở`. A sprint with `SPRINT.md` instead of `PROGRESS.md` gets the same
    one row in its blocker part. With no open sprint write nothing.
 3. Edit nothing else. Delete nothing: sprint folders, ledgers, SPEC, PLAN, REPORT and `.agile.json` stay as they are.
-4. Say which sprints were paused and that nothing was removed; resuming means typing `/agile` again and clearing the `BR`.
+4. Say which sprints were paused and that nothing was removed; resuming means typing `/agile` again and clearing that `BR<number>`.
 
 ## 4. What ON and OFF change for the agent
 

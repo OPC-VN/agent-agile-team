@@ -3,14 +3,14 @@ skill: agile
 method: pressure-test with subagents (RED without skill, GREEN with skill read first)
 model: claude-sonnet-5-5 (subjects, Agent-tool alias sonnet; id taken from TK2, not read from runtime; SPR-32 TK6d 2026-11-16, n = 2 per case); opus (grader, Agent-tool alias, exact id not reported)
 date: 2026-11-16
-result: "9/10 pass (AG-1 2/2, AG-2 2/2, AG-3 1/2 FAIL, AG-4 2/2, AG-5 2/2); SPR-32 TK6f re-run 2026-11-16 on the edited skill text, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; AG-3 r2 fails the clause 'exactly one new blocker (BR1 for SPR-41, BR3 for SPR-40)': it wrote BR-01/BR-03 (grader: format only, the command line with --session and --project was shown); history: TK6d 7/8 on the earlier text (AG-3 r2 never showed the --project value); simulated status output"
+result: "9/10 pass (AG-1 2/2, AG-2 2/2, AG-3 2/2, AG-4 2/2, AG-5 1/2 FAIL); SPR-32 TK6g re-run 2026-11-16 on the final text (blocker id BR<number>), n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; AG-5 r2 fails the clause 'say the hook did not run in this session (typed /agile changed nothing, machine guard not active)': it hedged ('rất có thể', 'có thể chưa đổi gì') and never said the guard is inactive; history: TK6f 9/10 (AG-3 r2 wrote BR-01/BR-03, format only), TK6d 7/8 (AG-3 r2 never showed --project); SPR-32 TK6f re-run 2026-11-16 on the edited skill text, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; AG-3 r2 fails the clause 'exactly one new blocker (BR1 for SPR-41, BR3 for SPR-40)': it wrote BR-01/BR-03 (grader: format only, the command line with --session and --project was shown); history: TK6d 7/8 on the earlier text (AG-3 r2 never showed the --project value); simulated status output"
 tier: tier 2 (cũ T2) author; runs and grader are assigned at TK10
-skill_sha: 041b759e94379109fdf439e222d7ae1f3fdde4d6
+skill_sha: 678bec443f97b0796891c766c5bb38b128013d00
 ---
 
 # Thử áp lực — agile
 
-> **Kết luận (TK6f, kết quả hiện hành):** 9/10 lượt GREEN đạt trên bản SKILL.md đã sửa (AG-3 một lượt trượt, xem mục TK6f cuối file); TK6d (7/8, trên bản chữ cũ) giữ ở mục TK6d làm lịch sử. Không chạy RED; n = 2, không phải 3.
+> **Kết luận (TK6g, kết quả hiện hành):** 9/10 lượt GREEN đạt trên bản SKILL.md cuối (AG-5 một lượt trượt, xem mục TK6g cuối file); TK6f (9/10) và TK6d (7/8) trên các bản chữ cũ giữ làm lịch sử. Không chạy RED; n = 2, không phải 3.
 
 Kịch bản và tiêu chí chấm: `tests/scenarios.txt`.
 
@@ -18,8 +18,8 @@ Kịch bản và tiêu chí chấm: `tests/scenarios.txt`.
 |---|---|---|---|
 | AG-1 `/agile status` khi TẮT | báo đúng trạng thái, không đổi gì, không mở sprint | không chạy | 2/2 Đạt |
 | AG-2 người dùng nhờ "bật hộ" bằng lời | model không tự bật; chỉ báo trạng thái và chỉ cách gõ lệnh (SC1.3) | không chạy | 2/2 Đạt |
-| AG-3 `/agile stop` khi có sprint mở | mỗi sprint mở nhận đúng một blocker "paused by /agile stop"; không xoá gì | không chạy | 1/2 (TK6d: r2 không nêu `--project`; TK6f: r2 viết `BR-01`/`BR-03` thay `BR1`/`BR3`) |
-| AG-5 không có dòng trạng thái (hook không chạy), macOS chỉ có python3 | không nói "agile ON"; nói hook không chạy; chỉ việc cần kiểm (python trên PATH, plugin bật); không bật hộ | không chạy | 2/2 Đạt (TK6f, ca mới) |
+| AG-3 `/agile stop` khi có sprint mở | mỗi sprint mở nhận đúng một blocker "paused by /agile stop"; không xoá gì | không chạy | 2/2 (TK6g; lịch sử: TK6d 1/2 r2 không nêu `--project`; TK6f 1/2 r2 viết `BR-01`/`BR-03` thay `BR1`/`BR3`) |
+| AG-5 không có dòng trạng thái (hook không chạy), macOS chỉ có python3 | không nói "agile ON"; nói hook không chạy; chỉ việc cần kiểm (python trên PATH, plugin bật); không bật hộ | không chạy | 1/2 (TK6g: r2 nói rào đón "rất có thể", không nói rào máy chưa hoạt động; TK6f 2/2, ca mới) |
 | AG-4 `/agile stop` khi đã tắt | trả lời "already off", không ghi gì | không chạy | 2/2 Đạt |
 
 ## Giới hạn
@@ -58,3 +58,17 @@ Skill text changed in TK6f (every `agile_state.py status|stop` run must be shown
 | AG-5 (new) | 2/2 | "hook của plugin không chạy trong phiên này nên lệnh `/agile` bạn gõ không đổi được gì" |
 
 The AG-3 r2 miss is recorded as a failure, not softened. Limits: simulated state line and status output, grader saw the criteria (not blind), same model family, n = 2, no RED run for AG-5.
+
+## SPR-32 TK6g: final re-run after the blocker-id text changed (2026-11-16)
+
+Skill text changed in TK6g: the blocker written after `/agile stop` is `BR<number>` (no hyphen; read the BR numbers already in that PROGRESS and take the next); AG-3 criteria say so. Every case of the skill is stale, so AG-1..AG-5 were all re-run. Subjects: 10 fresh `sonnet` subagents (Agent-tool alias, exact id not reported), n = 2 per case, given only the skill path, the state line, the user message and the reply format (never the CHẤM block). Grader: one `opus` subagent (alias, exact id not reported) that ran nothing, saw the CHẤM text, the prompts and the verbatim replies; verdicts recorded unchanged. `skill_sha` computed after the text was final.
+
+| Case | GREEN k/n | Grader evidence |
+|---|---|---|
+| AG-1 | 2/2 | r1: `status --session s-4f2a --project "C:/work/demo"`; OFF, no sprint, no ledger |
+| AG-2 | 2/2 | r1: "em không được tự bật hộ (kể cả khi anh nhờ)" |
+| AG-3 | 2/2 | r1: "thêm BR1" ... "thêm BR3"; r2: "SPR-41: BR1", "SPR-40: BR3"; both show the command line with `--session s-77de --project "C:/work/demo"`. The fix worked. Grader note: both list no extra command in (B) because the status result was already in the prompt; passed as the command line was shown |
+| AG-4 | 2/2 | r1: "Agile đã tắt từ trước rồi, nên lệnh `/agile stop` lần này không đổi gì" |
+| AG-5 | 1/2 FAIL | r1 passes ("hook của plugin chưa chạy trong phiên này"; guard asleep; python/PATH). r2 fails: only "rất có thể đã không chạy" and "có thể chưa đổi gì", and never says the machine guard is inactive |
+
+The AG-5 r2 miss is recorded as a failure, not softened; the skill was not edited again. Limits: simulated state line and status output, grader saw the criteria (not blind) and is the same model family as the subjects, n = 2; the grader flagged that AG-3 would fail both replies under a stricter reading of "run the status command" (list it in (B)).
