@@ -20,8 +20,9 @@ của nền tảng hay giá trị `AGENT_AGILE_STATE_DIR`; đường tương đ�
 TK6h (R3): (e) `cd`/`pushd`/`Set-Location`/`env -C`/`sudo -D` tới thư mục trạng thái HAY BẤT KỲ TỔ TIÊN của nó bị chặn; sau mọi `cd` (thư mục hiện hành không còn
 biết) đường tương đối bị chặn nếu có thể trỏ vào thư mục trạng thái từ một tổ tiên (`state/*`, `mv state x`, `*`); (f) lệnh trong nhóm chỉ-đọc mà ghi được (`sort -o`,
 `uniq a b`, `xxd a b`, `find -fprint`, `git diff --output`, `awk -i inplace`) không còn được coi là chỉ-đọc; (g) đường trạng thái trong `$(…)`, dấu huyền, `<(…)`
-và thân heredoc đưa vào trình thông dịch qua ống (`cat <<EOF | python`) bị chặn dù câu ngoài là `echo`; (h) `claude -p`/`--resume` kèm lệnh `/agile` hay
-`/agent-agile-team:agile` bị chặn; `AGILE_GUARD_DEADLINE_S` chỉ rút ngắn được hạn (nan/inf/<=0/chữ về 6 s).
+và thân heredoc đưa vào trình thông dịch qua ống (`cat <<EOF | python`) bị chặn dù câu ngoài là `echo`; (h) câu lệnh CHẠY `claude`/`claude-code`/`npx @anthropic-ai/claude-code` (xét từng câu, không phải chữ `claude` trong `grep … hosts/claude`) kèm `-p`/`--resume` và prompt mở đầu bằng `/agile` hay
+`/agent-agile-team:agile` bị chặn; TK6i (R4): `powershell -EncodedCommand` được giải base64 rồi xét lại, tên script có ký tự đại diện (`agile_st*.py`) bị chặn, ký tự đại diện
+sau `cd` có đuôi cố định khác `.json` (`**/*.ts`) được qua; `AGILE_GUARD_DEADLINE_S` chỉ rút ngắn được hạn (nan/inf/<=0/chữ về 6 s).
 
 GIỚI HẠN ĐÃ BIẾT (nói thẳng): so khớp chuỗi LUÔN lách được bằng gián tiếp (`python -c` ghép tên lệnh/đường từ mảnh, file script viết trước
 rồi chạy sau, biến chưa biết giá trị, `getattr`, `eval` dựng chuỗi). Luật này là sàn chống TAI NẠN, không phải bằng chứng an ninh; cùng tài
@@ -307,9 +308,18 @@ IMPORT_STATE = re.compile(
     r"|(?:spec_from_file_location|run_path)\b[^\n]{0,160}agile_(?:state|hook)", re.IGNORECASE)
 DOUBLE_SLASH = re.compile(r"/{2,}")
 RAW_SEPARATORS = re.compile(r"&&|\|\||[;|&\n\r]")  # như SEPARATORS nhưng KHÔNG tách ở ngoặc/dấu huyền: `(Get-Item p).Delete()` và `$(rm p)` giữ nguyên một câu
-CLAUDE_SPAWN = re.compile(r"(?<![\w.-])claude(?:\.\w+)?(?![\w./-])", re.IGNORECASE)  # TK6h RF4: tên chương trình `claude` (cả `/usr/bin/claude`, `claude.cmd`), không `.claude/`
-SPAWN_FLAG = re.compile(r"(?<![\w-])(?:-p|--print|--resume|-r|--continue|-c)(?![\w-])")
-AGILE_SLASH = re.compile(r"(?<![\w.])/(?:agent-agile-team:)?agile(?![\w-])", re.IGNORECASE)  # lệnh gạch chéo `/agile` hay `/agent-agile-team:agile`
+CLAUDE_NAMES = frozenset({"claude", "claude-code"})  # TK6i RF4: tên chương trình (`claude`, `claude.cmd`, `claude-code`, `@anthropic-ai/claude-code@latest`)
+CLAUDE_LAUNCHERS = frozenset({"npx", "pnpx", "bunx", "npm", "pnpm", "yarn", "bun", "node", "nodejs", "deno", "uvx", "volta", "fnm"})  # công cụ chạy gói/script: `claude` có thể là đối số sau nó
+CLAUDE_SUFFIXES = (".exe", ".cmd", ".bat", ".ps1", ".com", ".js", ".mjs", ".cjs")
+CLAUDE_LEAD = frozenset({"&", ".", "call", "start"})  # `& claude …` (PowerShell), `. claude`, `call claude`, `start claude`
+SPAWN_FLAG = re.compile(r"(?:-p|--print|--resume|-r|--continue|-c)(?:=.*)?", re.DOTALL)  # cả token, không phải chữ nằm trong prompt
+AGILE_PROMPT = re.compile(r"\s*/(?:agent-agile-team:)?agile(?![\w-])", re.IGNORECASE)  # prompt BẮT ĐẦU bằng lệnh gạch chéo `/agile` hay `/agent-agile-team:agile`
+ECHO_COMMANDS = frozenset({"echo", "printf", "write-output", "write-host"})  # `echo "/agile stop" | claude -p`: prompt đi qua ống
+ENCODED_FLAG_FULL = "-encodedcommand"
+ENCODED_MAX_CHARS = 262144  # TK6i RF2: phần base64 dài hơn thì không giải mã (chặn như lồng quá sâu)
+ENCODED_NAMES = frozenset({"powershell", "pwsh"})
+GLOB_MIN_RUN = 4  # TK6i RF3: tên script có ký tự đại diện chỉ tính khi có đoạn chữ thường dài ≥ 4 (`agile_st*.py` có; `*.py` không)
+SWITCH_SCRIPTS = (("state", "agile_state.py", "agile_state"), ("hook", "agile_hook.py", "agile_hook"))
 PY_OR_HEREDOC = re.compile(r"(?<![\w.-])(?:python[0-9.]*|py|pythonw)(?:\.exe)?(?![\w-])|<<", re.IGNORECASE)
 
 
@@ -414,6 +424,7 @@ def _reaches_state(norm: str, ctx: "Context", ancestor: bool, anywhere: bool) ->
     if not parts:
         return False
     bare = len(parts) == 1 and not GLOB_CHARS & set(parts[0])
+    globbed = bool(GLOB_CHARS & set(norm))
     for directory in ctx.state_dirs:
         dir_parts = [p for p in directory.replace("\\", "/").split("/") if p]
         if bare:
@@ -425,8 +436,17 @@ def _reaches_state(norm: str, ctx: "Context", ancestor: bool, anywhere: bool) ->
             for start in (range(len(parts)) if anywhere else (0,)):
                 sub = parts[start:]
                 if (len(sub) >= len(rest) or ancestor) and all(p == "**" or fnmatch.fnmatchcase(r, p) for p, r in zip(sub, rest)):
+                    if globbed and len(sub) > len(rest) and not _could_name_state_file(sub[-1]):
+                        continue  # TK6i SF1: mẫu `**/*.ts`, `*/config.yml` đi vào trong thư mục trạng thái nhưng đuôi không thể là `.json`
                     return True
     return False
+
+
+def _could_name_state_file(component: str) -> bool:
+    """TK6i SF1: thành phần CUỐI của một mẫu đi vào bên trong thư mục trạng thái có thể khớp một file trạng thái (`session-*.json`, `repo-*.json`)?
+    Chữ cố định sau ký tự đại diện cuối cùng (`.ts` của `*.ts`, cả `config.yml`) không thể là đuôi, hay một phần đuôi, của `.json` thì không khớp được."""
+    tail = re.split(r"[*?\[\]]", component)[-1]
+    return not tail or ".json".endswith(tail) or tail.endswith(".json")
 
 
 def _covers_state(text: str, ctx: "Context") -> bool:
@@ -442,8 +462,6 @@ def _raw_tamper(text: str) -> bool:
     """Luật trên VĂN BẢN lệnh nguyên (trước khi bỏ thân heredoc): (c) `import agile_state/agile_hook` trong lệnh có Python/heredoc,
     (d) đặt hay export `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` (TK6e S2: xét từng câu lệnh, bỏ câu chỉ-đọc như `grep -r CLAUDE_PROJECT_DIR= .`)."""
     if IMPORT_STATE.search(text) and PY_OR_HEREDOC.search(text):
-        return True
-    if CLAUDE_SPAWN.search(text) and SPAWN_FLAG.search(text) and AGILE_SLASH.search(text):  # TK6h RF4: phiên `claude -p`/`--resume` mang session_id riêng, hook áp lệnh cho phiên đó, không cho phiên này
         return True
     if not ENV_REDIRECT.search(text):
         return False
@@ -511,17 +529,98 @@ def _script_positions(tokens: list[str]) -> list[int]:
     return found
 
 
+def _switch_script(token: str) -> str | None:
+    """`state` hay `hook` nếu `token` là (tên) script công tắc; tên có ký tự đại diện (`agile_st*.py`, `agile_sta?e.py`) cũng tính khi nó khớp tên script
+    (TK6i RF3) và có đoạn chữ cố định ≥ GLOB_MIN_RUN (không bắt `*.py`)."""
+    norm = token.replace("\\", "/")
+    found = SCRIPT_REF.search(norm)
+    if found:
+        return found.group(1).lower()
+    base = os.path.basename(norm).lower()
+    if not GLOB_CHARS & set(base) or max(len(run) for run in re.split(r"[*?\[\]]+", base)) < GLOB_MIN_RUN:
+        return None
+    for kind, filename, stem in SWITCH_SCRIPTS:
+        if fnmatch.fnmatchcase(filename, base) or fnmatch.fnmatchcase(stem, base):
+            return kind
+    return None
+
+
+def _claude_program(token: str) -> bool:
+    """`token` là chương trình Claude Code: `claude`, `claude.cmd`, `/usr/bin/claude`, `claude-code`, `@anthropic-ai/claude-code[@ver]`, `…/claude-code/cli.js`
+    (TK6i RF4). Đường chỉ CHỨA chữ `claude` (`hosts/claude/README.md`) không tính; `hosts/claude` thì có, nhưng chỉ xét ở vị trí lệnh hay sau công tắc chạy gói."""
+    norm = token.replace("\\", "/").rstrip("/")
+    base = os.path.basename(norm).lower()
+    if "@" in base and not base.startswith("@"):
+        base = base.split("@", 1)[0]
+    for suffix in CLAUDE_SUFFIXES:
+        if base.endswith(suffix):
+            base = base[:-len(suffix)]
+            break
+    return base in CLAUDE_NAMES or (base in ("cli", "index", "main") and os.path.basename(os.path.dirname(norm)).lower() in CLAUDE_NAMES)
+
+
+def _claude_call(tokens: list[str]) -> list[str] | None:
+    """TK6i MF1: câu lệnh (đã bỏ tiền tố) CHẠY `claude` (token lệnh, hay sau `npx`/`node`/`pnpm dlx`…) kèm cờ phiên (`-p`, `--print`, `--resume`, `-r`,
+    `--continue`, `-c`): các token SAU chương trình; không thì None. Chữ `claude` trong `grep … hosts/claude`, `git log`, thông điệp commit không phải lệnh chạy."""
+    index = 0
+    while index < len(tokens) and tokens[index].lower() in CLAUDE_LEAD:
+        index += 1
+    if index >= len(tokens):
+        return None
+    found = index if _claude_program(tokens[index]) else None
+    if found is None and _exe_name(tokens[index]) in CLAUDE_LAUNCHERS:
+        found = next((i for i in range(index + 1, min(len(tokens), index + 8)) if _claude_program(tokens[i])), None)
+    if found is None:
+        return None
+    rest = tokens[found + 1:]
+    return rest if any(SPAWN_FLAG.fullmatch(t) for t in rest) else None
+
+
+def _claude_spawns_agile(tokens: list[str]) -> bool:
+    """Câu lệnh chạy `claude` kèm cờ phiên và một đối số (prompt) BẮT ĐẦU bằng `/agile` hay `/agent-agile-team:agile`: phiên con mang `session_id` riêng, hook của
+    nó áp lệnh cho chính nó, không cho phiên này (TK6h RF4). `claude -p "giải thích /agile"` (lệnh không đứng đầu prompt) không tính."""
+    rest = _claude_call(tokens)
+    return rest is not None and any(AGILE_PROMPT.match(t) for t in rest)
+
+
+def _encoded_item(args: list[str], ctx: "Context", depth: int) -> tuple[bool, str | None]:
+    """TK6i RF2: `powershell|pwsh -EncodedCommand <base64>` (cả dạng rút gọn `-e`, `-enc`, `-ec`): giải base64 → UTF-16LE rồi xét văn bản đó như một lệnh
+    (đệ quy tối đa MAX_UNWRAP lớp; quá dài bị chặn như lồng quá sâu). Không có cờ hay không giải mã được → (False, None): đường thư mục trạng thái nằm
+    thẳng trong văn bản lệnh gốc đã bị luật văn bản thô chặn, còn lại cho qua."""
+    for index, arg in enumerate(args):
+        low = arg.lower()
+        if len(low) >= 2 and low.startswith("-e") and (ENCODED_FLAG_FULL.startswith(low) or low == "-ec"):
+            break
+    else:
+        return False, None
+    value = args[index + 1] if index + 1 < len(args) else ""
+    if not value:
+        return False, None
+    if len(value) > ENCODED_MAX_CHARS or depth >= MAX_UNWRAP:
+        return True, NESTED
+    import base64  # lazy: chỉ khi có -EncodedCommand (khởi động rào, SPR-32 B4)
+    try:
+        decoded = base64.b64decode(value, validate=True).decode("utf-16-le")
+    except ValueError:  # binascii.Error và UnicodeDecodeError đều là ValueError
+        return False, None
+    if _raw_tamper(decoded) or _raw_state_tamper(decoded, ctx):
+        return True, TAMPER
+    return True, _analyze(decoded, ctx, depth + 1)
+
+
 def _tamper_item(tokens: list[str], ctx: "Context") -> str | None:
     """TAMPER nếu một câu lệnh (a) ghi/đổi/xoá thứ nằm trong thư mục trạng thái (chuyển hướng tới đó, lệnh không chỉ-đọc có đối số trỏ tới đó, `cd` vào
     đó) hay (b) chạy `agile_state.py` với lệnh con đổi công tắc, hay chạy `agile_hook.py`. Lệnh chỉ-đọc (`cat`, `ls`, `grep`…) và `agile_state.py status|get` qua."""
     if not tokens:
         return None
     name, args = _exe_name(tokens[0]), tokens[1:]
+    if _claude_spawns_agile(tokens):  # TK6i MF1/RF4: xét theo câu lệnh, không theo chữ `claude` rải trong văn bản
+        return TAMPER
     read_only = _read_only(name, args, ctx)
     if not read_only:
         for position in _script_positions(tokens):
-            script = SCRIPT_REF.search(tokens[position].replace("\\", "/"))
-            if script and (script.group(1).lower() == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):
+            kind = _switch_script(tokens[position])
+            if kind and (kind == "hook" or any(a.lower() in SWITCH_COMMANDS for a in tokens[position + 1:])):
                 return TAMPER
     ancestor = name in DELETE_COMMANDS or name in MOVE_COMMANDS or name in CD_COMMANDS  # TK6h RF1: `cd` tới tổ tiên của thư mục trạng thái cũng là phá (đường tương đối sau đó vào được)
     ref_at: list[int] = []
@@ -1239,6 +1338,10 @@ def _command_item(tokens: list[str], ctx: Context, depth: int) -> str | None:
     if name in EVAL_COMMANDS:
         return _nested_string(" ".join(args), ctx, depth)
     if name in SHELL_WRAPPERS:
+        if name in ENCODED_NAMES:  # TK6i RF2: `powershell -EncodedCommand <base64>`
+            handled, item = _encoded_item(args, ctx, depth)
+            if handled:
+                return item
         if "<<<" in args and args.index("<<<") + 1 < len(args):  # bash <<< "git push"
             return _nested_string(" ".join(args[args.index("<<<") + 1:]), ctx, depth)
         for index, arg in enumerate(args):
@@ -1280,12 +1383,15 @@ def _analyze(text: str, ctx: Context, depth: int = 0) -> str | None:
     parts = SEP_KEEP.split(text)  # [lệnh, dấu ngăn, lệnh, …]
     listing: list[str] | None = None  # đường mà một `Get-ChildItem -Recurse` phía trước ống dẫn đang liệt kê
     state_listed = False  # câu ngay trước ống dẫn liệt kê thư mục trạng thái hay thư mục bao nó (`ls <S>* | xargs rm`, TK6e RF2)
+    agile_echoed = False  # câu ngay trước ống dẫn là `echo "/agile stop"`: `| claude -p` nhận prompt đó qua stdin (TK6i RF4)
     for index in range(0, len(parts), 2):
         _tick()
         if index and parts[index - 1] in CHAIN_BREAKS:
             listing = None
         piped_from_state = state_listed and index > 0 and parts[index - 1] == "|"
+        piped_agile = agile_echoed and index > 0 and parts[index - 1] == "|"
         state_listed = False
+        agile_echoed = False
         tokens = tokenize(parts[index])
         item = _segment_item(list(tokens), ctx, depth)
         stripped, _ = _strip_prefixes(list(tokens), Context(set(), ctx.cwd, light=True))
@@ -1293,6 +1399,9 @@ def _analyze(text: str, ctx: Context, depth: int = 0) -> str | None:
             name = _exe_name(stripped[0])
             if piped_from_state and (name in DELETE_COMMANDS or name in MOVE_COMMANDS):
                 return TAMPER
+            if piped_agile and _claude_call(stripped) is not None:
+                return TAMPER
+            agile_echoed = name in ECHO_COMMANDS and any(AGILE_PROMPT.match(a) for a in stripped[1:])
             lists = name in LISTING_COMMANDS or name == "find" or name in ("get-item", "gi")
             state_listed = lists and any(_state_ref(a, ctx, ancestor=True) for a in stripped[1:] if not a.startswith("-"))
             paths = _recursive_listing(name, stripped[1:])

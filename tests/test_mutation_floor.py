@@ -229,7 +229,21 @@ def heredoc_pipe_interpreter_open(root: Path) -> None:
 
 
 def claude_spawn_open(root: Path) -> None:
-    edit(root, GUARD, "if CLAUDE_SPAWN.search(text) and SPAWN_FLAG", "if False and CLAUDE_SPAWN.search(text) and SPAWN_FLAG")
+    edit(root, GUARD, "if _claude_spawns_agile(tokens):", "if False and _claude_spawns_agile(tokens):")
+
+
+def claude_anywhere(root: Path) -> None:
+    """TK6i MF1: luật `claude -p` lại xét chữ `claude` ở BẤT KỲ token nào (không phải token lệnh): `grep -r "/agile" hosts/claude` bị chặn nhầm."""
+    edit(root, GUARD, "found = index if _claude_program(tokens[index]) else None", "found = next((i for i, t in enumerate(tokens) if 'claude' in t.lower()), None)")
+    edit(root, GUARD, "rest = tokens[found + 1:]", "rest = tokens")
+
+
+def encoded_command_open(root: Path) -> None:
+    edit(root, GUARD, "handled, item = _encoded_item(args, ctx, depth)", "handled, item = False, None")
+
+
+def script_glob_open(root: Path) -> None:
+    edit(root, GUARD, "if not GLOB_CHARS & set(base) or max(len(run)", "if True or max(len(run)")
 
 
 def read_only_writers_open(root: Path) -> None:
@@ -291,6 +305,9 @@ MUTATIONS = {
     "substitution-scan-open": Mutation(substitution_scan_open, "tests/test_agile_guard_r3.py::test_rf3_state_path_inside_a_substitution_or_a_heredoc_for_an_interpreter_is_blocked", ("tests/test_agile_guard_r3.py",)),
     "heredoc-pipe-interpreter-open": Mutation(heredoc_pipe_interpreter_open, "tests/test_agile_guard_r3.py::test_rf3_state_path_inside_a_substitution_or_a_heredoc_for_an_interpreter_is_blocked", ("tests/test_agile_guard_r3.py",)),
     "claude-spawn-open": Mutation(claude_spawn_open, "tests/test_agile_guard_r3.py::test_rf4_spawning_claude_with_an_agile_command_is_blocked", ("tests/test_agile_guard_r3.py",)),
+    "claude-anywhere": Mutation(claude_anywhere, "tests/test_agile_guard_r4.py::test_mf1_mentions_and_path_fragments_without_a_claude_command_stay_allowed", ("tests/test_agile_guard_r4.py",)),
+    "encoded-command-open": Mutation(encoded_command_open, "tests/test_agile_guard_r4.py::test_rf2_encoded_command_is_decoded_and_analysed", ("tests/test_agile_guard_r4.py",)),
+    "script-glob-open": Mutation(script_glob_open, "tests/test_agile_guard_r4.py::test_rf3_script_names_with_wildcards_that_match_the_switch_scripts_are_blocked", ("tests/test_agile_guard_r4.py",)),
     "read-only-writers-open": Mutation(read_only_writers_open, "tests/test_agile_guard_r3.py::test_rf2_read_only_names_that_write_into_the_state_directory_are_blocked", ("tests/test_agile_guard_r3.py",)),
     "deadline-env-trusted": Mutation(deadline_env_trusted, "tests/test_agile_guard_r3.py::test_rf5_invalid_deadline_env_falls_back_to_the_default", ("tests/test_agile_guard_r3.py",)),
 }
