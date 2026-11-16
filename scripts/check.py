@@ -17,6 +17,7 @@ Hợp đồng luật: `templates/README.md`; mô tả từng luật: `scripts/RE
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import math
 import os
@@ -31,6 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _agile_rules as rules  # noqa: E402
 import _common as c  # noqa: E402
+import _labels as lab  # noqa: E402
 from _agile_rules import (AGILE_EXCLUSIONS, DATE, DELEGATION_KEYS, DELEGATION_OPTIONAL_KEYS,  # noqa: E402,F401
                               MOMENT, parse_moment)
 
@@ -139,6 +141,7 @@ DELEGATION_FORBIDDEN_TAGS = {"secret", "auth"}  # vùng cấm duyệt thay (SPEC
 DELEGATION_SPECIALISTS = {"security-specialist", "data-specialist", "backend-specialist", "frontend-specialist"}  # danh sách chuyên đề kiểm định (dùng chung cho roles, self-review và người duyệt thay)
 DELEGATION_RECORD = "Bản ghi duyệt thay"  # tiêu đề cấp 2 ở plan, report, sprint
 DELEGATION_LABELS = ("Phương án chọn:", "Phương án bị loại:", "Nếu sai thì tốn gì:")
+DELEGATION_KEYS_FIELD = ("field.delegation_chosen", "field.delegation_rejected", "field.delegation_cost_if_wrong")
 FLOOR_TABLE_HEADING = "file luật và file sàn cứng sẽ chạm"  # tiêu đề cấp 2 của bảng khai file luật trong PLAN (so casefold)
 DELEGATION_QUOTE = "duyệt thay:"  # tiền tố bắt buộc của `gate_N_quote`
 EXECUTORS = {"analyst", "architect", "implementer", "qa", "researcher"}
@@ -152,6 +155,7 @@ WIDTH_KEY = {"RQ": "request", "FS": "feature", "SPR": "sprint"}
 # Ngày hiệu lực luật `plain-summary` (SPR-21 FR4): hồ sơ có `created` từ ngày này mới bị xét. Tạm đặt xa; TK10 chốt ngày thật.
 PLAIN_SUMMARY_EFFECTIVE = "2026-11-14"
 PLAIN_SUMMARY_HEADING = "Tóm tắt cho người không chuyên"
+_PLAIN_SUMMARY_HEADING = re.compile(r"^##\s+(?:[0-9]+(?:\.[0-9]+)*\.?\s+)?" + lab.alternation("heading.plain_summary") + r"\s*$")
 
 REQUIRED_HEADINGS = {
     "spec": ("Bối cảnh", "Câu chuyện người dùng", "Yêu cầu chức năng", "Tiêu chí thành công", "Ngoài phạm vi", "Câu hỏi cần làm rõ"),
@@ -165,6 +169,52 @@ REQUIRED_HEADINGS = {
     "sprints": ("Đang mở", "Timeline"),
     "specs": ("Đang mở", "Danh mục"),
 }
+# Label keys (labels/<locale>.json) of REQUIRED_HEADINGS, same order. Matching goes through these keys; the Vietnamese
+# phrases above stay for rule messages and are pinned to the tables by tests/test_labels.py.
+REQUIRED_HEADING_KEYS = {
+    "spec": ("context", "user_stories", "functional_requirements", "success_criteria", "out_of_scope", "clarification_questions"),
+    "plan": ("goal", "architecture", "common_constraints", "review_focus", "tasks", "risks", "human_decisions", "estimate"),
+    "progress": ("status_table", "log", "blockers", "current_review_round"),
+    "report": ("plain_summary", "verification_results", "reviewer_findings", "remaining_risks", "usage_changes_rollback",
+               "lessons", "leftovers", "review_retro", "gate_2"),
+    "sprint": ("part_spec", "part_plan", "part_progress", "part_report"),
+    "feature": ("current_behaviour", "criteria_in_force", "known_limits", "related_decisions", "sprint_history"),
+    "requests": ("open", "timeline"),
+    "sprints": ("open", "timeline"),
+    "specs": ("open", "catalog"),
+}
+SPRINT_TINY_KEYS = ("tiny_plan", "result")
+# ASCII labels that check.py has always matched as a prefix of the heading (SPEC, PLAN, ..., Timeline): prefix at a word boundary.
+PREFIX_HEADINGS = {"part_spec", "part_plan", "part_progress", "part_report", "timeline", "review_retro"}
+
+
+@functools.lru_cache(maxsize=None)
+def _alts(key: str) -> tuple:
+    """Every label of a key in every shipped locale (accept-any-locale matching, SPR-33 D2)."""
+    return tuple(text for texts in lab.labels_of(key).values() for text in texts)
+
+
+def _eq(text: str, key: str) -> bool:
+    """Whole-text equality ignoring case with a label of the key; the caller strips markers as before. Vietnamese keeps today's test."""
+    folded = text.casefold()
+    return any(folded == label.casefold() for label in _alts(key))
+
+
+def _starts(text: str, key: str, tail: str = "") -> bool:
+    """The text starts, case-sensitively, with a label of the key followed by tail (Vietnamese keeps today's startswith)."""
+    return any(text.startswith(label + tail) for label in _alts(key))
+
+
+def _starts_fold(text: str, key: str) -> bool:
+    """Like _starts, ignoring case."""
+    folded = text.casefold()
+    return any(folded.startswith(label.casefold()) for label in _alts(key))
+
+
+def _has_heading(heading: str, key: str) -> bool:
+    """A level-2 heading (numbering removed) carries the label: accented Vietnamese labels as a substring as today, the
+    ASCII labels of PREFIX_HEADINGS as a prefix, every other (English) label as the whole heading (GC1)."""
+    return lab.startswith(heading, f"heading.{key}") if key in PREFIX_HEADINGS else lab.contains(heading, f"heading.{key}")
 
 ASK_COUNT_LINE = re.compile(r"số lượt đức phải trả lời[^0-9\n]*[0-9]", re.IGNORECASE)  # FR7.4: dòng đếm lượt có số
 MERGED_MAIN = re.compile(r"đã gộp[^.\n]*(?:\bmain\b|nhánh chính)")  # FR7.2: bản tin khai đã gộp vào nhánh chính (chữ đã hạ về chữ thường)
@@ -174,8 +224,12 @@ HEADING_LEVEL = re.compile(r"^(#{1,6})\s")  # dòng tiêu đề Markdown; cấp 
 HEX_SHA = re.compile(r"\b[0-9a-f]{7,40}\b")
 
 PLAN_GOAL_LABELS = ("Mục tiêu sprint:", "Kết quả mong muốn / xong khi:", "Rủi ro cần chú ý:")  # SPEC 7.8
+PLAN_GOAL_KEYS = ("field.plan_goal", "field.plan_desired_result", "field.plan_risk_watch")
+_PLAN_GOAL_HEADING = re.compile(r"^##\s+" + lab.alternation("heading.goal") + r"\s*$")
 INPUT_FIELD = "**Đầu vào:**"
 OUTPUT_FIELD = "**Đầu ra:**"
+_INPUT_FIELD_LINE = re.compile(r"^(\s*)(?:[-*+]|[0-9]+\.)\s+\*\*" + lab.alternation("field.input") + r":\*\*")
+_OUTPUT_FIELD_MARK = re.compile(r"\*\*" + lab.alternation("field.output") + r":\*\*")
 PARALLEL_MARK = "chạy cùng được với"
 
 SPRINT_TINY_HEADINGS = ("Kế hoạch", "Kết quả")  # `SPRINT.md` cỡ rất nhỏ: hai phần; bốn phần cũ vẫn hợp lệ
@@ -954,7 +1008,7 @@ def _definitions(doc: Doc) -> list:
             prev_table = True
             continue
         else:
-            if header_first == "mã" and not c.is_separator_row(cells):
+            if _eq(header_first, "column.code") and not c.is_separator_row(cells):
                 m = CODE_AT_START.match(cells[0].strip("* "))
                 if m:
                     defs.append(Definition(m.group(1) + m.group(2), doc.line_no(idx), "table"))
@@ -1463,7 +1517,7 @@ class Engine:
         done = data.get(gate) not in (None, "pending")
         if data.get(mode_key, "human") == "human":  # vắng mode = human: lời/khối duyệt thay mà không khai mode là cách né kiểm
             quote = data.get(f"{gate}_quote")
-            if isinstance(quote, str) and quote.lstrip().casefold().startswith(DELEGATION_QUOTE):
+            if isinstance(quote, str) and _starts_fold(quote.lstrip(), "quote.delegated"):
                 self.add(path, doc.key_line(f"{gate}_quote"), "gate-delegation-invalid",
                          f"{gate}_quote bắt đầu '{DELEGATION_QUOTE}' mà {mode_key} không phải delegated")
             elif done and "delegation" in data and "delegated" not in (data.get("gate_1_mode"), data.get("gate_2_mode")):
@@ -1583,7 +1637,7 @@ class Engine:
                 if revoked_at[1] <= gate_at[1] if timed else revoked_at[0] <= gate_at[0]:
                     return bad("delegation.revoked_at", f"đã thu hồi ({revoked}) không sau thời điểm cổng ({data[f'{gate}_at']})")
         quote = data.get(quote_key)
-        if not (isinstance(quote, str) and quote.startswith(DELEGATION_QUOTE)):
+        if not (isinstance(quote, str) and _starts(quote, "quote.delegated")):
             return bad(quote_key, f"{quote_key} phải bắt đầu bằng '{DELEGATION_QUOTE}'")
         if doc.kind in ("plan", "report", "sprint"):
             missing = self._record_gaps(doc)
@@ -1806,7 +1860,7 @@ class Engine:
         out, inside = [], False
         for line in doc.raw:
             if line.startswith("## "):
-                inside = FLOOR_TABLE_HEADING in line.casefold()
+                inside = lab.contains(line[3:], "heading.floor_files")
                 continue
             cells = c.table_cells(line) if inside else None
             if cells is None or c.is_separator_row(cells):
@@ -1832,8 +1886,8 @@ class Engine:
                 continue
             if not prev_table:  # dòng tiêu đề của bảng mới
                 prev_table = True
-                in_table = cells[0].strip("* ").casefold() == "mã"
-                owner_col = next((i for i, cell in enumerate(cells) if "người quyết" in cell.casefold()), -1)
+                in_table = _eq(cells[0].strip("* "), "column.code")
+                owner_col = next((i for i, cell in enumerate(cells) if lab.contains(cell, "column.owner")), -1)
                 continue
             if not in_table or c.is_separator_row(cells):
                 continue
@@ -1912,12 +1966,12 @@ class Engine:
             if start is not None:
                 end = idx
                 break
-            if DELEGATION_RECORD.casefold() in NUMBERING.sub("", doc.raw[idx][3:].strip()).casefold():
+            if lab.contains(NUMBERING.sub("", doc.raw[idx][3:].strip()), "heading.delegation_record"):
                 start = idx
         if start is None:
             return f"thiếu mục '## {DELEGATION_RECORD}'"
         body = [re.sub(r"^[-*\s]+", "", line).replace("**", "") for line in doc.masked[start + 1:end]]
-        missing = [label for label in DELEGATION_LABELS if not any(line.startswith(label) for line in body)]
+        missing = [label for label, key in zip(DELEGATION_LABELS, DELEGATION_KEYS_FIELD) if not any(_starts(line, key, ":") for line in body)]
         return f"mục '{DELEGATION_RECORD}' thiếu nhãn {', '.join(missing)}" if missing else None
 
     # -- hình tài liệu theo cỡ --
@@ -1938,15 +1992,16 @@ class Engine:
                          "cỡ rất nhỏ dùng một file SPRINT.md, không dựng bốn file (method/sizing.md); nâng cỡ lên nhỏ nếu giữ bốn file")
 
     def required_headings(self, doc: Doc, headings: list) -> tuple:
-        """Tiêu đề bắt buộc; `SPRINT.md` cỡ rất nhỏ (hoặc cỡ chưa rõ) nhận hai phần "Kế hoạch" · "Kết quả" hoặc bốn phần cũ
+        """Cặp (khoá nhãn, chữ tiếng Việt cho lời báo) của tiêu đề bắt buộc; `SPRINT.md` cỡ rất nhỏ (hoặc cỡ chưa rõ) nhận hai phần "Kế hoạch" · "Kết quả" hoặc bốn phần cũ
         (nhận ra bốn phần khi có tiêu đề **bắt đầu** bằng SPEC/PLAN/PROGRESS, không phải chỉ chứa chữ đó)."""
         if doc.kind != "sprint":
-            return REQUIRED_HEADINGS[doc.kind]
+            return tuple(zip(REQUIRED_HEADING_KEYS[doc.kind], REQUIRED_HEADINGS[doc.kind]))
+        four = tuple(zip(REQUIRED_HEADING_KEYS["sprint"], SPRINT_FOUR))
         size = doc.data.get("size")
         if size in ("small", "medium", "large"):
-            return SPRINT_FOUR
-        four_part = any(h.startswith(w.casefold()) for w in SPRINT_FOUR[:3] for h in headings)  # bắt đầu bằng SPEC/PLAN/PROGRESS (đã bỏ số thứ tự)
-        return SPRINT_FOUR if four_part else SPRINT_TINY_HEADINGS
+            return four
+        four_part = any(lab.startswith(h, f"heading.{key}") for key, _ in four[:3] for h in headings)  # bắt đầu bằng SPEC/PLAN/PROGRESS (đã bỏ số thứ tự)
+        return four if four_part else tuple(zip(SPRINT_TINY_KEYS, SPRINT_TINY_HEADINGS))
 
     # -- tiêu đề --
 
@@ -1958,10 +2013,10 @@ class Engine:
             if line.startswith("## "):
                 first_h2 = min(first_h2, idx)
                 headings.append(NUMBERING.sub("", doc.raw[idx][3:].strip()).casefold())
-        for phrase in self.required_headings(doc, headings):
-            if not any(phrase.casefold() in h for h in headings):
+        for key, phrase in self.required_headings(doc, headings):
+            if not any(_has_heading(h, key) for h in headings):
                 self.add(doc.path, h1, "heading-missing", f"thiếu tiêu đề cấp 2 chứa '{phrase}'")
-        if doc.kind == "spec" and doc.data.get("size") in ("medium", "large") and not any("truy vết" in h for h in headings):
+        if doc.kind == "spec" and doc.data.get("size") in ("medium", "large") and not any(lab.contains(h, "heading.traceability") for h in headings):
             self.add(doc.path, h1, "heading-missing", "thiếu tiêu đề cấp 2 chứa 'Truy vết' (nên có từ cỡ vừa)")
         if doc.kind in SPRINT_DOCS + ("feature",):
             if not any(CONCLUSION.match(doc.raw[i]) for i in range(first_h2)):
@@ -2021,7 +2076,7 @@ class Engine:
                 prev_table = cells is not None
                 continue
             prev_table = True
-            if generated or cells[0].strip("* ").casefold() != "mã":
+            if generated or not _eq(cells[0].strip("* "), "column.code"):
                 continue
             above = idx - 1
             while above >= 0 and not doc.masked[above].strip():
@@ -2078,7 +2133,7 @@ class Engine:
             line = doc.masked[idx]
             if HEADING.match(line):
                 break
-            m = re.match(r"^(\s*)(?:[-*+]|[0-9]+\.)\s+" + re.escape(INPUT_FIELD), line)
+            m = _INPUT_FIELD_LINE.match(line)
             if not m:
                 continue
             parts = [line[m.end():]]
@@ -2088,7 +2143,7 @@ class Engine:
                 if len(nxt) - len(nxt.lstrip()) <= len(m.group(1)) or HEADING.match(nxt):
                     break
                 parts.append(nxt)
-            return doc.line_no(idx), " ".join(parts).split(OUTPUT_FIELD)[0]
+            return doc.line_no(idx), _OUTPUT_FIELD_MARK.split(" ".join(parts), maxsplit=1)[0]
         return None
 
     def plain_summary_rule(self, doc: Doc) -> None:
@@ -2097,7 +2152,7 @@ class Engine:
         if not (DATE.fullmatch(created) and created >= str(PLAIN_SUMMARY_EFFECTIVE)):
             return  # `created` thiếu / không đọc được / trước ngày hiệu lực: không báo
         start = next((i for i, line in enumerate(doc.masked)
-                      if re.match(r"^##\s+(?:[0-9]+(?:\.[0-9]+)*\.?\s+)?" + re.escape(PLAIN_SUMMARY_HEADING) + r"\s*$", line)), None)
+                      if _PLAIN_SUMMARY_HEADING.match(line)), None)
         if start is None:
             self.add(doc.path, doc.start, "plain-summary", f"thiếu mục '## {PLAIN_SUMMARY_HEADING}' (3–5 câu cho người không chuyên)")
             return
@@ -2112,7 +2167,7 @@ class Engine:
 
     def plan_goal_rule(self, doc: Doc) -> None:
         """Mục `## Mục tiêu` của PLAN có đủ ba dòng nhãn của mẫu (SPEC 7.8)."""
-        start = next((i for i, line in enumerate(doc.masked) if re.match(r"^##\s+Mục tiêu\s*$", line)), None)
+        start = next((i for i, line in enumerate(doc.masked) if _PLAN_GOAL_HEADING.match(line)), None)
         if start is None:
             return  # thiếu tiêu đề đã có `heading-missing`
         lines = []
@@ -2120,8 +2175,8 @@ class Engine:
             if re.match(r"^#{1,2}\s", line):
                 break
             lines.append(re.sub(r"^\s*(?:[-*+]\s+)?(?:\*\*)?", "", line))
-        for label in PLAN_GOAL_LABELS:
-            if not any(x.startswith(label) for x in lines):
+        for label, key in zip(PLAN_GOAL_LABELS, PLAN_GOAL_KEYS):
+            if not any(_starts(x, key, ":") for x in lines):
                 self.add(doc.path, doc.line_no(start), "plan-goal-block", f"mục Mục tiêu thiếu dòng nhãn '{label}' (mẫu PLAN)")
 
     def verification_rules(self, doc: Doc) -> None:
@@ -2442,7 +2497,7 @@ _AUTHOR_URL = re.compile(
     r"(?i)(?<![A-Za-z0-9-])(?:" + re.escape(AUTHOR_REPO_URL) + r"(?![A-Za-z0-9_-])|"
     + re.escape(AUTHOR_SITE) + r"(?![A-Za-z0-9-]))")
 _AUTHOR_KEY = re.compile(r'^\s*"(?:author|owner|repository|homepage)"\s*:')
-_AUTHOR_HEADING = re.compile(r"^##\s+(?:Author|Tác giả)\s*$")
+_AUTHOR_HEADING = re.compile(r"^##\s+" + lab.alternation("heading.author") + r"\s*$")
 
 _CODE_SPAN = re.compile(r"`([^`\n]*)`")
 _OLD_SKILL_ID = re.compile(r"[a-z0-9][a-z0-9-]*:(?:\*|[a-z0-9][a-z0-9-]*)")
