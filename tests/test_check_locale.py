@@ -496,7 +496,8 @@ def test_negated_merge_wordings_do_not_match(sentence):
 
 @pytest.mark.parametrize("sentence", [
     "merged into main", "branch merged into main (abc1234)", "the sprint branch was merged into the main branch",
-    "đã gộp vào main", "everything is merged to main now"
+    "đã gộp vào main", "everything is merged to main now",
+    "merged into main, no conflicts", "merged into main without conflicts", "merged into main (not squashed)"
 ])
 def test_positive_merge_wordings_match(sentence):
     assert check.MERGED_MAIN.search(sentence), sentence

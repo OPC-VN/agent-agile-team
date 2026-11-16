@@ -243,7 +243,8 @@ def _other_locales() -> tuple:
 def _has_heading(heading: str, key: str) -> bool:
     """A level-2 heading (numbering removed, casefolded) carries the label of `heading.<key>`. Vietnamese labels keep the
     test check.py used before SPR-33, a casefold substring (even the ASCII ones: `## Scope / SPEC` of old records);
-    labels of the other locales (English) must be the whole heading (GC1)."""
+    English labels must be the whole heading (GC1), except the six ASCII labels (SPEC, PLAN, PROGRESS, REPORT, Timeline,
+    Review & Retro) that are identical in both locales: they match as a substring in English headings too."""
     return any(text in heading for text in _vi_alts(f"heading.{key}")) or lab.contains(heading, f"heading.{key}", _other_locales())
 
 
@@ -262,9 +263,9 @@ def _phrase_for(key: str, locales) -> str:
 
 ASK_COUNT_LINE = re.compile(_phrase("field.ask_count") + r"[^0-9\n]*[0-9]", re.IGNORECASE)  # FR7.4: dòng đếm lượt có số
 _NEGATION = r"(?:\bnot\b|n't|\bnever\b|\bno\b|\bnowhere\b|\bwithout\b)"
-MERGED_MAIN = re.compile(  # Vietnamese: as before; English: a clause (between full stops) without any negation
+MERGED_MAIN = re.compile(  # Vietnamese: as before; English: a clause (between full stops) with no negation before 'merged'
     _phrase_for("phrase.merged", ("vi",)) + r"[^.\n]*(?:\bmain\b|" + _phrase_for("phrase.main_branch", ("vi",)) + ")|"
-    + r"(?<![^.\n])(?![^.\n]*" + _NEGATION + r")[^.\n]*?" + _phrase_for("phrase.merged", _other_locales())
+    + r"(?<![^.\n])(?![^.\n]*?" + _NEGATION + r"[^.\n]*?" + _phrase_for("phrase.merged", _other_locales()) + r")[^.\n]*?" + _phrase_for("phrase.merged", _other_locales())
     + r"[^.\n]*(?:\bmain\b|" + _phrase_for("phrase.main_branch", _other_locales()) + ")", re.IGNORECASE)
 MERGE_COMMIT_LINE = re.compile(r"^[\s>*_-]*" + _phrase("field.merge_commit"), re.IGNORECASE)  # dòng nhãn "Commit gộp": có mã băm thì là đã gộp
 BULLETIN_HEADINGS = ("bản tin agile", "bản tin autopilot")  # legacy: old records (mục cũ "Bản tin autopilot" vẫn được đọc; chữ đã hạ về chữ thường)
