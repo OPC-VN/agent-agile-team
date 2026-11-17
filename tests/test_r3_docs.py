@@ -49,5 +49,5 @@ def test_agile_skill_run_counts_are_consistent_in_the_docs():
     for rel in ("skills/README.md", "docs/OVERVIEW.md"):
         text = read(rel)
         assert "0/4 kịch bản" not in text and "chưa chạy (0/4" not in text, rel
-        assert "38 trong 38 skill có tệp thử đã chạy" in text and "9/10 lượt GREEN" in text, rel
+        assert "39 trong 39 skill có tệp thử đã chạy" in text and "9/10 lượt GREEN" in text, rel
     assert "runs sonnet, grader opus" in read("skills/agile/tests/pressure.md")

@@ -34,9 +34,9 @@ cấp. Nhóm ghi trong frontmatter `metadata.group` và trong mục lục dướ
   để `check` không quét như tài liệu; file chứa khoá, mật khẩu hay token làm mồi thì dòng thứ hai ghi rõ
   chúng là **GIÁ TRỊ GIẢ**.
 
-**Hiện trạng thử:** 38 trong 38 skill có tệp thử đã chạy; `agile` 9/10 lượt GREEN (n = 2, chưa có lượt RED, AG-5 1/2) — bảng ở mục 4.
+**Hiện trạng thử:** 39 trong 39 skill có tệp thử đã chạy; `agile` 9/10 lượt GREEN (n = 2, chưa có lượt RED, AG-5 1/2) — bảng ở mục 4.
 
-## 3. Mục lục — 38 skill
+## 3. Mục lục — 39 skill
 
 ### Quy trình
 
@@ -93,6 +93,7 @@ Cột "Loại": **tham chiếu** = `metadata.kind: reference`.
 |---|---|
 | [response-style](response-style/SKILL.md) | chọn độ dài, cấu trúc, giọng khi trả lời người hay agent; trỏ sang `explain` khi người đọc chưa hiểu |
 | [explain](explain/SKILL.md) | `/explain` hoặc "chưa hiểu / tại sao / nói dễ hiểu hơn": viết lại tin gần nhất bằng lời dễ hiểu, giữ nguyên dữ kiện, xong về súc tích |
+| [progress-report](progress-report/SKILL.md) | `/progress-report` hoặc "báo cáo tiến độ / đang làm tới đâu": đọc ROADMAP → SPRINTS → REQUESTS → hồ sơ sprint → Git, trả một báo cáo chuẩn bảy phần (tổng quan, việc còn nợ, bảng 5 sprint xong, 5 sắp tới, lộ trình ≤20, đề xuất bước tiếp); chỉ đọc |
 | [id-convention](id-convention/SKILL.md) | đặt, đọc, nhắc chéo, kiểm mã mục trong tài liệu sprint và chat |
 | [token-economy](token-economy/SKILL.md) | phiên dài, output lớn, subagent báo cáo, nén ngữ cảnh, tuyên bố tiết kiệm token |
 
@@ -103,7 +104,7 @@ Cột "Loại": **tham chiếu** = `metadata.kind: reference`.
 | [writing-skills](writing-skills/SKILL.md) | tạo/sửa skill, viết description hoặc thử áp lực, đề xuất nâng bài học thành skill, chẩn đoán phiên/sprint chạy sai |
 | [eval-harness](eval-harness/SKILL.md) | tiêu chí đạt/hỏng và kiểm hồi quy cho tính năng có gọi mô hình của sản phẩm (đánh giá kết quả mô hình, không phải thử áp lực skill) |
 
-## 4. Hiện trạng thử — 38 skill
+## 4. Hiện trạng thử — 39 skill
 
 Đọc từ frontmatter của tệp thử, không từ trí nhớ (`tests/test_skill_tests.py` đối chiếu bảng này với frontmatter). Tệp kỷ luật:
 cột `result` là đoạn đầu (số kịch bản Đạt), chi tiết RED và GREEN ở chính tệp. Tệp truy xuất: một thước chung — `strict` là
@@ -147,6 +148,7 @@ số câu Đạt hẳn trên tổng số câu (kèm số Một phần và Không
 | [agile](agile/tests/pressure.md) | kỷ luật | `pressure.md` | 9/10 pass (AG-1 2/2, AG-2 2/2, AG-3 2/2, AG-4 2/2, AG-5 1/2 FAIL); SPR-32 TK6g re-run 2026-11-16 on the final text (blocker id BR<number>), n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; AG-5 r2 fails the clause 'say the hook did not run in this session (typed /agile changed nothing, machine guard not active)': it hedged ('rất có thể', 'có thể chưa đổi gì') and never said the guard is inactive; history: TK6f 9/10 (AG-3 r2 wrote BR-01/BR-03, format only), TK6d 7/8 (AG-3 r2 never showed --project); SPR-32 TK6f re-run 2026-11-16 on the edited skill text, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; AG-3 r2 fails the clause 'exactly one new blocker (BR1 for SPR-41, BR3 for SPR-40)': it wrote BR-01/BR-03 (grader: format only, the command line with --session and --project was shown); history: TK6d 7/8 on the earlier text (AG-3 r2 never showed the --project value); simulated status output | 2026-11-16 |
 | [explain](explain/tests/pressure.md) | kỷ luật | `pressure.md` | 3/3 GREEN pass; SC4 nền đạt sẵn (CM-4/CM-4b không phân biệt được); vòng sửa 1: CM-3 3/3, CM-4/4b/6 n = 1 Đạt (CM-6 chưa có RED); vòng sửa 2: nạp thật khớp skill 4/4, CM-3 nạp thật 0/3 nghiêm (không đọc thân skill); vòng sửa 3: gỡ nhiễm, CM-3 ép đọc 2/3 nghiêm; vòng sửa 4: bản mẫu đổi miền, CM-3 ép đọc 0/3 nghiêm (N+1 chỉ ẩn dụ) | 2026-11-13 |
 | [token-economy](token-economy/tests/pressure.md) | kỷ luật | `pressure.md` | 4/4 GREEN pass on the current tree (rerun 2026-10-26 at n = 1; 0 partial; RED not rerun, scenarios unchanged) | 2026-10-26 |
+| [progress-report](progress-report/tests/pressure.md) | kỷ luật | `pressure.md` | 3/3 GREEN pass; n = 2 per case, RED n = 1 per case, RED 0/3 failed the seven-part structure (all three already kept the honest facts); simulated ledger and Git data | 2026-11-17 |
 | [eval-harness](eval-harness/tests/pressure.md) | kỷ luật | `pressure.md` | 4/4 GREEN pass on the current tree (eh-9 new; eh-1, eh-3, eh-4 rerun at n = 1) | 2026-10-24 |
 | [writing-skills](writing-skills/tests/pressure.md) | kỷ luật | `pressure.md` | 1/1 GREEN pass theo chữ và theo ý (KB8, n = 3 sau sửa SPR-19: 3/3 chữ, 3/3 ý); KB1–KB7 không chạy lại; SPR-19 2026-11-12 | 2026-11-12 |
 | [hooks-guardrails](hooks-guardrails/tests/pressure.md) | kỷ luật | `pressure.md` | 3/3 GREEN pass; RED 0/3 pass (3 partial) | 2026-10-23 |

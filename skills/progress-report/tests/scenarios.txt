@@ -5,7 +5,7 @@ và KHÔNG đọc file thật nào trên máy, trừ file SKILL.md ở lượt G
 Dòng [PHA] thay bằng:
   RED:   "Không dùng công cụ gọi skill (Skill tool) và không mở file SKILL.md nào."
   GREEN: "Đọc <đường tuyệt đối tới SKILL.md> trước rồi làm theo." Vế "KHÔNG đọc file nào trên máy" ở phần mở đầu đổi thành
-         "KHÔNG đọc file nào trên máy ngoài file nêu ở dòng trên" (mâu thuẫn với dòng bảo đọc SKILL.md).
+         "KHÔNG đọc file nào trên máy ngoài các file nêu ở dòng trên" (mâu thuẫn với dòng bảo đọc SKILL.md).
 Dòng [OUT] thay bằng: "Khi xong, ghi NGUYÊN VĂN báo cáo gửi người dùng vào file <đường> bằng công cụ ghi file (không thêm gì khác vào file), rồi báo "xong" một dòng."
 Khối [DỮ LIỆU] (chép nguyên vào mỗi kịch bản):
 
