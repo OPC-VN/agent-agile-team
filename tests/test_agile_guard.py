@@ -647,7 +647,9 @@ def test_guard_write_tools_other_files_and_other_trees_allowed(tmp_path):
 
 
 @pytest.mark.parametrize("cmd", ["sudo -Hu deploy rm -rf x", "sudo -Eu root rm -rf x", "env -iu HOME rm -rf x", "xargs -tI {} rm -rf x",
-                                 "sudo -EHu x -g y rm -rf x", "env -iC /tmp rm -rf x"])
+                                 "sudo -EHu x -g y rm -rf x", "env -iC /opt/x rm -rf x"])
+# `-C` chỉ cần MỘT giá trị thư mục; `/tmp` từng dùng ở đây bao thư mục trạng thái của test trên Linux (tmp_path nằm trong /tmp) nên luật công tắc bắn
+# trước luật xoá không đảo ngược. `/opt/x` không bao thư mục trạng thái trên nền nào: vẫn thử đúng cụm cờ ngắn kết thúc bằng cờ có giá trị.
 def test_guard_short_flag_clusters_ending_in_value_flag(tmp_path, cmd):
     repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
     assert_blocked(repo, cmd, "irreversible_delete")
