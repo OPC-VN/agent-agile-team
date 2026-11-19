@@ -87,6 +87,44 @@ def test_relative_glob_after_cd_reaches_state_dir_in_any_case(rel):
     assert agile_guard._reaches_state(rel, ctx, False, False), rel
 
 
+def test_negated_class_with_uppercase_still_matches():
+    """Review PR #18: chỉ hạ chữ cả mẫu thì `[!A-Z]tore` thành `[!a-z]tore` và không còn khớp `store` (bản đầu của PR làm lọt dạng base chặn).
+    Shell mở rộng `[!A-Z]tore` thành `store`: phải chặn."""
+    linux_dir = "/home/runner/agile/store"
+    assert agile_guard._glob_covers("/home/runner/agile/[!A-Z]tore/*.json", linux_dir, False)
+    assert agile_guard._glob_covers("/home/runner/agile/[!A-Z]tore", linux_dir, False)
+    ctx = agile_guard.Context(set(), os.getcwd(), (linux_dir,), light=True)
+    assert agile_guard._reaches_state("[!A-Z]tore/*.json", ctx, False, False)
+    assert agile_guard._reaches_state("[!A-Z]tore", ctx, True, False)
+
+
+def test_negated_class_with_lowercase_on_an_uppercase_state_dir_is_blocked(upper_state):
+    """Qua cả rào: `[!a-z]gileState` khớp `AgileState` (chữ `A` không thuộc a-z). Hạ chữ cả mẫu sẽ làm lọt."""
+    repo, state = upper_state
+    pattern = (str(state.parent) + "/[!a-z]gileState/*.json").replace("\\", "/")
+    rc, _, err = run("claude", claude("rm -f " + pattern, repo))
+    assert rc == 2 and TAMPER_REASON in err, (pattern, rc, err)
+
+
+@pytest.mark.parametrize("path, directory", [
+    ("/users/runner/agile/STORE/repo-x.json", "/Users/Runner/Agile/Store"),
+    ("/Users/Runner/Agile/Store", "/users/runner/agile/store"),
+])
+def test_under_ignores_case(path, directory):
+    """`_under` (đường đã giải, không ký tự đại diện): trên macOS `../agile/STORE/repo-x.json` trúng `.../Agile/Store` (có từ trước PR)."""
+    assert agile_guard._under(path.replace("/", os.sep), directory.replace("/", os.sep))
+    assert not agile_guard._under("/Users/Runner/Agile/Storex/repo-x.json".replace("/", os.sep), directory.replace("/", os.sep))
+
+
+@pytest.mark.parametrize("cmd", ["rm ../../Users/Runner/Library/AGILESTATE/session-t1.json", "rm -rf ../../users/runner/library/agilestate",
+                                 "mv ../../USERS/runner/LIBRARY/agileState/session-t1.json x.json"])
+def test_relative_path_in_other_case_is_blocked(upper_state, cmd):
+    """Qua cả rào, đường tương đối khác kiểu chữ tới thư mục trạng thái giữ chữ hoa (mô phỏng macOS): trước bản sửa `_under` lọt."""
+    repo, _ = upper_state
+    rc, _, err = run("claude", claude(cmd, repo))
+    assert rc == 2 and TAMPER_REASON in err, (cmd, rc, err)
+
+
 def test_glob_covers_state_dir_in_any_case():
     """Đơn vị `_glob_covers`: mẫu tuyệt đối có ký tự đại diện, khác kiểu chữ với thư mục trạng thái (POSIX không `normcase` hạ chữ)."""
     assert agile_guard._glob_covers("/USERS/runner/library/agile*", POSIX_DIR, False)
