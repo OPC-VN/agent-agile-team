@@ -56,7 +56,7 @@ RULES: dict[str, tuple[str, str]] = {
     "frontmatter-value": (PHAI, "giá trị khoá sai miền hoặc mâu thuẫn"),
     "doc-unknown": (GHI, "khoá `doc` có nhưng không thuộc loại đã biết — chỉ áp luật chung"),
     "heading-missing": (PHAI, "thiếu tiêu đề cấp 2 bắt buộc"),
-    "sprint-size-mismatch": (PHAI, "hình tài liệu không khớp `size`: `SPRINT.md` ở cỡ vừa/lớn, hoặc bốn file ở cỡ rất nhỏ"),
+    "sprint-size-mismatch": (PHAI, "hình tài liệu không khớp `size`: `SPRINT.md` ở cỡ vừa/lớn, bốn file ở cỡ rất nhỏ, hoặc `TASK.md` sai cỡ / bốn phần / đứng cạnh tài liệu sprint khác"),
     "conclusion-missing": (PHAI, "thiếu khối `> **Kết luận:**` trước tiêu đề cấp 2 đầu tiên"),
     "id-bare-single-letter": (PHAI, "mã một chữ cái + số ngoài dấu code (trừ T1/T2/T3)"),
     "id-unknown-prefix": (PHAI, "định nghĩa mục bằng tiền tố hai chữ cái ngoài bảng mã"),
@@ -82,7 +82,7 @@ RULES: dict[str, tuple[str, str]] = {
     "config-invalid": (PHAI, "`.agile.json` sai hình hoặc đổi ngưỡng coverage không ghi lý do"),
     "config-public-root": (CHAN, "`visibility: public` mà `artifact_root` nằm trong gốc dự án"),
     "ledger-missing-row": (PHAI, "dự án khai sổ tập trung mà sổ không có dòng cho sprint đang mở"),
-    "ledger-stale": (PHAI, "dòng sổ lệch `status` hoặc ngày cũ hơn `updated` của PROGRESS/SPRINT"),
+    "ledger-stale": (PHAI, "dòng sổ lệch `status` hoặc ngày cũ hơn `updated` của PROGRESS/SPRINT/TASK"),
     "ledger-unreadable": (PHAI, "file sổ không có, không đọc được UTF-8 hoặc không có bảng cột đầu 'Sprint'"),
     "ledger-unconfigured": (GHI, "dự án khai sổ tập trung mà máy chưa đặt mẫu đường `AGENT_AGILE_LEDGER`"),
     "leak-denylist": (CHAN, "`--self`: file của repo chứa từ trong danh sách cấm"),
@@ -90,8 +90,8 @@ RULES: dict[str, tuple[str, str]] = {
     "agents-md-budget": (PHAI, "`--self`: `AGENTS.md` quá 120 dòng hoặc quá 10 KB"),
     "delegation-floor-file": (PHAI, "`delegation.files` nêu file thuộc sàn cứng (`FLOOR_FILES`): không duyệt thay được"),
     "gate-signer-independence": (PHAI, "người ký cổng trùng nhãn phiên người làm ở tài liệu cùng sprint, tier người ký thấp hơn tier người làm, hoặc cổng đã kết luận thiếu `evidence/gate-<N>-verdict.md` / dòng đầu lệch quote (khối duyệt thay từ ngày hiệu lực)"),
-    "decision-log-missing": (PHAI, "REPORT hoặc SPRINT.md có Cổng 2 duyệt thay mới mà thiếu mục 'Nhật ký quyết định' đủ ai ký · model · bằng chứng · lệnh hoàn tác"),
-    "session-cap-missing": (PHAI, "PLAN hoặc SPRINT.md có Cổng 1 duyệt thay mới mà thiếu 'Trần phiên: <số>' hoặc sessions_cap không khớp (null/vắng không hợp lệ)"),
+    "decision-log-missing": (PHAI, "REPORT, SPRINT.md hoặc TASK.md có Cổng 2 duyệt thay mới mà thiếu mục 'Nhật ký quyết định' đủ ai ký · model · bằng chứng · lệnh hoàn tác"),
+    "session-cap-missing": (PHAI, "PLAN, SPRINT.md hoặc TASK.md có Cổng 1 duyệt thay mới mà thiếu 'Trần phiên: <số>' hoặc sessions_cap không khớp (null/vắng không hợp lệ)"),
     "session-cap-over": (GHI, "chỉ báo (không chặn): 'Trần phiên' vượt công thức cỡ × rủi ro mà không có dòng 'nâng trần' ở Nhật ký quyết định"),
     "gate-route-floor": (PHAI, "cổng `delegated` (kể cả còn `pending`) mà bảng 'File luật và file sàn cứng sẽ chạm' khai file sàn cứng, hoặc `risk_tags` có `rules` mà `delegation.files` rỗng: chuyển cổng người, trình lời khuyến nghị"),
     "frontmatter-duplicate-key": (PHAI, "khoá `delegation` lặp trong frontmatter (chỉ một phiên điều phối ghi lời cấp)"),
@@ -2146,7 +2146,7 @@ class Engine:
             if folder not in self.size_flagged:
                 self.size_flagged.add(folder)
                 self.add(doc.path, doc.key_line("size"), "sprint-size-mismatch",
-                         "cỡ rất nhỏ dùng một file SPRINT.md, không dựng bốn file (method/sizing.md); nâng cỡ lên nhỏ nếu giữ bốn file")
+                         "cỡ rất nhỏ dùng một file TASK.md, không dựng bốn file (method/sizing.md); nâng cỡ lên nhỏ nếu giữ bốn file")
 
     def _four_part(self, doc: Doc, headings: list) -> bool:
         """Có tiêu đề cấp 2 **bắt đầu** bằng SPEC/PLAN/PROGRESS (hình bốn phần của `SPRINT.md` cũ)?"""
@@ -2155,20 +2155,17 @@ class Engine:
 
     def _task_md_mismatch(self, doc: Doc, size: str) -> str | None:
         """Lý do `TASK.md` sai hình (hình bốn phần chỉ còn hợp lệ với `SPRINT.md` cũ); `None` khi đúng: cỡ rất nhỏ, hai phần, không có
-        tài liệu sprint nào khác **của cùng sprint** trong thư mục (`templates/sprint/` chứa mẫu của nhiều sprint nên không bị báo)."""
-        try:
-            names = set(os.listdir(doc.path.resolve().parent))
-        except OSError:
-            names = set()
-        mine = doc.data.get("sprint")
-        beside = []
-        for name in ("SPEC.md", "PLAN.md", "PROGRESS.md", "REPORT.md", "SPRINT.md"):
-            if name not in names:
-                continue
-            other = self.doc(doc.path.resolve().parent / name)
-            theirs = other.data.get("sprint") if other is not None else None
-            if mine is None or theirs is None or theirs == mine:  # cùng sprint (hoặc không rõ): thư mục mẫu chứa nhiều sprint khác nhau thì không bị báo
-                beside.append(name)
+        tài liệu sprint nào khác trong thư mục. Ngoại lệ duy nhất: thư mục mẫu của plugin (`templates/sprint/`, so đường đã `resolve()`),
+        nơi các mẫu của nhiều hình đứng cạnh nhau."""
+        folder = doc.path.resolve().parent
+        if folder == (c.TEMPLATES / "sprint").resolve():
+            beside = []
+        else:
+            try:
+                names = set(os.listdir(folder))
+            except OSError:
+                names = set()
+            beside = [n for n in ("SPEC.md", "PLAN.md", "PROGRESS.md", "REPORT.md", "SPRINT.md") if n in names]
         if beside:
             return f"TASK.md đứng cạnh {', '.join(beside)} — một thư mục sprint chỉ có một hình: TASK.md, hoặc SPRINT.md, hoặc bốn file (method/sizing.md)"
         if size != "tiny":

@@ -1,8 +1,8 @@
 ---
-id: SPR-03-task
+id: SPR-02-task
 doc: task
 title: Sprint goal title
-sprint: SPR-03
+sprint: SPR-02
 request: RQ-002
 feature: FS-001
 status: in_progress

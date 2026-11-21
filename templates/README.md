@@ -175,7 +175,7 @@ hình tài liệu; `check` đối chiếu hai thứ:
 | `small` (sprint cũ) | bốn file | như từng tài liệu ở bảng trên | như cỡ vừa | như cỡ vừa — vẫn hợp lệ |
 | `medium` · `large` (vừa · lớn) | bốn file | như từng tài liệu ở bảng trên | `US`, `FR`, `SC`, `TK`, `VR` cho mỗi `FR` và `SC` | đủ luật; **`SPRINT.md` ở cỡ này → `sprint-size-mismatch`** (báo một lần) |
 | `tiny` mà dựng **bốn file** | — | — | — | `sprint-size-mismatch` (báo một lần cho cả thư mục) |
-| `TASK.md` ở cỡ khác `tiny`, có bốn phần, hoặc cạnh `SPRINT.md` / bốn file của **cùng sprint** | — | — | — | `sprint-size-mismatch` (báo một lần cho cả thư mục); hình bốn phần chỉ còn hợp lệ với `SPRINT.md` cũ |
+| `TASK.md` ở cỡ khác `tiny`, có bốn phần, hoặc cạnh `SPRINT.md` / bốn file (trừ thư mục mẫu `templates/sprint/`) | — | — | — | `sprint-size-mismatch` (báo một lần cho cả thư mục); hình bốn phần chỉ còn hợp lệ với `SPRINT.md` cũ |
 
 Thiếu khoá `size` do `frontmatter-key-missing` báo; `sprint-size-mismatch` không báo đúp.
 

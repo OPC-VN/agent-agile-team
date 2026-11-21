@@ -148,11 +148,60 @@ def test_task_md_beside_four_files_is_mismatch_once(tmp_path):
     assert len(hits) == 1, [f.render() for f in hits]
 
 
-def test_task_md_beside_another_sprints_file_is_not_a_mismatch(tmp_path):
-    """Thư mục mẫu (`templates/sprint/`) chứa mẫu của nhiều sprint: chỉ file của CÙNG sprint mới làm `TASK.md` sai hình."""
+def test_task_md_beside_another_sprints_file_is_still_one_mismatch(tmp_path):
+    """Khác mã sprint vẫn báo: luật đếm mọi tài liệu sprint trong thư mục (chỉ thư mục mẫu của plugin được miễn)."""
     put(tmp_path, "TASK.md", as_task(legacy_two_part()))
     put(tmp_path, "SPRINT.md", legacy_two_part().replace("SPR-04", "SPR-09"))
-    assert "sprint-size-mismatch" not in rules_of(check.check_paths([tmp_path]))
+    hits = [f for f in check.check_paths([tmp_path]).findings if f.rule == "sprint-size-mismatch"]
+    assert len(hits) == 1, [f.render() for f in hits]
+
+
+def _plugin_template_dir(tmp_path, monkeypatch, name: str = "sprint") -> Path:
+    templates = tmp_path / "plugin" / "templates"
+    monkeypatch.setattr(c, "TEMPLATES", templates)
+    return templates / name
+
+
+def test_plugin_template_folder_is_exempt_from_beside_rule(tmp_path, monkeypatch):
+    folder = _plugin_template_dir(tmp_path, monkeypatch)
+    put(folder, "TASK.md", as_task(legacy_two_part()))
+    put(folder, "SPRINT.md", legacy_two_part())
+    assert "sprint-size-mismatch" not in rules_of(check.check_paths([folder]))
+
+
+def test_folder_named_like_the_template_folder_is_not_exempt(tmp_path, monkeypatch):
+    """Miễn theo đường `resolve()`, không theo tên thư mục: `.../sprint` ở chỗ khác vẫn bị báo."""
+    _plugin_template_dir(tmp_path, monkeypatch)
+    other = tmp_path / "elsewhere" / "templates" / "sprint"
+    put(other, "TASK.md", as_task(legacy_two_part()))
+    put(other, "SPRINT.md", legacy_two_part())
+    assert "sprint-size-mismatch" in rules_of(check.check_paths([other]))
+
+
+def test_template_folder_exemption_compares_resolved_paths(tmp_path, monkeypatch):
+    """Đường tới thư mục mẫu qua `..` (hoa/thường hay lối vòng) vẫn là cùng thư mục sau `resolve()`."""
+    folder = _plugin_template_dir(tmp_path, monkeypatch)
+    put(folder, "TASK.md", as_task(legacy_two_part()))
+    put(folder, "SPRINT.md", legacy_two_part())
+    detour = tmp_path / "plugin" / "x" / ".." / "templates" / "sprint"
+    assert "sprint-size-mismatch" not in rules_of(check.check_paths([detour]))
+    upper = tmp_path / "plugin" / "TEMPLATES" / "SPRINT"
+    if upper.exists():  # hệ không phân biệt hoa/thường (Windows): cùng một thư mục
+        assert "sprint-size-mismatch" not in rules_of(check.check_paths([upper]))
+
+
+def test_task_md_missing_result_part_is_flagged(tmp_path):
+    text = as_task(legacy_two_part())
+    text = text[:text.index("## 2. Kết quả")]
+    put(tmp_path, "TASK.md", text)
+    hits = [f for f in check.check_paths([tmp_path]).findings if f.rule == "heading-missing"]
+    assert any("Kết quả" in f.message for f in hits), [f.render() for f in check.check_paths([tmp_path]).findings]
+
+
+def test_task_md_without_vr_row_is_flagged(tmp_path):
+    text = "\n".join(line for line in as_task(legacy_two_part()).split("\n") if not line.startswith("| VR1"))
+    put(tmp_path, "TASK.md", text)
+    assert "report-sc-without-vr" in rules_of(check.check_paths([tmp_path]))
 
 
 def test_task_md_with_doc_sprint_is_flagged(tmp_path):

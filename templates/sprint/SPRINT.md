@@ -31,7 +31,7 @@ updated: 2026-01-20
      quyết định kiến trúc. Bốn phần dưới đây là bốn tài liệu SPEC → PLAN → PROGRESS → REPORT thu gọn; Cổng 1 và
      Cổng 2 là lượt duyệt thật. MỘT reviewer (agent KHÁC người làm) kiểm cả nghiệp vụ lẫn kỹ thuật.
      Phân vân giữa nhỏ và vừa → chọn vừa. Rủi ro cao (`risk: high`) là lớn, không bao giờ nhỏ.
-     Cỡ rất nhỏ dùng mẫu SPRINT-tiny.md (hai phần); cỡ vừa/lớn dùng bốn file.
+     Cỡ rất nhỏ dùng mẫu TASK.md (hai phần); cỡ vừa/lớn dùng bốn file.
      Câu dẫn: trước mỗi bảng / danh sách mã ghi một câu nói tài liệu nào và mã là gì, nghĩa in đậm — ví dụ
      "PLAN có 1 **task** (TK):" (skill id-convention). -->
 

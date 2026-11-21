@@ -54,6 +54,9 @@ def serious(root: Path) -> list:
 
 @pytest.mark.parametrize("name", sorted(COMBOS))
 def test_plain_vi_run_is_byte_identical_to_db1f34a(tmp_path, name):
+    """Golden của lần chạy `vi` thường. Hai mục KHÔNG còn giống db1f34a, đã ghim lại có chủ ý (SPR-35 TK2): `tiny` (file ra đổi thành `TASK.md`,
+    `doc: task`, nhãn H1 mới) và `small` (một dòng comment mẫu `SPRINT.md` trỏ `TASK.md` thay `SPRINT-tiny.md`); các mục khác vẫn
+    byte-identical với db1f34a."""
     root = tmp_path / "p"
     root.mkdir()
     argv = [str(root), "--apply", "--date", DATE, *COMBOS[name]]
