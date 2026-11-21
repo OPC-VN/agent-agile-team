@@ -186,7 +186,9 @@ def test_template_folder_exemption_compares_resolved_paths(tmp_path, monkeypatch
     detour = tmp_path / "plugin" / "x" / ".." / "templates" / "sprint"
     assert "sprint-size-mismatch" not in rules_of(check.check_paths([detour]))
     upper = tmp_path / "plugin" / "TEMPLATES" / "SPRINT"
-    if upper.exists():  # hệ không phân biệt hoa/thường (Windows): cùng một thư mục
+    # Chỉ khi `resolve()` chuẩn hoá kiểu chữ (Windows): cùng một thư mục. Trên macOS hệ file không phân biệt hoa/thường nhưng
+    # `resolve()` giữ nguyên kiểu chữ đã gõ, nên đường hoa/thường khác vẫn là một đường khác với `c.TEMPLATES`: không khẳng định.
+    if upper.exists() and upper.resolve() == folder.resolve():
         assert "sprint-size-mismatch" not in rules_of(check.check_paths([upper]))
 
 

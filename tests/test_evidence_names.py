@@ -118,6 +118,9 @@ def test_verdict_lookup_uses_directory_listing(tmp_path, monkeypatch):
     monkeypatch.setattr(check.os, "listdir", lambda p=".": ["gate-1-verdict.md"] if Path(p) == evidence else real(p))
     found = check._find_verdict(evidence, 1)
     assert found is not None and found.name == "gate-1-verdict.md"
+    # `_find_verdict` also needs the listed file to EXIST (`is_file`): on a case-sensitive file system (Linux CI) the upper-case
+    # name is a second file, so create it; on a case-insensitive one (Windows, macOS) this just rewrites the same file.
+    write_lf(evidence / "GATE-1-VERDICT.md", "x\n")
     monkeypatch.setattr(check.os, "listdir", lambda p=".": ["GATE-1-VERDICT.md", "gate-1-verdict.md"] if Path(p) == evidence else real(p))
     assert check._find_verdict(evidence, 1).name == "GATE-1-VERDICT.md"  # tên mới trước
     monkeypatch.setattr(check.os, "listdir", lambda p=".": ["Gate-1-Verdict.md"] if Path(p) == evidence else real(p))
