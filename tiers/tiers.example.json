@@ -26,6 +26,7 @@
   },
   "roles": {
     "tech-reviewer": { "tier": "3", "models": { "claude": "<model-id>" }, "effort": 3 },
-    "researcher":    { "tier": "1", "effort": 2 }
+    "researcher":    { "tier": "1", "effort": 2 },
+    "qa":            { "tier": "2", "effort": { "claude": 2, "codex": 2, "antigravity": 1 } }
   }
 }

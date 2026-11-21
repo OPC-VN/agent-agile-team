@@ -13,9 +13,9 @@
 | Implementer | 2 | claude | `<model-id>` | 3 | `high` | ô tier 2 |
 | Implementer | 2 | codex | `<model-id>` | 3 | `high` | ô tier 2 |
 | Implementer | 2 | antigravity | `<model-id>` | 3 | `high` | ô tier 2 |
-| QA | 2 | claude | `<model-id>` | 3 | `high` | ô tier 2 |
-| QA | 2 | codex | `<model-id>` | 3 | `high` | ô tier 2 |
-| QA | 2 | antigravity | `<model-id>` | 3 | `high` | ô tier 2 |
+| QA | 2 | claude | `<model-id>` | 2 | `medium` | override roles.qa |
+| QA | 2 | codex | `<model-id>` | 2 | `medium` | override roles.qa |
+| QA | 2 | antigravity | `<model-id>` | 1 | `low` | override roles.qa |
 | Researcher | 1 | claude | `<model-id>` | 2 | `medium` | override roles.researcher |
 | Researcher | 1 | codex | `<model-id>` | 2 | `medium` | override roles.researcher |
 | Researcher | 1 | antigravity | `<model-id>` | 2 | `medium` | override roles.researcher |

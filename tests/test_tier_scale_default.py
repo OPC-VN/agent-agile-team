@@ -167,3 +167,13 @@ def test_tiers_example_is_schema_3_with_five_tiers():
     assert data["schema"] == 3 and data["tier_scale"] == 2
     assert list(data["tiers"]) == ["1", "2", "3", "4", "5"]
     assert data["tiers"]["5"]["models"] == {} and data["tiers"]["5"]["effort"] is None
+
+
+def test_tier_label_legacy_boundary_created_equal_to_effective_date_is_reported(tmp_path, monkeypatch):
+    task = _legacy_doc(tmp_path, monkeypatch, created=NEW_DATE)
+    assert _rules(task.parent) == {"tier-label-legacy"}
+
+
+def test_tier_label_legacy_boundary_created_one_day_before_is_silent(tmp_path, monkeypatch):
+    task = _legacy_doc(tmp_path, monkeypatch, created="2025-12-31")  # NEW_DATE = 2026-01-01
+    assert _rules(task.parent) == set()
