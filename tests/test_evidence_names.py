@@ -257,3 +257,28 @@ def test_evidence_name_no_evidence_dir_or_subfolder_is_silent(tmp_path, effectiv
     assert _notes(root) == []
     (root / "evidence" / "gate-1-verdict.md").mkdir(parents=True)
     assert _notes(root) == []
+
+
+@pytest.mark.parametrize("key,name", [
+    ("research", "RESEARCH-TK3-api.md"), ("research", "RESEARCH-chủ-đề.md"), ("research", "RESEARCH-Topic_X.md"),
+    ("plan_review", "PLAN-REVIEW-v1-huong-B.md"), ("plan_review", "PLAN-REVIEW-Advisor.md"), ("plan_review", "PLAN-REVIEW-tech-reviewer.md"),
+])
+def test_new_topic_part_is_not_restricted_in_case_or_charset(tmp_path, effective, key, name):
+    """NAMING mục 0 chỉ quy định tiền tố viết hoa: phần chủ đề/vai tự do, không bị ghi chú là kiểu cũ."""
+    new, _ = c.EVIDENCE_NAMES[key]
+    assert re.fullmatch(new, name), name
+    root = make_sprint(tmp_path)
+    _new_record_with(root, name)
+    assert _notes(root) == []
+
+
+@pytest.mark.parametrize("key,name", [
+    ("research", "research-api.md"), ("research", "Research-api.md"), ("research", "research.md"),
+    ("plan_review", "plan-review-opus.md"), ("plan_review", "Plan-Review-1.md"), ("plan_review", "plan-review.md"),
+])
+def test_legacy_prefix_case_still_flagged(tmp_path, effective, key, name):
+    new, old = c.EVIDENCE_NAMES[key]
+    assert re.fullmatch(old, name) and not re.fullmatch(new, name), name
+    root = make_sprint(tmp_path)
+    _new_record_with(root, name)
+    assert len(_notes(root)) == 1

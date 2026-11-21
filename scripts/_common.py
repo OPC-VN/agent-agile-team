@@ -31,8 +31,8 @@ STATE_DOC_NAMES: tuple = ("PROGRESS.md", "SPRINT.md", "TASK.md")
 EVIDENCE_NAMES: dict = {
     "gate_verdict": (r"GATE-([12])-VERDICT\.md", r"gate-([12])-verdict\.md"),
     "task_report": (r"REPORT-TK[0-9]+(?:\.[0-9]+)*[a-z]?\.md", r"(?i)tk[0-9a-z][0-9a-z.]*[-_].*report.*\.md"),
-    "plan_review": (r"PLAN-REVIEW-[a-z0-9]+(?:-[a-z0-9]+)*\.md", r"(?i)plan-review(?:-[0-9a-z]+)*\.md"),
-    "research": (r"RESEARCH-[a-z0-9]+(?:-[a-z0-9]+)*\.md", r"(?i)research(?:[-_].*)?\.md"),
+    "plan_review": (r"PLAN-REVIEW-.+\.md", r"(?i)plan-review(?:-[0-9a-z]+)*\.md"),
+    "research": (r"RESEARCH-.+\.md", r"(?i)research(?:[-_].*)?\.md"),
     "analysis": (r"ANALYSIS\.md", r"(?i)analysis(?:[-_].*)?\.md"),
     "claims": (r"CLAIMS\.md", r"(?i)claims(?:[-_].*)?\.md"),
 }
