@@ -88,10 +88,11 @@ Giá trị là token tiếng Anh cho máy đọc; thân tài liệu dùng nhãn 
 | `size` | tài liệu sprint | `tiny` (rất nhỏ) · `small` (nhỏ) · `medium` (vừa) · `large` (lớn) |
 | `risk` | tài liệu sprint | `normal` · `high` — `high` buộc `size: large` |
 | `risk_tags` | tài liệu sprint | danh sách con của `secret`, `auth`, `external_input`, `public_api`, `infra`, `data_migration`, `rules`; khác rỗng buộc `risk: high`; cổng `delegated` đã kết luận buộc khai `risk_tags` là danh sách chuỗi (`[]` khi không có nhãn), `check` báo `gate-delegation-invalid` nếu vắng hoặc sai kiểu |
+| `tier_scale` | tài liệu sprint | `2` = thang Tier 1–5: mẫu và `init` ghi sẵn, `roles` ghi tier bằng số 1–4 (mục 3.1). Vắng khoá = thang cũ (nhãn chữ), hồ sơ cũ giữ nguyên kết quả của `check`. Giá trị khác `2` được đọc như vắng. Mẫu đặt khoá ngay trên `gate_1` (hoặc trên `roles` ở tài liệu không có `gate_1`) |
 | `roles` | tài liệu sprint | khối lồng; khoá vai → `[tier, agent]` hoặc `[tier, agent, "note"]` (mục 3.1) |
 | `gate_1` · `gate_1_at` · `gate_1_quote` | SPEC, PLAN, SPRINT | `pending` · `approved` · `changes_requested`; thời điểm và câu duyệt nguyên văn, chưa có thì `null` |
-| `gate_1_mode` · `gate_2_mode` | SPEC, PLAN, SPRINT (Cổng 1) · REPORT, SPRINT (Cổng 2) | `delegated` (mặc định của sprint mới: Gate Delegate T1 ký theo lời cấp thường trực, [method/process.md](../method/process.md) mục 3) · `human` (người tự ký; hồ sơ cũ vắng khoá được đọc như `human`); giá trị khác → `frontmatter-value`. `delegated` buộc `gate_N_quote` bắt đầu `duyệt thay:` và `risk_tags` khai hợp lệ |
-| `delegation` | nơi có `gate_N_mode: delegated` | khối lồng một cấp, tám khoá sau và năm khoá agile tuỳ chọn (`level` · `program` · `channel` · `orchestrator` · `sessions_cap`, ý nghĩa ở `method/agile.md` mục 3; có một khoá hoặc `grant` bắt đầu `Bật autopilot` — chữ mở đầu cũ mà `check` còn đọc, cố ý giữ — là kích luật duyệt thay) — khoá ngoài hai nhóm này cũng báo, kể cả khi cổng còn mở (một lần mỗi tài liệu): `grant` (lời cấp nguyên văn) · `grant_at` · `scope` (`[gate_1]`, `[gate_2]` hoặc cả hai) · `expires` (`sprint_end` hoặc `YYYY-MM-DD`) · `by` (nhãn agent T1 giữ vai kiểm định T1 trong `roles` của chính PLAN, REPORT hoặc `SPRINT.md`; chuyên đề chỉ tính khi thuộc danh sách `security-specialist`, `data-specialist`, `backend-specialist`, `frontend-specialist`; SPEC không đòi) · `tier` (`T1`) · `files` (file luật nêu đích danh, `[]` nếu không) · `revoked_at` (`null` hoặc thời điểm thu hồi). Thời điểm dạng `YYYY-MM-DD` hoặc `YYYY-MM-DD HH:MM +TZ` |
+| `gate_1_mode` · `gate_2_mode` | SPEC, PLAN, SPRINT (Cổng 1) · REPORT, SPRINT (Cổng 2) | `delegated` (mặc định của sprint mới: Gate Delegate ký theo lời cấp thường trực, [method/process.md](../method/process.md) mục 3) · `human` (người tự ký; hồ sơ cũ vắng khoá được đọc như `human`); giá trị khác → `frontmatter-value`. `delegated` buộc `gate_N_quote` bắt đầu `duyệt thay:` và `risk_tags` khai hợp lệ |
+| `delegation` | nơi có `gate_N_mode: delegated` | khối lồng một cấp, tám khoá sau và năm khoá agile tuỳ chọn (`level` · `program` · `channel` · `orchestrator` · `sessions_cap`, ý nghĩa ở `method/agile.md` mục 3; có một khoá hoặc `grant` bắt đầu `Bật autopilot` — chữ mở đầu cũ mà `check` còn đọc, cố ý giữ — là kích luật duyệt thay) — khoá ngoài hai nhóm này cũng báo, kể cả khi cổng còn mở (một lần mỗi tài liệu): `grant` (lời cấp nguyên văn) · `grant_at` · `scope` (`[gate_1]`, `[gate_2]` hoặc cả hai) · `expires` (`sprint_end` hoặc `YYYY-MM-DD`) · `by` (nhãn agent giữ vai kiểm định tier cao trong `roles` của chính PLAN, REPORT hoặc `SPRINT.md`: tier 3 hoặc 4 ở thang Tier 1–5, tier cao nhất của thang cũ ở hồ sơ cũ; chuyên đề chỉ tính khi thuộc danh sách `security-specialist`, `data-specialist`, `backend-specialist`, `frontend-specialist`; SPEC không đòi) · `tier` (tier của người duyệt thay: 3 hoặc 4 ở thang Tier 1–5; hồ sơ cũ ghi tier cao nhất của thang cũ) · `files` (file luật nêu đích danh, `[]` nếu không) · `revoked_at` (`null` hoặc thời điểm thu hồi). Thời điểm dạng `YYYY-MM-DD` hoặc `YYYY-MM-DD HH:MM +TZ` |
 | `verdict` | REPORT, SPRINT | kết luận vòng kiểm định cuối: `pending` · `pass` (Đạt) · `conditional_pass` (Đạt có điều kiện) · `fail` (Không đạt) |
 | `gate_2` · `gate_2_at` · `gate_2_quote` | REPORT, SPRINT | kết luận của chủ sản phẩm, cùng bộ giá trị với `verdict`; thời điểm, câu nguyên văn |
 | `review_round` | PROGRESS, REPORT, SPRINT | số nguyên ≥ 0 — vòng kiểm định hiện tại |
@@ -117,19 +118,21 @@ Giá trị là token tiếng Anh cho máy đọc; thân tài liệu dùng nhãn 
 - Vai thực thi: `analyst`, `architect`, `implementer`, `qa`, `researcher`. Vai kiểm định: `business-reviewer`,
   `tech-reviewer` và chuyên đề `<tên>-specialist` (`security-specialist`, `data-specialist`,
   `backend-specialist`, `frontend-specialist`; tên chuyên đề khác → `roles-invalid`) và `gate-delegate` (vai kiểm định
-  T1, người duyệt thay cổng). Vai tư vấn: `advisor` (T1). `gate-delegate` và `advisor` buộc tier `T1` (khác → `roles-invalid`).
-- `tier` là `T1` · `T2` · `T3`. `agent` là **nhãn phiên hoặc subagent** (`agent-a`), không phải tên model —
+  Tier 4, người duyệt thay cổng). Vai tư vấn: `advisor` (Tier 4). Ở thang Tier 1–5 `gate-delegate` và `advisor` buộc tier 3 hoặc 4 (khác → `roles-invalid`;
+  mẫu ghi 4); ở hồ sơ cũ (không có `tier_scale`) hai vai buộc tier cao nhất của thang cũ.
+- `tier` là số 1–4 khi tài liệu có `tier_scale: 2` (vai → tier: Researcher 1 · QA và Implementer 2 · Analyst, Architect và Tech Reviewer 3 ·
+  Business Reviewer, Gate Delegate và Advisor 4); tier 5 là bậc dự phòng chỉ người, gán cho agent → `roles-invalid`. Hồ sơ cũ không có `tier_scale` giữ ba nhãn chữ của thang cũ. `agent` là **nhãn phiên hoặc subagent** (`agent-a`), không phải tên model —
   hai phiên của cùng một model là hai agent khác nhau. Chưa giao thì `pending`. Model và effort thực tế ghi ở cột
   "Vai · tier · model · effort" của PROGRESS (và của bảng trạng thái trong `SPRINT.md`): effort là số 1–5 theo
-  `method/effort-scale.md`, ví dụ `Implementer · T2 · model-x · 3`; chưa giao thì ghi `—`.
+  `method/effort-scale.md`, ví dụ `Implementer · Tier 2 · model-x · 3`; chưa giao thì ghi `—`.
 - Luật `check` dựa vào: trong một file, không nhãn `agent` nào (trừ `pending`) vừa giữ vai thực thi vừa giữ
   vai kiểm định (mức Chặn). Một agent được giữ nhiều vai thực thi. Nhãn Advisor trùng nhãn Business Reviewer hay Tech Reviewer
   là hợp lệ (Advisor không chấm việc của người làm) **trừ khi** nhãn đó là `delegation.by` (Advisor không ký duyệt thay: `self-review`); trùng nhãn Analyst/Architect hoặc Gate Delegate là `self-review`
   (Advisor không soạn SPEC/PLAN và không duyệt thay khuyến nghị của chính mình). Khoá `advisor` ghi ở `roles` của cả SPEC
   lẫn PLAN (để `check` so được với `analyst` ở SPEC và `architect` ở PLAN).
 - Người duyệt thay (`delegation.by`) cũng không được trùng nhãn một vai thực thi trong `roles` của cùng file: mức Chặn, cùng luật `self-review`.
-  Ở tài liệu có bản ghi duyệt thay (PLAN, REPORT, `SPRINT.md`) `by` còn phải giữ ít nhất một vai kiểm định tier T1 trong `roles` của chính tài liệu
-  (nhiều vai kiểm định khác tier: đủ một vai T1); `roles` vắng, nhãn lạ hoặc chỉ vai tier khác T1 → Phải sửa `gate-delegation-invalid`. SPEC không đòi.
+  Ở tài liệu có bản ghi duyệt thay (PLAN, REPORT, `SPRINT.md`) `by` còn phải giữ ít nhất một vai kiểm định tier cao trong `roles` của chính tài liệu (tier 3 hoặc 4 ở thang Tier 1–5, tier cao nhất của thang cũ ở hồ sơ cũ;
+  nhiều vai kiểm định khác tier: đủ một vai đạt); `roles` vắng, nhãn lạ hoặc chỉ vai tier thấp hơn → Phải sửa `gate-delegation-invalid`. SPEC không đòi.
 - **Độc lập kiểm định:** file có `VR` (REPORT, SPRINT) thì nhãn `qa` phải khác nhãn `implementer` và
   `architect`. Trùng nhãn → Phải sửa, trừ khi việc cỡ **rất nhỏ** và dòng `VR` ghi rõ "tự kiểm, chưa độc lập"; khi đó
   `verdict` tối đa `conditional_pass`. Cỡ nhỏ trở lên không có tự kiểm: `qa` trùng nhãn người làm vẫn là Phải sửa dù

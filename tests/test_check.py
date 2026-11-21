@@ -21,6 +21,7 @@ SPECIAL_CASES = {
     "routing-invalid", "routing-unknown", "routing-manifest-invalid", "routing-missing", "routing-duplicate",
     "locale-invalid", "locale-differs", "locale-label-mixed",  # tests/test_check_locale_rules.py (need the `locale` key)
     "evidence-name",  # tests/test_evidence_names.py (needs NAMING_EFFECTIVE_DATE patched: the branch constant is the 9999-12-31 placeholder)
+    "tier-label-legacy",  # tests/test_tier_scale_default.py (needs NAMING_EFFECTIVE_DATE patched and a `tier_scale: 2` document)
 }
 
 

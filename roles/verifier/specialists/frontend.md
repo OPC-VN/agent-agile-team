@@ -1,7 +1,7 @@
 ---
 name: frontend-specialist
 group: verifier
-tier: T1
+tier: 3
 title: Frontend specialist — pulled by Tech Reviewer when UI, accessibility or client-side state changes
 ---
 

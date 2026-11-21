@@ -10,6 +10,7 @@ size: small
 risk: normal
 risk_tags: []
 review_round: 0
+tier_scale: 2
 gate_1: pending
 gate_1_at: null
 gate_1_quote: null
@@ -18,9 +19,9 @@ gate_2: pending
 gate_2_at: null
 gate_2_quote: null
 roles:
-  analyst: [T1, agent-a]
-  implementer: [T2, agent-e]
-  tech-reviewer: [T1, agent-d]
+  analyst: [3, agent-a]
+  implementer: [2, agent-e]
+  tech-reviewer: [3, agent-d]
 created: 2026-01-20
 updated: 2026-01-20
 ---
@@ -54,7 +55,7 @@ updated: 2026-01-20
 
 PLAN có 1 **task** (TK):
 
-- **TK1 (cắt khoảng trắng mã đơn) → FR1.1, SC1:** Implementer · T2 thực thi. Cách kiểm: test đơn vị xanh.
+- **TK1 (cắt khoảng trắng mã đơn) → FR1.1, SC1:** Implementer · Tier 2 thực thi. Cách kiểm: test đơn vị xanh.
   Hoàn tác: `git revert`.
 
 ## 3. PROGRESS
@@ -65,7 +66,7 @@ PLAN có 1 **task** (TK):
 
 | Việc | Vai · tier · model · effort | Trạng thái | Bằng chứng |
 |---|---|---|---|
-| TK1 (cắt khoảng trắng mã đơn) | Implementer · T2 · model-x · 3 | Đạt | `pytest tests/test_lookup.py` → 1 passed |
+| TK1 (cắt khoảng trắng mã đơn) | Implementer · Tier 2 · model-x · 3 | Đạt | `pytest tests/test_lookup.py` → 1 passed |
 
 - **2026-01-20 10:00 +07** — Implementer thêm bước cắt khoảng trắng; test xanh.
 - **Vướng mắc:** Không có.

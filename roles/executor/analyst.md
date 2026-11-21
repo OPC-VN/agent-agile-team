@@ -1,7 +1,7 @@
 ---
 name: analyst
 group: executor
-tier: T1
+tier: 3
 title: Analyst — intake, SPEC, coordination, REPORT, lessons
 ---
 

@@ -9,12 +9,13 @@ status: draft
 size: medium
 risk: normal
 risk_tags: []
+tier_scale: 2
 gate_1: pending
 gate_1_at: null
 gate_1_quote: null
 roles:
-  architect: [T1, agent-b]
-  tech-reviewer: [T1, agent-d]
+  architect: [3, agent-b]
+  tech-reviewer: [3, agent-d]
 created: 2026-01-15
 updated: 2026-01-15
 links:
@@ -86,7 +87,7 @@ PLAN có 2 **task** (TK):
 
 ### TK1 — Hàm tra cứu đơn (→ FR1.1, FR1.2)
 
-- **Vai:** Implementer · T2 thực thi; QA · T3 vặt & kiểm thử chạy test.
+- **Vai:** Implementer · Tier 2 thực thi; QA · Tier 2 vặt & kiểm thử chạy test.
 - **Đầu vào:** SPEC mục 3. **Đầu ra:** hàm tra cứu + test.
 - **Giao diện (interfaces):** `find_order(code: str) -> OrderStatus | None`; trả `None` khi không tìm thấy.
 - **Cách kiểm:** `pytest tests/test_orders.py` xanh; coverage dòng ≥80%.
@@ -95,7 +96,7 @@ PLAN có 2 **task** (TK):
 
 ### TK2 — Màn hình tra cứu (→ FR1.1, SC1)
 
-- **Vai:** Implementer · T2 thực thi.
+- **Vai:** Implementer · Tier 2 thực thi.
 - **Đầu vào:** TK1 (hàm tra cứu đơn). **Đầu ra:** màn hình + test giao diện.
 - **Giao diện (interfaces):** ô nhập mã đơn → gọi `find_order` → hiện trạng thái hoặc "không tìm thấy".
 - **Cách kiểm:** kịch bản FR1.1, FR1.2 chạy trên trình duyệt; ảnh chụp làm bằng chứng.

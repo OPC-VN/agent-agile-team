@@ -9,12 +9,13 @@ status: draft
 size: medium
 risk: normal
 risk_tags: []
+tier_scale: 2
 gate_1: pending
 gate_1_at: null
 gate_1_quote: null
 roles:
-  analyst: [T1, agent-a]
-  business-reviewer: [T1, agent-c]
+  analyst: [3, agent-a]
+  business-reviewer: [4, agent-c]
 created: 2026-01-15
 updated: 2026-01-15
 links:

@@ -1,7 +1,7 @@
 ---
 name: backend-specialist
 group: verifier
-tier: T1
+tier: 3
 title: Backend specialist — pulled by Tech Reviewer when risk tags include public_api or infra, or contracts change
 ---
 

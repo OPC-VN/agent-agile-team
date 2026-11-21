@@ -58,7 +58,7 @@ RULES: dict[str, tuple[str, str]] = {
     "heading-missing": (PHAI, "thiếu tiêu đề cấp 2 bắt buộc"),
     "sprint-size-mismatch": (PHAI, "hình tài liệu không khớp `size`: `SPRINT.md` ở cỡ vừa/lớn, bốn file ở cỡ rất nhỏ, hoặc `TASK.md` sai cỡ / bốn phần / đứng cạnh tài liệu sprint khác"),
     "conclusion-missing": (PHAI, "thiếu khối `> **Kết luận:**` trước tiêu đề cấp 2 đầu tiên"),
-    "id-bare-single-letter": (PHAI, "mã một chữ cái + số ngoài dấu code (trừ T1/T2/T3)"),
+    "id-bare-single-letter": (PHAI, "mã một chữ cái + số ngoài dấu code (trừ T1/T2/T3, nhãn tier của hồ sơ cũ)"),
     "id-unknown-prefix": (PHAI, "định nghĩa mục bằng tiền tố hai chữ cái ngoài bảng mã"),
     "id-wrong-doc": (PHAI, "định nghĩa mục bằng tiền tố thuộc tài liệu khác"),
     "id-list-lead": (GHI, "bảng có cột đầu `Mã` mà dòng ngay trên không có câu dẫn in đậm (tài liệu + nghĩa của mã)"),
@@ -74,7 +74,7 @@ RULES: dict[str, tuple[str, str]] = {
     "self-review": (CHAN, "một nhãn agent vừa giữ vai thực thi vừa giữ vai kiểm định"),
     "qa-not-independent": (PHAI, "QA trùng nhãn với implementer/architect mà không khai tự kiểm, hoặc khai tự kiểm mà verdict là pass"),
     "vr-result-not-pass": (NEN, "dòng `VR` ghi 'Chưa chạy' (hoặc 'Không áp dụng' không kèm lý do) ở cột Kết quả trong khi `verdict` hoặc `gate_2` là pass"),
-    "roles-invalid": (PHAI, "`roles` sai hình: vai lạ, tier ngoài T1–T3, thiếu nhãn agent"),
+    "roles-invalid": (PHAI, "`roles` sai hình: vai lạ, tier ngoài thang (T1–T3 khi không có `tier_scale`; 1–5 khi `tier_scale: 2`, tier 5 chỉ người), thiếu nhãn agent"),
     "gate-invalid": (PHAI, "cổng đã kết luận mà thiếu thời điểm/câu nguyên văn, hoặc trạng thái vượt cổng"),
     "gate-delegation-invalid": (PHAI, "duyệt thay thiếu lời cấp/phạm vi/hạn/bản ghi, quá hạn, đã thu hồi, người duyệt không phải T1, hoặc vào vùng cấm"),
     "old-scale-label": (PHAI, "nhãn thang mức cũ (kiểu nguồn trong câu, hoặc tiếng Việt kiểu cũ) ngoài bảng quy đổi `method/severity.md`"),
@@ -94,6 +94,7 @@ RULES: dict[str, tuple[str, str]] = {
     "session-cap-missing": (PHAI, "PLAN, SPRINT.md hoặc TASK.md có Cổng 1 duyệt thay mới mà thiếu 'Trần phiên: <số>' hoặc sessions_cap không khớp (null/vắng không hợp lệ)"),
     "session-cap-over": (GHI, "chỉ báo (không chặn): 'Trần phiên' vượt công thức cỡ × rủi ro mà không có dòng 'nâng trần' ở Nhật ký quyết định"),
     "evidence-name": (GHI, "hồ sơ tạo từ ngày hiệu lực của quy ước tên (`NAMING_EFFECTIVE_DATE`) mà `evidence/` còn file đặt tên kiểu cũ (`gate-<N>-verdict.md`, `tk<n>-report.md`, `analysis.md`…): chỉ báo, không đổi mã thoát"),
+    "tier-label-legacy": (GHI, "tài liệu `tier_scale: 2` tạo từ ngày hiệu lực (`NAMING_EFFECTIVE_DATE`) mà thân còn nhãn tier cũ `T1`/`T2`/`T3` ngoài dấu code: chỉ báo, không đổi mã thoát"),
     "gate-route-floor": (PHAI, "cổng `delegated` (kể cả còn `pending`) mà bảng 'File luật và file sàn cứng sẽ chạm' khai file sàn cứng, hoặc `risk_tags` có `rules` mà `delegation.files` rỗng: chuyển cổng người, trình lời khuyến nghị"),
     "frontmatter-duplicate-key": (PHAI, "khoá `delegation` lặp trong frontmatter (chỉ một phiên điều phối ghi lời cấp)"),
     "decision-owner-missing": (NEN, "CQ/DN của sprint từ ngày chế độ mở mà bảng thiếu cột hoặc ô 'Người quyết'"),
@@ -325,6 +326,7 @@ SPRINT_FOUR = REQUIRED_HEADINGS["sprint"]
 CODE = re.compile(r"(?<![\w/\-])([A-Z]{2})([0-9]+(?:\.[0-9]+)*)(?![\w\-])")
 CODE_AT_START = re.compile(r"([A-Z]{2})([0-9]+(?:\.[0-9]+)*)(?![\w\-])")
 BARE = re.compile(r"(?<![\w\-.])([A-Z])([0-9]+)(?![\w\-])")
+LEGACY_TIER_LABEL = re.compile(r"(?<![\w\-.])T[123](?![\w\-])")
 RANGE = re.compile(r"(?<![\w/\-])([A-Z]{2})([0-9]+)\s*[–—-]\s*([A-Z]{2})([0-9]+)(?![\w\-]|\.[0-9])")
 HEADING = re.compile(r"^(#{1,6})\s+(?:\*\*)?")
 BOLD_ITEM = re.compile(r"^\s*(?:[-*+]|[0-9]+\.)\s+\*\*")
@@ -1297,6 +1299,7 @@ class Engine:
             return
         self.frontmatter_rules(doc)
         self.evidence_name_rule(doc)
+        self.tier_label_legacy_rule(doc)
         self.locale_rules(doc)
         self.size_rules(doc)
         self.heading_rules(doc)
@@ -1314,6 +1317,22 @@ class Engine:
         if doc.kind in ("report", "sprint"):
             self.verification_rules(doc)
             self.stop_message_rules(doc)
+
+    def tier_label_legacy_rule(self, doc: Doc) -> None:
+        """`tier-label-legacy` (Ghi chú; FR5.3): tài liệu `tier_scale: 2` có `created` từ `NAMING_EFFECTIVE_DATE` mà thân còn nhãn tier cũ
+        `T1`/`T2`/`T3` ngoài dấu code, khối code và comment (đọc từ dòng đã che) thì báo từng dòng. Không có `tier_scale: 2` (hồ sơ cũ) hay
+        `created` thiếu/sai định dạng/trước ngày hiệu lực → không báo."""
+        if _tier_scale(doc) != 2:
+            return
+        created = doc.data.get("created")
+        created = created.isoformat() if hasattr(created, "isoformat") else created
+        if not isinstance(created, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) or created < c.NAMING_EFFECTIVE_DATE:
+            return
+        for idx, line in enumerate(doc.masked):
+            match = LEGACY_TIER_LABEL.search(line)
+            if match:
+                self.add(doc.path, doc.line_no(idx), "tier-label-legacy",
+                         f"nhãn tier cũ '{match.group(0)}' — hồ sơ `tier_scale: 2` viết Tier 1…Tier 5 (hồ sơ tạo từ {c.NAMING_EFFECTIVE_DATE})")
 
     def evidence_name_rule(self, doc: Doc) -> None:
         """`evidence-name` (Ghi chú; FR3.3): từ tài liệu trạng thái của hồ sơ MỚI (`created` từ `NAMING_EFFECTIVE_DATE`), báo từng file trong

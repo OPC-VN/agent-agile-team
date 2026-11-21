@@ -14,12 +14,13 @@ verdict: pending
 gate_2: pending
 gate_2_at: null
 gate_2_quote: null
+tier_scale: 2
 roles:
-  analyst: [T1, agent-a]
-  implementer: [T2, agent-e]
-  qa: [T3, agent-f]
-  business-reviewer: [T1, agent-c]
-  tech-reviewer: [T1, agent-d]
+  analyst: [3, agent-a]
+  implementer: [2, agent-e]
+  qa: [2, agent-f]
+  business-reviewer: [4, agent-c]
+  tech-reviewer: [3, agent-d]
 created: 2026-01-15
 updated: 2026-01-15
 links:

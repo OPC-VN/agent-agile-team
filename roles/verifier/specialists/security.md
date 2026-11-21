@@ -1,7 +1,7 @@
 ---
 name: security-specialist
 group: verifier
-tier: T1
+tier: 3
 title: Security specialist — pulled by Tech Reviewer when risk tags include secret, auth, external_input, infra or rules
 ---
 

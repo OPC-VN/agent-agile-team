@@ -1,7 +1,7 @@
 ---
 name: researcher
 group: executor
-tier: T3
+tier: 1
 title: Researcher — search, read and extract information into a cited dossier; no inference, no verdicts
 ---
 

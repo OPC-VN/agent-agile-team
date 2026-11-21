@@ -10,6 +10,7 @@ size: tiny
 risk: normal
 risk_tags: []
 review_round: 0
+tier_scale: 2
 gate_1: pending
 gate_1_at: null
 gate_1_quote: null
@@ -18,9 +19,9 @@ gate_2: pending
 gate_2_at: null
 gate_2_quote: null
 roles:
-  analyst: [T1, agent-a]
-  implementer: [T2, agent-e]
-  tech-reviewer: [T1, agent-d]
+  analyst: [3, agent-a]
+  implementer: [2, agent-e]
+  tech-reviewer: [3, agent-d]
 created: 2026-01-20
 updated: 2026-01-20
 ---
@@ -50,7 +51,7 @@ updated: 2026-01-20
 Kế hoạch có 1 **success criterion** (SC) và 1 **task** (TK):
 
 - **SC1 (chữ đúng):** test giao diện so khớp đúng câu trên.
-- **TK1 (sửa câu báo lỗi) → SC1:** Implementer · T2. Cách kiểm: test giao diện xanh. Hoàn tác: `git revert`.
+- **TK1 (sửa câu báo lỗi) → SC1:** Implementer · Tier 2. Cách kiểm: test giao diện xanh. Hoàn tác: `git revert`.
 
 ## 2. Kết quả
 

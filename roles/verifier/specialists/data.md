@@ -1,7 +1,7 @@
 ---
 name: data-specialist
 group: verifier
-tier: T1
+tier: 3
 title: Data specialist — pulled by Tech Reviewer when risk tags include data_migration
 ---
 
