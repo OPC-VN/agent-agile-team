@@ -157,17 +157,19 @@ def test_report_template_vr_table_has_nine_columns_and_result_header():
     assert summary.count("Gợi ý") == 3  # three prompts in the comment for the plain-language summary
 
 
-def nine_column(text: str) -> str:
+def nine_column(text: str, new_after_evidence: bool = False) -> str:
     """Rewrite the six-column VR table of a build() fixture into the nine-column shape of the template."""
     header = TABLE["vi"]["header"]
     out = []
     for line in text.split("\n"):
         if line == header:
-            out.append(header.replace("| Người kiểm | Bằng chứng |", "| Người kiểm | Môi trường | Mốc | Thời điểm | Bằng chứng |"))
+            new = "| Môi trường | Mốc | Thời điểm |"
+            out.append(header + new[1:] if new_after_evidence else header.replace("| Người kiểm | Bằng chứng |", "| Người kiểm " + new + " Bằng chứng |"))
         elif line == "|---|---|---|---|---|---|":
             out.append("|---|---|---|---|---|---|---|---|---|")
         elif line.startswith("| VR1 "):
-            out.append(line.replace("| QA · agent-f | ", "| QA · agent-f | máy dev | `abc1234` | 2026-11-21 10:00 +07 | "))
+            cells = " máy dev | `abc1234` | 2026-11-21 10:00 +07 |"
+            out.append(line + cells if new_after_evidence else line.replace("| QA · agent-f | ", "| QA · agent-f |" + cells + " "))
         else:
             out.append(line)
     return "\n".join(out)
@@ -183,6 +185,25 @@ def test_vr_result_rule_still_fires_with_new_columns(tmp_path, result, fires):
     write_lf(path, wide)
     report = check.check_paths([root])
     assert ("vr-result-not-pass" in rules_of(report)) is fires, [f.render() for f in report.findings]
+
+
+def test_vr_not_applicable_without_reason_still_fires_with_new_columns(tmp_path):
+    """The template order keeps the evidence/reason cell last, so a bare "Không áp dụng" is still reported."""
+    root, _ = build(tmp_path, "vi", "Không áp dụng", last="")
+    path = root / "REPORT.md"
+    write_lf(path, nine_column(path.read_bytes().decode("utf-8")))
+    report = check.check_paths([root])
+    assert "vr-result-not-pass" in rules_of(report), [f.render() for f in report.findings]
+
+
+def test_known_limit_new_columns_after_evidence_hide_missing_reason(tmp_path):
+    """Records a LIMIT of `check`, not a requirement: with the three new columns AFTER the evidence column the rule reads the
+    last cell as the reason, so a bare "Không áp dụng" goes unreported. This is why the template puts them before it."""
+    root, _ = build(tmp_path, "vi", "Không áp dụng", last="")
+    path = root / "REPORT.md"
+    write_lf(path, nine_column(path.read_bytes().decode("utf-8"), new_after_evidence=True))
+    report = check.check_paths([root])
+    assert "vr-result-not-pass" not in rules_of(report), [f.render() for f in report.findings]
 
 
 # --- FR1.6, FR1.7 ---------------------------------------------------------------------------------------
