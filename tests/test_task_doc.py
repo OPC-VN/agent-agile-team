@@ -286,3 +286,21 @@ def test_task_md_with_foreign_frontmatter_is_frontmatter_syntax(tmp_path):
     found = [f for f in report.findings if f.rule == "frontmatter-syntax"]
     assert [f.level for f in found] == [check.CHAN]
     assert check.main([str(tmp_path)]) == 2
+
+
+@pytest.mark.parametrize("name, wrong, right", [("TASK.md", "sprint", "task"), ("SPRINT.md", "task", "sprint")])
+def test_wrong_doc_value_gives_no_misleading_id_finding(tmp_path, name, wrong, right):
+    """A `doc` that does not match the file name is reported once, as `doc`; no `id` finding derived from that wrong value
+    (it would tell the author to make the id match the wrong doc)."""
+    base = as_task(legacy_two_part()) if name == "TASK.md" else legacy_two_part()
+    put(tmp_path, name, base.replace(f"doc: {right}", f"doc: {wrong}", 1))
+    found = [f for f in check.check_paths([tmp_path]).findings if f.rule == "frontmatter-value"]
+    assert [f for f in found if "id" in f.message.split(":")[0]] == [], [f.render() for f in found]
+    assert len([f for f in found if f.message.startswith("doc:")]) == 1
+
+
+def test_frontmatter_missing_message_offers_ways_out(tmp_path):
+    write_lf(tmp_path / "TASK.md", "# Todo" + chr(10))
+    msg = next(f.message for f in check.check_paths([tmp_path]).findings if f.rule == "frontmatter-missing")
+    assert msg.startswith("TASK.md là tài liệu chuẩn nhưng không có frontmatter")
+    assert "đổi tên" in msg and "thêm frontmatter" in msg and "thư mục hồ sơ" in msg

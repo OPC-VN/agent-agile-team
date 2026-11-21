@@ -38,7 +38,7 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 | `research` | `RESEARCH-<chủ-đề>.md` | `research.md`, `research-<chủ-đề>.md` | `evidence/` |
 | `analysis` | `ANALYSIS.md` | `analysis.md` | `evidence/` |
 | `claims` | `CLAIMS.md` | `claims.md` | `evidence/` |
-| (ngoài `EVIDENCE_NAMES`) | `HANDOFF.md` | `HANDOFF-BRIEF.md` (tên dự kiến lúc chờ CQ7, chưa từng có file dùng) | gốc thư mục sprint |
+| (ngoài `EVIDENCE_NAMES`) | `HANDOFF.md` | Không có | gốc thư mục sprint |
 | (ngoài `EVIDENCE_NAMES`) | `ROADMAP.md` | Không có | gốc thư mục hồ sơ chương trình |
 
 **Ánh xạ với luật nền `core.md`** (mục *Workflow*: bốn artifact PLAN · CHANGESET · VERIFICATION · HANDOFF):

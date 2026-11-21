@@ -1078,7 +1078,8 @@ def load_doc(path: Path) -> Doc:
             else:
                 doc.load_findings.append(Finding(path, exc.line, "frontmatter-syntax", exc.message))
         if doc.fm is None and not doc.load_findings:
-            doc.load_findings.append(Finding(path, 1, "frontmatter-missing", f"{path.name} là tài liệu chuẩn nhưng không có frontmatter"))
+            doc.load_findings.append(Finding(path, 1, "frontmatter-missing", f"{path.name} là tài liệu chuẩn nhưng không có frontmatter "
+                                             "(không phải hồ sơ sprint: đổi tên file hoặc trỏ `check` vào thư mục hồ sơ thay vì gốc repo; là hồ sơ sprint: thêm frontmatter)"))
         kind = doc.data.get("doc")
         if isinstance(kind, str):
             doc.doc_name = kind
@@ -1564,9 +1565,10 @@ class Engine:
             check_ids("feature", "FS", allow_null=True, allow_list=True)
             sprint = data.get("sprint")
             doc_value = doc.doc_name or kind
-            if isinstance(sprint, str) and c.parse_id(sprint) and data.get("id") != f"{sprint}-{doc_value}":
-                bad("id", f"id: {data.get('id')!r} phải là '{sprint}-{doc_value}'")
             expected = DOC_VALUE_BY_FILE.get(path.name)
+            # `doc` sai so với tên file thì chỉ báo `doc` (cách sửa đúng); không báo thêm `id` suy từ giá trị `doc` sai đó
+            if isinstance(sprint, str) and c.parse_id(sprint) and data.get("id") != f"{sprint}-{doc_value}" and not (expected and doc_value != expected):
+                bad("id", f"id: {data.get('id')!r} phải là '{sprint}-{doc_value}'")
             if expected and doc_value != expected:
                 bad("doc", f"doc: {doc_value!r} không khớp tên file {path.name} (phải là doc: {expected})")
             tags = data.get("risk_tags", [])

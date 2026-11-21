@@ -391,7 +391,7 @@ def test_naming_table_handoff_and_roadmap_rows_are_separate():
     handoff = [cells(ln) for ln in rows if ln.startswith("| (ngoài `EVIDENCE_NAMES`) | `HANDOFF.md`")]
     roadmap = [cells(ln) for ln in rows if ln.startswith("| (ngoài `EVIDENCE_NAMES`) | `ROADMAP.md`")]
     assert len(handoff) == 1 and len(roadmap) == 1
-    assert "HANDOFF-BRIEF.md" in handoff[0][2] and "chờ CQ7" in handoff[0][2] and "chưa từng có file" in handoff[0][2]
+    assert handoff[0][2] == "Không có" and "CQ7" not in handoff[0][2]
     assert handoff[0][3] == "gốc thư mục sprint"
     assert roadmap[0][2] == "Không có" and roadmap[0][3] == "gốc thư mục hồ sơ chương trình"
     assert not any("`HANDOFF.md`, `ROADMAP.md`" in ln for ln in rows)

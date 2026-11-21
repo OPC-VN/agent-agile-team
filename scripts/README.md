@@ -134,7 +134,7 @@ dấu huyền. Mã bị bắt có dấu huyền sát bên thì phát hiện kèm
 | Mã luật | Mức | Bắt gì |
 |---|---|---|
 | `frontmatter-syntax` | Chặn | Frontmatter ngoài tập con YAML, kèm dòng — lỗi đầu vào, thoát 2 |
-| `frontmatter-missing` | Phải sửa | File tên chuẩn (`SPEC.md`, `PLAN.md`, `PROGRESS.md`, `REPORT.md`, `SPRINT.md`, `TASK.md`, ba sổ) không có frontmatter |
+| `frontmatter-missing` | Phải sửa | File tên chuẩn (`SPEC.md`, `PLAN.md`, `PROGRESS.md`, `REPORT.md`, `SPRINT.md`, `TASK.md`, ba sổ) không có frontmatter; thông báo gợi ba lối thoát: đổi tên file, thêm frontmatter, hoặc trỏ `check` vào thư mục hồ sơ |
 | `frontmatter-key-missing` | Phải sửa | Thiếu khoá bắt buộc theo loại tài liệu (`templates/README.md` mục 3); file tên chuẩn có frontmatter mà thiếu `doc` |
 | `frontmatter-key-unknown` | Ghi chú | Khoá ngoài bảng khoá của hợp đồng |
 | `locale-invalid` | Phải sửa | Khoá `locale` khai giá trị không thuộc các ngôn ngữ đã phát hành (`vi`, `en`); chỉ xét tài liệu có khoá `locale` |
