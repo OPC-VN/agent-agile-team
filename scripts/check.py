@@ -112,6 +112,8 @@ INPUT_RULES = {"frontmatter-syntax", "config-syntax"}
 SPRINT_DOCS = ("spec", "plan", "progress", "report", "sprint")
 REGISTRY_DOCS = ("requests", "specs", "sprints")
 DOC_KINDS = SPRINT_DOCS + ("feature",) + REGISTRY_DOCS
+# Hai phần kèm (DN6, TK6.1): `check` nhận tên `doc: handoff` và `doc: roadmap` nhưng không áp luật hình nào (chỉ luật chung về mã). Cố ý KHÔNG nằm trong `DOC_KINDS`: thêm vào đó làm hồ sơ cũ dùng hai giá trị này ra Phải sửa mới.
+ADDON_DOCS = ("handoff", "roadmap")
 KNOWN_NAMES = {
     "SPEC.md": "spec", "PLAN.md": "plan", "PROGRESS.md": "progress", "REPORT.md": "report",
     "SPRINT.md": "sprint", "TASK.md": "sprint", "REQUESTS.md": "requests", "SPECS.md": "specs", "SPRINTS.md": "sprints",
@@ -1087,7 +1089,7 @@ def load_doc(path: Path) -> Doc:
             doc.load_findings.append(Finding(path, 1, "frontmatter-key-missing",
                                              f"{path.name} là tài liệu chuẩn nhưng frontmatter thiếu khoá 'doc' "
                                              f"(doc: {DOC_VALUE_BY_FILE.get(path.name, KNOWN_NAMES[path.name])})"))
-        elif doc.fm is not None and "doc" in doc.data:
+        elif doc.fm is not None and "doc" in doc.data and kind not in ADDON_DOCS:
             doc.load_findings.append(Finding(path, doc.key_line("doc"), "doc-unknown", f"doc: {kind!r} không thuộc {', '.join(DOC_KINDS)}"))
     doc.defs = _definitions(doc)
     return doc

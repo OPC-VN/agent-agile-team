@@ -16,10 +16,10 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 | `sprint/SPRINT.md` | `<thư mục sprint>/SPRINT.md` | Cỡ nhỏ: bốn phần SPEC · PLAN · PROGRESS · REPORT gộp một file (`size: small`) |
 | `sprint/TASK.md` | `<thư mục sprint>/TASK.md` | Cỡ rất nhỏ: hai phần "Kế hoạch" / "Kết quả" (`size: tiny`, `doc: task`); thay `SPRINT.md` hai phần của hồ sơ cũ |
 | `sprint/BRIEF.md` | không dựng — `init` không chép; người giao tự điền | Brief người giao 4 ô, điền trước khi giao việc. `BRIEF.md` là lời giao của NGƯỜI cho agent ở bước tiếp nhận (skill intake); `HANDOFF.md` là bàn giao của AGENT cho agent khác phiên hoặc khác hãng |
-| `sprint/HANDOFF.md` | không dựng — `init` không chép; người hoặc agent tự thêm ở gốc thư mục sprint khi giao ra ngoài phiên | Hai phần: **Giao** (≤40 dòng, bảy ô đánh số, khối kiểm cố định ≤10 dòng) và **Trả** (bốn ô). `doc: handoff` chưa thuộc loại `check` biết: Ghi chú `doc-unknown` |
+| `sprint/HANDOFF.md` | không dựng — `init` không chép; người hoặc agent tự thêm ở gốc thư mục sprint khi giao ra ngoài phiên | Hai phần: **Giao** (≤40 dòng, bảy ô đánh số, khối kiểm cố định ≤10 dòng) và **Trả** (bốn ô). `doc: handoff`: `check` nhận tên, không áp luật hình (chỉ luật chung về mã) |
 | `sprint/ANALYSIS.md` | không dựng — tự thêm vào `evidence/` khi dùng hay nâng một nguồn ngoài, hoặc phương án dài hơn một đoạn | Sáu mục: kết luận · bảng nguồn · kiểm an toàn nguồn · đánh giá từng thay đổi · điều kiện tiên quyết · phương án và khuyến nghị |
 | `sprint/CLAIMS.md` | không dựng — tự thêm vào `evidence/` khi PLAN từ cỡ vừa khẳng định điều gì về mã, bản cài hay thứ đang chạy | Bảng ba cột Số · Khẳng định · Bằng chứng, và bảng "Chưa kiểm" |
-| `registry/ROADMAP.md` | không dựng — tự thêm ở gốc thư mục hồ sơ chương trình khi một mục tiêu cần từ hai sprint | Bảy mục: mục tiêu · bảng lát · hợp đồng dùng chung · quyết định còn hiệu lực · bài học · điểm vào cho phiên mới · rủi ro. `doc: roadmap` chưa thuộc loại `check` biết: Ghi chú `doc-unknown` |
+| `registry/ROADMAP.md` | không dựng — tự thêm ở gốc thư mục hồ sơ chương trình khi một mục tiêu cần từ hai sprint | Bảy mục: mục tiêu · bảng lát · hợp đồng dùng chung · quyết định còn hiệu lực · bài học · điểm vào cho phiên mới · rủi ro. `doc: roadmap`: `check` nhận tên, không áp luật hình (chỉ luật chung về mã) |
 | `registry/REQUESTS.md` | `paths.requests` | Sổ yêu cầu theo timeline |
 | `registry/SPECS.md` | `paths.specs` | Mục lục tính năng |
 | `registry/feature-spec.md` | `<paths.feature_specs_dir>/<slug>.md` | Spec sống của một tính năng |

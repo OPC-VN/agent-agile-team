@@ -10,7 +10,7 @@ updated: 2026-01-20
 # Lộ trình chương trình (ROADMAP)
 
 <!-- Dùng khi một mục tiêu cần từ hai sprint. Đặt ở gốc thư mục hồ sơ của chương trình. `init` không chép mẫu này;
-     `check` chưa biết loại `roadmap` nên chỉ áp luật chung về mã (Ghi chú `doc-unknown`). Bảy mục. Sprint chưa mở
+     `check` nhận tên `roadmap` nhưng không áp luật hình, chỉ luật chung về mã. Bảy mục. Sprint chưa mở
      không mang nhãn mã sprint: ghi tên lát, cấp mã khi mở. Trạng thái của lát trỏ về sổ SPRINTS, không chép lại. -->
 
 > **Kết luận:** chương trình … gồm N lát; lát hiện tại là …; xong khi …

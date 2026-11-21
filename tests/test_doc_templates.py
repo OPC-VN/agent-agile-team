@@ -254,7 +254,7 @@ def test_addon_templates_exist():
 
 
 def test_addon_templates_pass_check(tmp_path):
-    """Each add-on template, alone in its folder, gives no Chặn and no Phải sửa (Ghi chú `doc-unknown` is allowed).
+    """Each add-on template, alone in its folder, gives no Chặn and no Phải sửa (`check` knows the names `handoff` and `roadmap` since TK6.1, so no Ghi chú either; pinned in test_addon_docs.py).
 
     ANALYSIS.md and CLAIMS.md carry no `doc:` key, so `check` reads no document kind from their frontmatter and applies
     only the general rules on codes; their structure is pinned by test_addon_headings_follow_spec."""
