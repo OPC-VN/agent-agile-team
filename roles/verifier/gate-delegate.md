@@ -1,7 +1,7 @@
 ---
 name: gate-delegate
 group: verifier
-tier: T1
+tier: 4
 title: Gate Delegate — approve a gate on the user's behalf when granted; fresh session, never the maker
 ---
 

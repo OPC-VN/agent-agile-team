@@ -9,12 +9,14 @@ status: draft
 size: medium
 risk: normal
 risk_tags: []
+tier_scale: 2
 gate_1: pending
 gate_1_at: null
 gate_1_quote: null
 roles:
-  architect: [T1, agent-b]
-  tech-reviewer: [T1, agent-d]
+  architect: [3, agent-b]
+  tech-reviewer: [3, agent-d]
+  gate-delegate: [4, agent-g]
 created: 2026-01-15
 updated: 2026-01-15
 links:
@@ -56,13 +58,20 @@ links:
 
 <!-- Luật áp cho MỌI việc trong plan: quyết định đã chốt, giới hạn kỹ thuật, điều cấm. Chép nguyên, không
      diễn giải lại. Implementer đọc mục này trước mọi TK.
-     Gồm nguyên văn mục 1.1 của SPEC. -->
+     Gồm nguyên văn mục 1.1 của SPEC; ô Môi trường thực thi dưới đây nói nơi và cách chạy. -->
 
 - Chỉ đọc dữ liệu đơn; không thêm thao tác ghi.
 - Coverage dòng ≥80% cho code mới và code được sửa (hoặc ngưỡng của cấu hình dự án).
 - Nếu sprint tham gia pilot routing: khóa manifest áp dụng, policy/criteria version và nguồn sáu trục trước
   dispatch. Quyết định của chủ về model hoặc effort được ghi theo từng field và scope; thiếu bằng chứng thì
   để unknown có lý do, không gán 0 hay tự suy actual.
+- **Môi trường thực thi:** <!-- điền cho mọi sprint từ cỡ vừa; cỡ nhỏ ghi một dòng. Không nhắc tên công cụ của một nền tảng -->
+  - Thư mục hoặc repo được ghi: `orders/`, `tests/` (kể cả repo hồ sơ khác repo mã, nếu có).
+  - Thứ không được đụng: lược đồ dữ liệu, thư mục `deploy/`, file cấu hình môi trường thật.
+  - Bước ngoài sandbox (mạng · thiết bị · máy thật) và ai chạy: Không có.
+  - Người thực thi có nạp bộ skill này không: có; nếu không nạp, brief phải chép khối kiểm cố định.
+  - Bẫy shell và hệ điều hành: Không có. <!-- ví dụ: dấu nháy kép bị hỏng khi qua một vỏ lệnh; hệ file không phân biệt hoa thường -->
+  - Lệnh chứng minh chạy đúng mã: `git rev-parse HEAD`, rồi `python -c "import orders; print(orders.__file__)"` in đường dưới thư mục làm việc.
 
 ## File luật và file sàn cứng sẽ chạm
 
@@ -86,7 +95,7 @@ PLAN có 2 **task** (TK):
 
 ### TK1 — Hàm tra cứu đơn (→ FR1.1, FR1.2)
 
-- **Vai:** Implementer · T2 thực thi; QA · T3 vặt & kiểm thử chạy test.
+- **Vai:** Implementer · Tier 2 thực thi; QA · Tier 2 vặt & kiểm thử chạy test.
 - **Đầu vào:** SPEC mục 3. **Đầu ra:** hàm tra cứu + test.
 - **Giao diện (interfaces):** `find_order(code: str) -> OrderStatus | None`; trả `None` khi không tìm thấy.
 - **Cách kiểm:** `pytest tests/test_orders.py` xanh; coverage dòng ≥80%.
@@ -95,12 +104,24 @@ PLAN có 2 **task** (TK):
 
 ### TK2 — Màn hình tra cứu (→ FR1.1, SC1)
 
-- **Vai:** Implementer · T2 thực thi.
+- **Vai:** Implementer · Tier 2 thực thi.
 - **Đầu vào:** TK1 (hàm tra cứu đơn). **Đầu ra:** màn hình + test giao diện.
 - **Giao diện (interfaces):** ô nhập mã đơn → gọi `find_order` → hiện trạng thái hoặc "không tìm thấy".
 - **Cách kiểm:** kịch bản FR1.1, FR1.2 chạy trên trình duyệt; ảnh chụp làm bằng chứng.
 - **Cổng:** nội bộ.
 - **Hoàn tác:** `git revert`.
+
+## Sau Cổng 2
+
+<!-- Mục tuỳ chọn, `check` không đòi: chỉ giữ khi sprint có bước ghi thật sau Cổng 2 (đẩy nhánh, di chuyển dữ liệu, đổi cấu hình
+     đang chạy, cài bản). Không có dấu hiệu đó thì xoá cả mục. -->
+
+- **Điều kiện vào:** Cổng 2 Đạt; cây làm việc sạch; sao lưu đã có.
+- **Điểm lùi:** commit hoặc nhánh sao lưu `backup/<ngày-giờ>` tạo trước bước ghi thật.
+- **Phải dừng khi:** lệnh ghi thoát khác 0, hoặc đầu ra khác bản chạy thử.
+- **Bước ghi thật và mã thoát:** `<lệnh>` → mã thoát 0 mong đợi.
+- **Smoke sau ghi:** `<lệnh kiểm nhanh>` → kết quả mong đợi.
+- **Lùi, và phần không lùi được:** `<lệnh lùi>`; không lùi được: `<việc đã ra ngoài>`.
 
 ## Rủi ro
 

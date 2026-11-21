@@ -1,7 +1,7 @@
 ---
 name: tech-reviewer
 group: verifier
-tier: T1
+tier: 3
 title: Tech Reviewer — code, tests, security, data, backend, frontend
 ---
 

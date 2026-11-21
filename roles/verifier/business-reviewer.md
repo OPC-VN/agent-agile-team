@@ -1,7 +1,7 @@
 ---
 name: business-reviewer
 group: verifier
-tier: T1
+tier: 4
 title: Business Reviewer — does the product meet US, FR and SC
 ---
 

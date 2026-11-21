@@ -1,7 +1,7 @@
 ---
 name: architect
 group: executor
-tier: T1
+tier: 3
 title: Architect — PLAN, design decisions, ADR
 ---
 

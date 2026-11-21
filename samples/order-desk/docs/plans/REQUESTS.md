@@ -2,8 +2,8 @@
 id: REQUESTS
 doc: requests
 title: Request ledger
-next_id: RQ-006
-updated: 2026-01-23
+next_id: RQ-007
+updated: 2026-01-24
 ---
 
 # Sổ yêu cầu (REQUESTS)
@@ -32,6 +32,7 @@ Sổ REQUESTS ghi mỗi dòng một **request** (RQ), mới nhất ở trên:
 
 | Mã | Ngày | Tóm tắt | Trạng thái | Tính năng | Sprint |
 |---|---|---|---|---|---|
+| RQ-006 | 2026-01-24 | Đổi chữ gợi ý ô mã đơn trống | xong | FS-001 | SPR-05 |
 | RQ-005 | 2026-01-23 | Đổi chữ nút Gửi thành Gửi đơn | xong | FS-001 | SPR-04 |
 | RQ-004 | 2026-01-22 | Tra đơn bỏ khoảng trắng thừa quanh mã đơn | đang làm | FS-001 | SPR-03 |
 | RQ-003 | 2026-01-20 | Câu báo không tìm thấy sai chính tả | đang làm | FS-001 | SPR-02 |

@@ -1,7 +1,7 @@
 ---
 name: dual-review
 group: verifier
-tier: T1
+tier: 3
 title: Dual Review — hai reviewer độc lập cùng rubric, cả hai Đạt mới Đạt
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: advisor
 group: advisor
-tier: T1
+tier: 4
 title: Advisor — independent critique of SPEC and PLAN before gate 1; never writes, never approves
 ---
 

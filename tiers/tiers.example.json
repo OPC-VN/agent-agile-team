@@ -1,5 +1,6 @@
 {
-  "schema": 2,
+  "schema": 3,
+  "tier_scale": 2,
   "effort_scale": {
     "claude":      { "1": "low", "2": "medium", "3": "high", "4": "xhigh", "5": "max" },
     "codex":       { "1": "low", "2": "medium", "3": "high", "4": "xhigh", "5": "max" },
@@ -7,18 +8,25 @@
   },
   "fallback": { "antigravity": "clamp_to_max" },
   "tiers": {
-    "T1": { "purpose": "thinking",
-            "models": { "claude": "<model-id>", "codex": "<model-id>", "antigravity": "<model-id>" },
-            "effort": 3 },
-    "T2": { "purpose": "execution",
-            "models": { "claude": "<model-id>", "codex": "<model-id>", "antigravity": "<model-id>" },
-            "effort": 3 },
-    "T3": { "purpose": "chores-and-qa",
-            "models": { "claude": "<model-id>", "codex": "<model-id>", "antigravity": "<model-id>" },
-            "effort": { "claude": 2, "codex": 2, "antigravity": 1 } }
+    "1": { "purpose": "lookup-research",
+           "models": { "claude": "<model-id>", "codex": "<model-id>", "antigravity": "<model-id>" },
+           "effort": 2 },
+    "2": { "purpose": "execution-qa",
+           "models": { "claude": "<model-id>", "codex": "<model-id>", "antigravity": "<model-id>" },
+           "effort": 3 },
+    "3": { "purpose": "architecture-review",
+           "models": { "claude": "<model-id>", "codex": "<model-id>", "antigravity": "<model-id>" },
+           "effort": 3 },
+    "4": { "purpose": "judgment-governance",
+           "models": { "claude": "<model-id>", "codex": "<model-id>", "antigravity": "<model-id>" },
+           "effort": 3 },
+    "5": { "purpose": "reserved-human-only",
+           "models": {},
+           "effort": null }
   },
   "roles": {
-    "tech-reviewer": { "tier": "T1", "models": { "claude": "<model-id>" }, "effort": 3 },
-    "researcher":    { "tier": "T3", "effort": 2 }
+    "tech-reviewer": { "tier": "3", "models": { "claude": "<model-id>" }, "effort": 3 },
+    "researcher":    { "tier": "1", "effort": 2 },
+    "qa":            { "tier": "2", "effort": { "claude": 2, "codex": 2, "antigravity": 1 } }
   }
 }

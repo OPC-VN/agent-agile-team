@@ -14,8 +14,12 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 | `sprint/PROGRESS.md` | `<thư mục sprint>/PROGRESS.md` | Như trên — đang ở đâu, vướng gì |
 | `sprint/REPORT.md` | `<thư mục sprint>/REPORT.md` | Như trên — kết quả, bàn giao |
 | `sprint/SPRINT.md` | `<thư mục sprint>/SPRINT.md` | Cỡ nhỏ: bốn phần SPEC · PLAN · PROGRESS · REPORT gộp một file (`size: small`) |
-| `sprint/SPRINT-tiny.md` | `<thư mục sprint>/SPRINT.md` (đổi tên khi dựng) | Cỡ rất nhỏ: hai phần "Kế hoạch" / "Kết quả" (`size: tiny`) |
-| `sprint/BRIEF.md` | không dựng — `init` không chép; người giao tự điền | Brief người giao 4 ô, điền trước khi giao việc |
+| `sprint/TASK.md` | `<thư mục sprint>/TASK.md` | Cỡ rất nhỏ: hai phần "Kế hoạch" / "Kết quả" (`size: tiny`, `doc: task`); thay `SPRINT.md` hai phần của hồ sơ cũ |
+| `sprint/BRIEF.md` | không dựng — `init` không chép; người giao tự điền | Brief người giao 4 ô, điền trước khi giao việc. `BRIEF.md` là lời giao của NGƯỜI cho agent ở bước tiếp nhận (skill intake); `HANDOFF.md` là bàn giao của AGENT cho agent khác phiên hoặc khác hãng |
+| `sprint/HANDOFF.md` | không dựng — `init` không chép; người hoặc agent tự thêm ở gốc thư mục sprint khi giao ra ngoài phiên | Hai phần: **Giao** (≤40 dòng, bảy ô đánh số, khối kiểm cố định ≤10 dòng) và **Trả** (bốn ô). `doc: handoff`: `check` nhận tên, không áp luật hình (chỉ luật chung về mã) |
+| `sprint/ANALYSIS.md` | không dựng — tự thêm vào `evidence/` khi dùng hay nâng một nguồn ngoài, hoặc phương án dài hơn một đoạn | Sáu mục: kết luận · bảng nguồn · kiểm an toàn nguồn · đánh giá từng thay đổi · điều kiện tiên quyết · phương án và khuyến nghị |
+| `sprint/CLAIMS.md` | không dựng — tự thêm vào `evidence/` khi PLAN từ cỡ vừa khẳng định điều gì về mã, bản cài hay thứ đang chạy | Bảng ba cột Số · Khẳng định · Bằng chứng, và bảng "Chưa kiểm" |
+| `registry/ROADMAP.md` | không dựng — tự thêm ở gốc thư mục hồ sơ chương trình khi một mục tiêu cần từ hai sprint | Bảy mục: mục tiêu · bảng lát · hợp đồng dùng chung · quyết định còn hiệu lực · bài học · điểm vào cho phiên mới · rủi ro. `doc: roadmap`: `check` nhận tên, không áp luật hình (chỉ luật chung về mã) |
 | `registry/REQUESTS.md` | `paths.requests` | Sổ yêu cầu theo timeline |
 | `registry/SPECS.md` | `paths.specs` | Mục lục tính năng |
 | `registry/feature-spec.md` | `<paths.feature_specs_dir>/<slug>.md` | Spec sống của một tính năng |
@@ -23,6 +27,30 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 | `registry/LEDGER.md` | file sổ tập trung trong kho sổ của máy (không thuộc repo dự án; `init` không dựng) | Sổ tập trung nhiều dự án, bật bằng `ledger.project` (mục 7); khi nào ghi: [`method/process.md`](../method/process.md) mục 11 |
 | `project/agile.json` | `.agile.json` ở gốc dự án | Cấu hình đường dẫn, coverage, chế độ hiển thị |
 | `repo-skeleton/` | cả cây sao chép ra gốc repo xưởng mới (không phải mẫu hồ sơ sprint; `init` không dựng) | Khung repo xưởng, 7 file: `.gitignore` (cache, `.tmp/`, `.worktrees/`, `.claude/worktrees/`), `.gitattributes` (LF), `NOTICE` tối thiểu (chỉ điều giấy phép buộc), `README.md` mẫu của repo mới, `docs/README.md`, `hosts/README.md` và `scripts/README.md` tuỳ chọn; quy tắc cấu trúc ở `docs/STRUCTURE.md` |
+
+**Bảng tên chuẩn của file kèm** (khoá khớp `_common.EVIDENCE_NAMES`; tên cũ của hồ sơ có từ trước quy ước vẫn đọc được, `check` chỉ ghi chú `evidence-name` với hồ sơ mới):
+
+| Khoá | Tên chuẩn | Tên cũ | Đặt ở |
+|---|---|---|---|
+| `gate_verdict` | `GATE-<N>-VERDICT.md` | `gate-<N>-verdict.md` | `evidence/` |
+| `task_report` | `REPORT-TK<n>.md` | `tk<n>-report.md`, `TK<n>-REPORT.md` | `evidence/` |
+| `plan_review` | `PLAN-REVIEW-<vai>.md` | `<vai>-plan-review.md`, `plan-review.md`, `plan-review-<vai>.md` | `evidence/` |
+| `research` | `RESEARCH-<chủ-đề>.md` | `research.md`, `research-<chủ-đề>.md` | `evidence/` |
+| `analysis` | `ANALYSIS.md` | `analysis.md` | `evidence/` |
+| `claims` | `CLAIMS.md` | `claims.md` | `evidence/` |
+| (ngoài `EVIDENCE_NAMES`) | `HANDOFF.md` | Không có | gốc thư mục sprint |
+| (ngoài `EVIDENCE_NAMES`) | `ROADMAP.md` | Không có | gốc thư mục hồ sơ chương trình |
+
+**Ánh xạ với luật nền `core.md`** (mục *Workflow*: bốn artifact PLAN · CHANGESET · VERIFICATION · HANDOFF):
+
+| Artifact của `core.md` | Ở hồ sơ agile |
+|---|---|
+| PLAN | `PLAN.md` |
+| CHANGESET | diff và commit Git của nhánh sprint; REPORT mục "Cách dùng, đã đổi gì, cách hoàn tác" tóm tắt |
+| VERIFICATION | PROGRESS (nhật ký kiểm) và REPORT mục "Kết quả kiểm định" (bảng `VR`); báo cáo việc `REPORT-TK<n>.md` làm nguồn |
+| HANDOFF | REPORT mục "Cách dùng, đã đổi gì, cách hoàn tác" khi không giao ra ngoài phiên; `HANDOFF.md` phần Trả khi giao cho phiên hoặc agent khác |
+
+KHI việc chạy ngoài agile THÌ `VERIFICATION.md` và `HANDOFF.md` vẫn được dùng; tên `SUMMARY.md`, `NOTES.md`, `BRIEF-<x>.md` không dựng.
 
 **Giá trị trong mẫu là ví dụ hợp lệ**, không phải chỗ trống kiểu `<...>`: nhờ vậy `check` chạy được trên
 chính thư mục `templates/`. Phần thân ví dụ là để người viết thay. Dòng ví dụ của sổ gốc nằm trong comment
@@ -33,7 +61,7 @@ Khi tạo file thật, `init` ghi lại frontmatter như sau (khoá không có t
 | Tạo gì | Khoá được ghi |
 |---|---|
 | Sổ gốc | `next_id` = mã đầu tiên theo `id_width`, `updated` = ngày chạy |
-| Sprint mới (4 file; hoặc một `SPRINT.md` khi `--tiny` / `--size tiny` / `--size small`) | `id` = `<sprint>-<doc>`, `sprint` = `next_id` của SPRINTS, `request`/`feature` theo tham số (không có thì `null`), `title`, `created`, `updated`; **đặt lại trạng thái**: `status` = `drafting` (PROGRESS, SPRINT) hoặc `draft` (SPEC, PLAN, REPORT), `review_round: 0`, `gate_1`/`verdict`/`gate_2` = `pending`, `*_at`/`*_quote` = `null`, mọi vai trong `roles` = `[tier, pending]`; `size`/`risk`/`risk_tags` theo tham số (mặc định `medium`/`normal`/`[]`, `--tiny` → `tiny`); mẫu theo cỡ: `tiny` → `sprint/SPRINT-tiny.md` (ghi ra `SPRINT.md`), `small` → `sprint/SPRINT.md`, `medium`/`large` → bốn file |
+| Sprint mới (4 file; hoặc một `TASK.md` khi `--tiny` / `--size tiny`; hoặc một `SPRINT.md` khi `--size small`) | `id` = `<sprint>-<doc>`, `sprint` = `next_id` của SPRINTS, `request`/`feature` theo tham số (không có thì `null`), `title`, `created`, `updated`; **đặt lại trạng thái**: `status` = `drafting` (PROGRESS, SPRINT, TASK) hoặc `draft` (SPEC, PLAN, REPORT), `review_round: 0`, `gate_1`/`verdict`/`gate_2` = `pending`, `*_at`/`*_quote` = `null`, mọi vai trong `roles` = `[tier, pending]`; `size`/`risk`/`risk_tags` theo tham số (mặc định `medium`/`normal`/`[]`, `--tiny` → `tiny`); mẫu theo cỡ: `tiny` → `sprint/TASK.md` (ghi ra `TASK.md`), `small` → `sprint/SPRINT.md`, `medium`/`large` → bốn file |
 | SPRINTS khi tạo sprint | thêm một dòng Timeline ở đầu bảng (Mã, Mở = ngày chạy, Mục tiêu = `title`; Đóng và Kết luận để trống) và tăng `next_id` |
 
 Tiêu đề cấp 1 thay cụm "Tên mục tiêu sprint" bằng `title`. Chạy lại cùng `slug` không đổi gì.
@@ -52,7 +80,7 @@ ngoài tập con là lỗi đầu vào, `check` báo `đường-dẫn:dòng` và
 | Comment cuối dòng | ` #` (có khoảng trắng trước) ngoài dấu nháy kép; bị bỏ | `sprint: null  # chưa có sổ` |
 | Cặp khoá–giá trị | `khoá: giá trị`, bắt đầu ở cột 0 | `size: medium` |
 | Khoá | `[a-z][a-z0-9_-]*` — khoá gốc dùng `snake_case`, khoá vai dùng `kebab-case`; không trùng trong cùng cấp | `gate_1`, `business-reviewer` |
-| Khối lồng một cấp | khoá có giá trị rỗng; các dòng con thụt **đúng 2 dấu cách**, mỗi dòng là một cặp khoá–giá trị | `roles:` rồi `  analyst: [T1, agent-a]` |
+| Khối lồng một cấp | khoá có giá trị rỗng; các dòng con thụt **đúng 2 dấu cách**, mỗi dòng là một cặp khoá–giá trị | `roles:` rồi `  analyst: [3, agent-a]` |
 | `null` | chữ `null`; khoá rỗng **không có dòng con** cũng là `null` | `gate_1_at: null`, `feature:` |
 | Bool | `true` / `false` | |
 | Số nguyên | `-?[0-9]+` | `review_round: 0` |
@@ -79,7 +107,7 @@ Giá trị là token tiếng Anh cho máy đọc; thân tài liệu dùng nhãn 
 | Khoá | Có ở | Giá trị |
 |---|---|---|
 | `id` | mọi file | sprint: `<sprint>-<doc>` (`SPR-01-spec`); spec sống: `FS-NNN`; sổ gốc: `REQUESTS` · `SPECS` · `SPRINTS` |
-| `doc` | mọi file | `spec` · `plan` · `progress` · `report` · `sprint` (gộp) · `feature` · `requests` · `specs` · `sprints` |
+| `doc` | mọi file | `spec` · `plan` · `progress` · `report` · `sprint` (gộp) · `task` (việc rất nhỏ, file `TASK.md`) · `feature` · `requests` · `specs` · `sprints` |
 | `title` | mọi file | chuỗi tự do |
 | `sprint` | tài liệu sprint | `SPR-NN` |
 | `request` | tài liệu sprint | `RQ-NNN`, hoặc danh sách inline khi sprint phục vụ nhiều yêu cầu |
@@ -88,10 +116,11 @@ Giá trị là token tiếng Anh cho máy đọc; thân tài liệu dùng nhãn 
 | `size` | tài liệu sprint | `tiny` (rất nhỏ) · `small` (nhỏ) · `medium` (vừa) · `large` (lớn) |
 | `risk` | tài liệu sprint | `normal` · `high` — `high` buộc `size: large` |
 | `risk_tags` | tài liệu sprint | danh sách con của `secret`, `auth`, `external_input`, `public_api`, `infra`, `data_migration`, `rules`; khác rỗng buộc `risk: high`; cổng `delegated` đã kết luận buộc khai `risk_tags` là danh sách chuỗi (`[]` khi không có nhãn), `check` báo `gate-delegation-invalid` nếu vắng hoặc sai kiểu |
+| `tier_scale` | tài liệu sprint | `2` = thang Tier 1–5: mẫu và `init` ghi sẵn, `roles` ghi tier bằng số 1–4 (mục 3.1). Vắng khoá = thang cũ (nhãn chữ), hồ sơ cũ giữ nguyên kết quả của `check`. Giá trị khác `2` được đọc như vắng. Mẫu đặt khoá ngay trên `gate_1` (hoặc trên `roles` ở tài liệu không có `gate_1`) |
 | `roles` | tài liệu sprint | khối lồng; khoá vai → `[tier, agent]` hoặc `[tier, agent, "note"]` (mục 3.1) |
 | `gate_1` · `gate_1_at` · `gate_1_quote` | SPEC, PLAN, SPRINT | `pending` · `approved` · `changes_requested`; thời điểm và câu duyệt nguyên văn, chưa có thì `null` |
-| `gate_1_mode` · `gate_2_mode` | SPEC, PLAN, SPRINT (Cổng 1) · REPORT, SPRINT (Cổng 2) | `delegated` (mặc định của sprint mới: Gate Delegate T1 ký theo lời cấp thường trực, [method/process.md](../method/process.md) mục 3) · `human` (người tự ký; hồ sơ cũ vắng khoá được đọc như `human`); giá trị khác → `frontmatter-value`. `delegated` buộc `gate_N_quote` bắt đầu `duyệt thay:` và `risk_tags` khai hợp lệ |
-| `delegation` | nơi có `gate_N_mode: delegated` | khối lồng một cấp, tám khoá sau và năm khoá agile tuỳ chọn (`level` · `program` · `channel` · `orchestrator` · `sessions_cap`, ý nghĩa ở `method/agile.md` mục 3; có một khoá hoặc `grant` bắt đầu `Bật autopilot` — chữ mở đầu cũ mà `check` còn đọc, cố ý giữ — là kích luật duyệt thay) — khoá ngoài hai nhóm này cũng báo, kể cả khi cổng còn mở (một lần mỗi tài liệu): `grant` (lời cấp nguyên văn) · `grant_at` · `scope` (`[gate_1]`, `[gate_2]` hoặc cả hai) · `expires` (`sprint_end` hoặc `YYYY-MM-DD`) · `by` (nhãn agent T1 giữ vai kiểm định T1 trong `roles` của chính PLAN, REPORT hoặc `SPRINT.md`; chuyên đề chỉ tính khi thuộc danh sách `security-specialist`, `data-specialist`, `backend-specialist`, `frontend-specialist`; SPEC không đòi) · `tier` (`T1`) · `files` (file luật nêu đích danh, `[]` nếu không) · `revoked_at` (`null` hoặc thời điểm thu hồi). Thời điểm dạng `YYYY-MM-DD` hoặc `YYYY-MM-DD HH:MM +TZ` |
+| `gate_1_mode` · `gate_2_mode` | SPEC, PLAN, SPRINT (Cổng 1) · REPORT, SPRINT (Cổng 2) | `delegated` (mặc định của sprint mới: Gate Delegate ký theo lời cấp thường trực, [method/process.md](../method/process.md) mục 3) · `human` (người tự ký; hồ sơ cũ vắng khoá được đọc như `human`); giá trị khác → `frontmatter-value`. `delegated` buộc `gate_N_quote` bắt đầu `duyệt thay:` và `risk_tags` khai hợp lệ |
+| `delegation` | nơi có `gate_N_mode: delegated` | khối lồng một cấp, tám khoá sau và năm khoá agile tuỳ chọn (`level` · `program` · `channel` · `orchestrator` · `sessions_cap`, ý nghĩa ở `method/agile.md` mục 3; có một khoá hoặc `grant` bắt đầu `Bật autopilot` — chữ mở đầu cũ mà `check` còn đọc, cố ý giữ — là kích luật duyệt thay) — khoá ngoài hai nhóm này cũng báo, kể cả khi cổng còn mở (một lần mỗi tài liệu): `grant` (lời cấp nguyên văn) · `grant_at` · `scope` (`[gate_1]`, `[gate_2]` hoặc cả hai) · `expires` (`sprint_end` hoặc `YYYY-MM-DD`) · `by` (nhãn agent giữ vai kiểm định tier cao trong `roles` của chính PLAN, REPORT hoặc `SPRINT.md`: tier 3 hoặc 4 ở thang Tier 1–5, tier cao nhất của thang cũ ở hồ sơ cũ; chuyên đề chỉ tính khi thuộc danh sách `security-specialist`, `data-specialist`, `backend-specialist`, `frontend-specialist`; SPEC không đòi) · `tier` (tier của người duyệt thay: 3 hoặc 4 ở thang Tier 1–5; hồ sơ cũ ghi tier cao nhất của thang cũ) · `files` (file luật nêu đích danh, `[]` nếu không) · `revoked_at` (`null` hoặc thời điểm thu hồi). Thời điểm dạng `YYYY-MM-DD` hoặc `YYYY-MM-DD HH:MM +TZ` |
 | `verdict` | REPORT, SPRINT | kết luận vòng kiểm định cuối: `pending` · `pass` (Đạt) · `conditional_pass` (Đạt có điều kiện) · `fail` (Không đạt) |
 | `gate_2` · `gate_2_at` · `gate_2_quote` | REPORT, SPRINT | kết luận của chủ sản phẩm, cùng bộ giá trị với `verdict`; thời điểm, câu nguyên văn |
 | `review_round` | PROGRESS, REPORT, SPRINT | số nguyên ≥ 0 — vòng kiểm định hiện tại |
@@ -106,28 +135,32 @@ Giá trị là token tiếng Anh cho máy đọc; thân tài liệu dùng nhãn 
 | Tài liệu | Giá trị |
 |---|---|
 | SPEC, PLAN | `draft` (nháp) · `in_review` (đang review) · `approved` (đã qua Cổng 1) · `superseded` (bị thay) |
-| PROGRESS, SPRINT — trạng thái sống của cả sprint | `drafting` (viết SPEC/PLAN) · `awaiting_gate_1` · `in_progress` (thực thi) · `verifying` (kiểm định) · `blocked` (có `BR` đang mở) · `awaiting_gate_2` · `done` · `dropped` |
+| PROGRESS, SPRINT, TASK — trạng thái sống của cả sprint | `drafting` (viết SPEC/PLAN) · `awaiting_gate_1` · `in_progress` (thực thi) · `verifying` (kiểm định) · `blocked` (có `BR` đang mở) · `awaiting_gate_2` · `done` · `dropped` |
 | REPORT | `draft` · `submitted` (đã trình Cổng 2) · `accepted` (Cổng 2 đã kết luận) |
 | spec sống | `proposed` (đề xuất) · `in_progress` (đang làm) · `live` (đang chạy) · `deprecated` (ngừng) · `dropped` (bỏ) |
+
+`TASK.md` (`doc: task`) mang đúng các khoá của SPRINT ở mọi dòng bảng trên; `id` của nó là `<sprint>-task`. `doc` phải khớp tên file: `TASK.md` mang `doc: task`, `SPRINT.md` mang `doc: sprint`, sai thì `frontmatter-value`.
 
 ### 3.1. Khoá vai và luật "người làm không tự chấm"
 
 - Vai thực thi: `analyst`, `architect`, `implementer`, `qa`, `researcher`. Vai kiểm định: `business-reviewer`,
   `tech-reviewer` và chuyên đề `<tên>-specialist` (`security-specialist`, `data-specialist`,
   `backend-specialist`, `frontend-specialist`; tên chuyên đề khác → `roles-invalid`) và `gate-delegate` (vai kiểm định
-  T1, người duyệt thay cổng). Vai tư vấn: `advisor` (T1). `gate-delegate` và `advisor` buộc tier `T1` (khác → `roles-invalid`).
-- `tier` là `T1` · `T2` · `T3`. `agent` là **nhãn phiên hoặc subagent** (`agent-a`), không phải tên model —
+  Tier 4, người duyệt thay cổng). Vai tư vấn: `advisor` (Tier 4). Ở thang Tier 1–5 `gate-delegate` và `advisor` buộc tier 3 hoặc 4 (khác → `roles-invalid`;
+  mẫu ghi 4); ở hồ sơ cũ (không có `tier_scale`) hai vai buộc tier cao nhất của thang cũ.
+- `tier` là số 1–4 khi tài liệu có `tier_scale: 2` (vai → tier: Researcher 1 · QA và Implementer 2 · Analyst, Architect và Tech Reviewer 3 ·
+  Business Reviewer, Gate Delegate và Advisor 4); tier 5 là bậc dự phòng chỉ người, gán cho agent → `roles-invalid`. Hồ sơ cũ không có `tier_scale` giữ ba nhãn chữ của thang cũ. `agent` là **nhãn phiên hoặc subagent** (`agent-a`), không phải tên model —
   hai phiên của cùng một model là hai agent khác nhau. Chưa giao thì `pending`. Model và effort thực tế ghi ở cột
   "Vai · tier · model · effort" của PROGRESS (và của bảng trạng thái trong `SPRINT.md`): effort là số 1–5 theo
-  `method/effort-scale.md`, ví dụ `Implementer · T2 · model-x · 3`; chưa giao thì ghi `—`.
+  `method/effort-scale.md`, ví dụ `Implementer · Tier 2 · model-x · 3`; chưa giao thì ghi `—`.
 - Luật `check` dựa vào: trong một file, không nhãn `agent` nào (trừ `pending`) vừa giữ vai thực thi vừa giữ
   vai kiểm định (mức Chặn). Một agent được giữ nhiều vai thực thi. Nhãn Advisor trùng nhãn Business Reviewer hay Tech Reviewer
   là hợp lệ (Advisor không chấm việc của người làm) **trừ khi** nhãn đó là `delegation.by` (Advisor không ký duyệt thay: `self-review`); trùng nhãn Analyst/Architect hoặc Gate Delegate là `self-review`
   (Advisor không soạn SPEC/PLAN và không duyệt thay khuyến nghị của chính mình). Khoá `advisor` ghi ở `roles` của cả SPEC
   lẫn PLAN (để `check` so được với `analyst` ở SPEC và `architect` ở PLAN).
 - Người duyệt thay (`delegation.by`) cũng không được trùng nhãn một vai thực thi trong `roles` của cùng file: mức Chặn, cùng luật `self-review`.
-  Ở tài liệu có bản ghi duyệt thay (PLAN, REPORT, `SPRINT.md`) `by` còn phải giữ ít nhất một vai kiểm định tier T1 trong `roles` của chính tài liệu
-  (nhiều vai kiểm định khác tier: đủ một vai T1); `roles` vắng, nhãn lạ hoặc chỉ vai tier khác T1 → Phải sửa `gate-delegation-invalid`. SPEC không đòi.
+  Ở tài liệu có bản ghi duyệt thay (PLAN, REPORT, `SPRINT.md`) `by` còn phải giữ ít nhất một vai kiểm định tier cao trong `roles` của chính tài liệu (tier 3 hoặc 4 ở thang Tier 1–5, tier cao nhất của thang cũ ở hồ sơ cũ;
+  nhiều vai kiểm định khác tier: đủ một vai đạt); `roles` vắng, nhãn lạ hoặc chỉ vai tier thấp hơn → Phải sửa `gate-delegation-invalid`. SPEC không đòi.
 - **Độc lập kiểm định:** file có `VR` (REPORT, SPRINT) thì nhãn `qa` phải khác nhãn `implementer` và
   `architect`. Trùng nhãn → Phải sửa, trừ khi việc cỡ **rất nhỏ** và dòng `VR` ghi rõ "tự kiểm, chưa độc lập"; khi đó
   `verdict` tối đa `conditional_pass`. Cỡ nhỏ trở lên không có tự kiểm: `qa` trùng nhãn người làm vẫn là Phải sửa dù
@@ -150,12 +183,14 @@ Mẫu SPEC và PLAN còn có mục `## Tóm tắt cho người không chuyên` (
 | PLAN | Mục tiêu · Kiến trúc · Ràng buộc chung · File luật và file sàn cứng sẽ chạm · Trọng tâm review · Việc · Rủi ro · Quyết định cần người · Ước lượng |
 | PROGRESS | Bảng trạng thái việc · Nhật ký · Vướng mắc · Vòng kiểm định hiện tại |
 | REPORT | Tóm tắt cho người không chuyên · Kết quả kiểm định · Phát hiện của reviewer · Rủi ro còn lại · Cách dùng, đã đổi gì, cách hoàn tác · Bài học · Việc để lại · Review & Retro · Bản tin agile (`check` đọc cả tên cũ `Bản tin autopilot` của hồ sơ cũ; nội dung là bản tin cuối khi agile bật) · Nhật ký quyết định (ai ký, model, bằng chứng, lệnh hoàn tác) · Cổng 2 (tiểu mục `### Review PLAN trước Cổng 1` dưới "Phát hiện của reviewer": nơi chuẩn của `RF` review PLAN, nên có từ cỡ vừa — `check` không bắt buộc) |
-| SPRINT (gộp) | theo cỡ — xem bảng hợp đồng `size × doc` dưới |
+| SPRINT (gộp), TASK | theo cỡ — xem bảng hợp đồng `size × doc` dưới |
 | spec sống | Hành vi hiện hành · Tiêu chí đang giữ · Giới hạn đã biết · Quyết định liên quan · Lịch sử sprint |
 | REQUESTS, SPRINTS | Đang mở · Timeline |
 | SPECS | Đang mở · Danh mục |
 
 Mục không có nội dung vẫn giữ tiêu đề và ghi "Không có." — không xoá tiêu đề.
+
+**Mục tuỳ chọn và cột thêm của mẫu sprint** (`check` không đòi mục tuỳ chọn; hồ sơ cũ thiếu chúng hoặc có bảng ít cột vẫn hợp lệ). Hai mục tuỳ chọn: `## Tiếp nối` ở PROGRESS, ngay dưới Kết luận, sáu ô *Đọc theo thứ tự* · *Nguồn sự thật* · *Đang ở* · *Việc kế* · *Đừng làm lại* · *Bẫy môi trường mới gặp* (cỡ nhỏ: `SPRINT.md` giữ ba dòng *Đang ở* · *Việc kế* · *Đừng làm lại* ở phần PROGRESS); `## Sau Cổng 2` ở PLAN, trước Rủi ro, chỉ khi có bước ghi thật sau Cổng 2 (không có dấu hiệu thì xoá mục). Ô và cột thêm: SPEC mục Bối cảnh có dòng `Kế thừa:` ("Không có." khi trống); bảng `SC` có sáu cột Mã · Tiêu chí · Cách đo · Ngưỡng · Môi trường đo · Khi không đo được; bảng `CQ` thêm cột Hệ quả cho thực thi (trước cột Người quyết); PLAN mục Ràng buộc chung có ô *Môi trường thực thi*; bảng `VR` của REPORT thêm ba cột Môi trường · Mốc · Thời điểm (đặt trước cột Bằng chứng, tiêu đề cột Kết quả giữ nguyên chữ vì luật `vr-result-not-pass` đọc cột đó theo tên); khối `roles` của SPEC, PLAN, PROGRESS, REPORT và `SPRINT.md` có khoá `gate-delegate`. Nhãn của các ô và cột này nằm ở `labels/vi.json` và `labels/en.json`.
 
 PLAN: mục `Mục tiêu` có ba dòng nhãn của mẫu (luật `plan-goal-block`, Ghi chú khi thiếu); số `TK` = thứ tự làm (luật `task-order`, `task-gap`).
 
@@ -166,12 +201,14 @@ hình tài liệu; `check` đối chiếu hai thứ:
 
 | Cỡ (`size`) | Tài liệu | Tiêu đề cấp 2 bắt buộc | Mã tối thiểu | Luật áp |
 |---|---|---|---|---|
-| `tiny` (rất nhỏ) | một `SPRINT.md` hai phần | Kế hoạch · Kết quả | `SC`, `TK` trỏ `SC` (phần Kế hoạch); `VR` cho mỗi `SC` (phần Kết quả) | `task-without-trace`, `report-sc-without-vr`; `heading-missing` khi thiếu phần |
+| `tiny` (rất nhỏ) | một `TASK.md` hai phần | Kế hoạch · Kết quả | `SC`, `TK` trỏ `SC` (phần Kế hoạch); `VR` cho mỗi `SC` (phần Kết quả) | `task-without-trace`, `report-sc-without-vr`; `heading-missing` khi thiếu phần |
+| `tiny` (tương thích ngược) | một `SPRINT.md` hai phần (hồ sơ cũ) | Kế hoạch · Kết quả | như hàng `tiny` | như hàng `tiny` |
 | `tiny` (tương thích ngược) | một `SPRINT.md` bốn phần | SPEC · PLAN · PROGRESS · REPORT | như hàng `small` | như hàng `small` |
 | `small` (nhỏ) | một `SPRINT.md` bốn phần | SPEC · PLAN · PROGRESS · REPORT | `FR`, `SC`, `TK` trỏ `FR`/`SC`, `VR` cho mỗi `SC` | `task-without-trace`, `report-sc-without-vr`; thiếu phần → `heading-missing` |
 | `small` (sprint cũ) | bốn file | như từng tài liệu ở bảng trên | như cỡ vừa | như cỡ vừa — vẫn hợp lệ |
 | `medium` · `large` (vừa · lớn) | bốn file | như từng tài liệu ở bảng trên | `US`, `FR`, `SC`, `TK`, `VR` cho mỗi `FR` và `SC` | đủ luật; **`SPRINT.md` ở cỡ này → `sprint-size-mismatch`** (báo một lần) |
 | `tiny` mà dựng **bốn file** | — | — | — | `sprint-size-mismatch` (báo một lần cho cả thư mục) |
+| `TASK.md` ở cỡ khác `tiny`, có bốn phần, hoặc cạnh `SPRINT.md` / bốn file (trừ thư mục mẫu `templates/sprint/`) | — | — | — | `sprint-size-mismatch` (báo một lần cho cả thư mục); hình bốn phần chỉ còn hợp lệ với `SPRINT.md` cũ |
 
 Thiếu khoá `size` do `frontmatter-key-missing` báo; `sprint-size-mismatch` không báo đúp.
 
@@ -218,7 +255,7 @@ Thiếu khoá `size` do `frontmatter-key-missing` báo; `sprint-size-mismatch` k
 |---|---|---|
 | REQUESTS | dòng bảng Timeline có trạng thái `mới` hoặc `đang làm` | Mã · Ngày · Tóm tắt · Trạng thái · Sprint |
 | SPECS | frontmatter các spec sống trong `paths.feature_specs_dir` có `status` là `proposed` hoặc `in_progress` | Mã · Tính năng · Trạng thái · Spec sống |
-| SPRINTS | frontmatter `PROGRESS.md` (hoặc `SPRINT.md`) của từng thư mục sprint có `status` khác `done` và `dropped`; mục tiêu lấy từ dòng Timeline cùng mã | Mã · Mở · Mục tiêu · Trạng thái · Vòng · Thư mục |
+| SPRINTS | frontmatter `PROGRESS.md` (hoặc `SPRINT.md`, `TASK.md`) của từng thư mục sprint có `status` khác `done` và `dropped`; mục tiêu lấy từ dòng Timeline cùng mã | Mã · Mở · Mục tiêu · Trạng thái · Vòng · Thư mục |
 
 Cột Trạng thái của khối viết chữ Việt: SPECS `proposed` → đề xuất, `in_progress` → đang làm; SPRINTS
 `drafting` → đang viết SPEC/PLAN, `awaiting_gate_1` → chờ Cổng 1, `in_progress` → đang làm, `verifying` → đang

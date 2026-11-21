@@ -14,12 +14,14 @@ verdict: pending
 gate_2: pending
 gate_2_at: null
 gate_2_quote: null
+tier_scale: 2
 roles:
-  analyst: [T1, agent-a]
-  implementer: [T2, agent-e]
-  qa: [T3, agent-f]
-  business-reviewer: [T1, agent-c]
-  tech-reviewer: [T1, agent-d]
+  analyst: [3, agent-a]
+  implementer: [2, agent-e]
+  qa: [2, agent-f]
+  business-reviewer: [4, agent-c]
+  tech-reviewer: [3, agent-d]
+  gate-delegate: [4, agent-g]
 created: 2026-01-15
 updated: 2026-01-15
 links:
@@ -41,7 +43,10 @@ links:
 
 ## Tóm tắt cho người không chuyên
 
-<!-- 3–5 câu, không thuật ngữ, không mã trần: làm được gì, dùng thế nào, còn rủi ro gì, cần quyết gì. -->
+<!-- 3–5 câu, không thuật ngữ, không mã trần: làm được gì, dùng thế nào, còn rủi ro gì, cần quyết gì.
+     Gợi ý 1: nói điều người đọc làm được hoặc thấy khác đi, không nói file nào đổi.
+     Gợi ý 2: nói rõ phần nào đã kiểm trên máy nào, phần nào chưa kiểm và vì sao.
+     Gợi ý 3: nói việc cần người làm hoặc quyết tiếp, kèm hạn nếu có. -->
 
 Nhân viên bán hàng giờ gõ mã đơn là thấy ngay trạng thái. Mã sai thì báo "không tìm thấy" và không lộ đơn khác.
 Khi số đơn tăng nhiều, việc tra có thể chậm dần — đề xuất xử lý ở sprint sau.
@@ -49,13 +54,14 @@ Khi số đơn tăng nhiều, việc tra có thể chậm dần — đề xuất
 ## 1. Kết quả kiểm định
 
 <!-- Mỗi SC (và kịch bản FR quan trọng) có ít nhất một VR. Kết quả: Đạt · Không đạt · Chưa chạy · Không áp dụng
-     (kèm lý do). "Chưa chạy" và "Không áp dụng" KHÔNG tính là Đạt. Người kiểm phải là agent khác người làm. -->
+     (kèm lý do). "Chưa chạy" và "Không áp dụng" KHÔNG tính là Đạt. Người kiểm phải là agent khác người làm.
+     Cột Môi trường, Mốc, Thời điểm cho phép chạy lại đúng lệnh: máy và phiên bản; commit hoặc tag đã đo; giờ chạy. -->
 
 REPORT có 1 **verification result** (VR):
 
-| Mã | Kiểm cái gì | Lệnh / thao tác | Kết quả | Người kiểm | Bằng chứng |
-|---|---|---|---|---|---|
-| VR1 (test tra cứu) | SC1, FR1.1, FR1.2 | `pytest tests/test_orders.py` | Đạt | QA · agent-f | 6 passed, coverage 92% |
+| Mã | Kiểm cái gì | Lệnh / thao tác | Kết quả | Người kiểm | Môi trường | Mốc | Thời điểm | Bằng chứng |
+|---|---|---|---|---|---|---|---|---|
+| VR1 (test tra cứu) | SC1, FR1.1, FR1.2 | `pytest tests/test_orders.py` | Đạt | QA · agent-f | máy phát triển, Python 3.12 | commit `abc1234` | 2026-01-15 11:00 +07 | 6 passed, coverage 92% |
 
 ## 2. Phát hiện của reviewer
 

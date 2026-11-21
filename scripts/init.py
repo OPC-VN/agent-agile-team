@@ -11,7 +11,7 @@ Cách chạy:
 Sprint mới lấy mã từ `next_id` của SPRINTS, đặt lại trạng thái (`status: drafting` cho PROGRESS/SPRINT, cổng
 và `verdict` về pending/null, `review_round: 0`, mọi vai về nhãn `pending`) rồi ghi một dòng Timeline vào
 SPRINTS (xoá comment dòng ví dụ của mẫu) và tăng `next_id`. Chạy lại cùng `slug` không đổi gì.
-Số file theo cỡ (method/sizing.md): `--tiny` hoặc `--size tiny` → một `SPRINT.md` hai phần "Kế hoạch" / "Kết quả";
+Số file theo cỡ (method/sizing.md): `--tiny` hoặc `--size tiny` → một `TASK.md` hai phần "Kế hoạch" / "Kết quả";
 `--size small` → một `SPRINT.md` bốn phần SPEC · PLAN · PROGRESS · REPORT; `medium` (mặc định) và `large` → bốn file.
 
 Tiêu đề có dấu: `--title-file` đọc UTF-8 từ file, không qua shell. Tiêu đề có U+FFFD hoặc `?` kẹp giữa hai chữ
@@ -52,8 +52,8 @@ SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 LEDGERS = (("requests", "REQUESTS.md", "RQ", "request"), ("sprints", "SPRINTS.md", "SPR", "sprint"),
            ("specs", "SPECS.md", "FS", "feature"))
 SPRINT_FILES = ("SPEC", "PLAN", "PROGRESS", "REPORT")
-ONE_FILE_TEMPLATE = {"tiny": "SPRINT-tiny", "small": "SPRINT"}  # cỡ → mẫu của `SPRINT.md` (hai phần / bốn phần)
-STATUS_NEW = {"spec": "draft", "plan": "draft", "progress": "drafting", "report": "draft", "sprint": "drafting"}
+ONE_FILE_TEMPLATE = {"tiny": ("TASK", "TASK"), "small": ("SPRINT", "SPRINT")}  # cỡ → (mẫu, tên file ra): `TASK.md` hai phần / `SPRINT.md` bốn phần
+STATUS_NEW = {"spec": "draft", "plan": "draft", "progress": "drafting", "report": "draft", "sprint": "drafting", "task": "drafting"}
 EXAMPLE_COMMENT = "<!-- Ví dụ một dòng"
 SKELETON_LOCALE = _labels.DEFAULT_LOCALE  # the templates are written in this locale; others are rendered by _labels.translate
 SUSPECT_TITLE = re.compile(r"\ufffd|\w\?\w")  # ký tự thay thế, hoặc "?" kẹp giữa hai chữ ("c?ch")
@@ -230,8 +230,8 @@ def plan_sprint(root: Path, cfg: dict, args, plan: Plan) -> None:
         "title": yaml_str(args.title), "created": args.date, "updated": args.date,
         "size": args.size, "risk": args.risk, "risk_tags": yaml_value(args.risk_tags), **RESET,
     }
-    if args.size in ONE_FILE_TEMPLATE:  # rất nhỏ / nhỏ: một file SPRINT.md, mẫu theo bậc
-        files = ((ONE_FILE_TEMPLATE[args.size], "SPRINT"),)
+    if args.size in ONE_FILE_TEMPLATE:  # rất nhỏ: một TASK.md; nhỏ: một SPRINT.md
+        files = (ONE_FILE_TEMPLATE[args.size],)
     else:
         files = tuple((n, n) for n in SPRINT_FILES)
     for tmpl, name in files:
@@ -369,9 +369,9 @@ def main(argv=None, env=None) -> int:
     parser.add_argument("--sprint", metavar="SLUG", help="tạo khung một sprint mới")
     parser.add_argument("--title", help="mục tiêu sprint")
     parser.add_argument("--title-file", help="đọc mục tiêu sprint từ file UTF-8 (không qua shell)")
-    parser.add_argument("--tiny", action="store_true", help="việc rất nhỏ: một file SPRINT.md hai phần Kế hoạch / Kết quả (= --size tiny)")
+    parser.add_argument("--tiny", action="store_true", help="việc rất nhỏ: một file TASK.md hai phần Kế hoạch / Kết quả (= --size tiny)")
     parser.add_argument("--size", choices=["tiny", "small", "medium", "large"],
-                        help="cỡ việc (mặc định medium): tiny/small một file SPRINT.md, medium/large bốn file")
+                        help="cỡ việc (mặc định medium): tiny một file TASK.md, small một file SPRINT.md, medium/large bốn file")
     parser.add_argument("--risk", choices=["normal", "high"], default="normal")
     parser.add_argument("--risk-tags", help="danh sách nhãn rủi ro, phân cách bằng dấu phẩy")
     parser.add_argument("--request", help="RQ-NNN của yêu cầu gốc")

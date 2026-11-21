@@ -4,33 +4,33 @@
 
 | Vai | Tier | Vendor | Model | Effort | Effort native | Ghi chú |
 |---|---|---|---|---|---|---|
-| Analyst | T1 | claude | `<model-id>` | 3 | `high` | ô tier T1 |
-| Analyst | T1 | codex | `<model-id>` | 3 | `high` | ô tier T1 |
-| Analyst | T1 | antigravity | `<model-id>` | 3 | `high` | ô tier T1 |
-| Architect | T1 | claude | `<model-id>` | 3 | `high` | ô tier T1 |
-| Architect | T1 | codex | `<model-id>` | 3 | `high` | ô tier T1 |
-| Architect | T1 | antigravity | `<model-id>` | 3 | `high` | ô tier T1 |
-| Implementer | T2 | claude | `<model-id>` | 3 | `high` | ô tier T2 |
-| Implementer | T2 | codex | `<model-id>` | 3 | `high` | ô tier T2 |
-| Implementer | T2 | antigravity | `<model-id>` | 3 | `high` | ô tier T2 |
-| QA | T3 | claude | `<model-id>` | 2 | `medium` | ô tier T3 |
-| QA | T3 | codex | `<model-id>` | 2 | `medium` | ô tier T3 |
-| QA | T3 | antigravity | `<model-id>` | 1 | `low` | ô tier T3 |
-| Researcher | T3 | claude | `<model-id>` | 2 | `medium` | override roles.researcher |
-| Researcher | T3 | codex | `<model-id>` | 2 | `medium` | override roles.researcher |
-| Researcher | T3 | antigravity | `<model-id>` | 2 | `medium` | override roles.researcher |
-| Business Reviewer | T1 | claude | `<model-id>` | 3 | `high` | ô tier T1 |
-| Business Reviewer | T1 | codex | `<model-id>` | 3 | `high` | ô tier T1 |
-| Business Reviewer | T1 | antigravity | `<model-id>` | 3 | `high` | ô tier T1 |
-| Tech Reviewer | T1 | claude | `<model-id>` | 3 | `high` | override roles.tech-reviewer |
-| Tech Reviewer | T1 | codex | `<model-id>` | 3 | `high` | ô tier T1 |
-| Tech Reviewer | T1 | antigravity | `<model-id>` | 3 | `high` | ô tier T1 |
-| Gate Delegate | T1 | claude | `<model-id>` | 3 | `high` | ô tier T1 |
-| Gate Delegate | T1 | codex | `<model-id>` | 3 | `high` | ô tier T1 |
-| Gate Delegate | T1 | antigravity | `<model-id>` | 3 | `high` | ô tier T1 |
-| Advisor | T1 | claude | `<model-id>` | 3 | `high` | ô tier T1 |
-| Advisor | T1 | codex | `<model-id>` | 3 | `high` | ô tier T1 |
-| Advisor | T1 | antigravity | `<model-id>` | 3 | `high` | ô tier T1 |
+| Analyst | 3 | claude | `<model-id>` | 3 | `high` | ô tier 3 |
+| Analyst | 3 | codex | `<model-id>` | 3 | `high` | ô tier 3 |
+| Analyst | 3 | antigravity | `<model-id>` | 3 | `high` | ô tier 3 |
+| Architect | 3 | claude | `<model-id>` | 3 | `high` | ô tier 3 |
+| Architect | 3 | codex | `<model-id>` | 3 | `high` | ô tier 3 |
+| Architect | 3 | antigravity | `<model-id>` | 3 | `high` | ô tier 3 |
+| Implementer | 2 | claude | `<model-id>` | 3 | `high` | ô tier 2 |
+| Implementer | 2 | codex | `<model-id>` | 3 | `high` | ô tier 2 |
+| Implementer | 2 | antigravity | `<model-id>` | 3 | `high` | ô tier 2 |
+| QA | 2 | claude | `<model-id>` | 2 | `medium` | override roles.qa |
+| QA | 2 | codex | `<model-id>` | 2 | `medium` | override roles.qa |
+| QA | 2 | antigravity | `<model-id>` | 1 | `low` | override roles.qa |
+| Researcher | 1 | claude | `<model-id>` | 2 | `medium` | override roles.researcher |
+| Researcher | 1 | codex | `<model-id>` | 2 | `medium` | override roles.researcher |
+| Researcher | 1 | antigravity | `<model-id>` | 2 | `medium` | override roles.researcher |
+| Business Reviewer | 4 | claude | `<model-id>` | 3 | `high` | ô tier 4 |
+| Business Reviewer | 4 | codex | `<model-id>` | 3 | `high` | ô tier 4 |
+| Business Reviewer | 4 | antigravity | `<model-id>` | 3 | `high` | ô tier 4 |
+| Tech Reviewer | 3 | claude | `<model-id>` | 3 | `high` | override roles.tech-reviewer |
+| Tech Reviewer | 3 | codex | `<model-id>` | 3 | `high` | ô tier 3 |
+| Tech Reviewer | 3 | antigravity | `<model-id>` | 3 | `high` | ô tier 3 |
+| Gate Delegate | 4 | claude | `<model-id>` | 3 | `high` | ô tier 4 |
+| Gate Delegate | 4 | codex | `<model-id>` | 3 | `high` | ô tier 4 |
+| Gate Delegate | 4 | antigravity | `<model-id>` | 3 | `high` | ô tier 4 |
+| Advisor | 4 | claude | `<model-id>` | 3 | `high` | ô tier 4 |
+| Advisor | 4 | codex | `<model-id>` | 3 | `high` | ô tier 4 |
+| Advisor | 4 | antigravity | `<model-id>` | 3 | `high` | ô tier 4 |
 
 ## Thang 1–5 → native
 

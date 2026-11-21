@@ -10,13 +10,15 @@ size: medium
 risk: normal
 risk_tags: []
 review_round: 0
+tier_scale: 2
 roles:
-  analyst: [T1, agent-a]
-  architect: [T1, agent-b]
-  implementer: [T2, agent-e]
-  qa: [T3, agent-f]
-  business-reviewer: [T1, agent-c]
-  tech-reviewer: [T1, agent-d]
+  analyst: [3, agent-a]
+  architect: [3, agent-b]
+  implementer: [2, agent-e]
+  qa: [2, agent-f]
+  business-reviewer: [4, agent-c]
+  tech-reviewer: [3, agent-d]
+  gate-delegate: [4, agent-g]
 created: 2026-01-15
 updated: 2026-01-15
 links:
@@ -35,6 +37,18 @@ links:
 > **Kết luận:** <!-- MỘT câu bằng lời thường, viết lại mỗi lần cập nhật: xong bao nhiêu việc (số đếm đúng), vướng gì, vòng kiểm định thứ mấy; không dùng mã trần, mã nào nhắc thì kèm tên. -->
 > 1/2 việc Đạt; chưa có vướng mắc; chưa vào vòng kiểm định.
 
+## Tiếp nối
+
+<!-- Biển chỉ đường cho người hay agent mở sprint giữa chừng, kể cả khi phiên trước đứt. Mục tuỳ chọn, `check` không đòi.
+     Viết lại mỗi lần cập nhật Kết luận; nhật ký (mục 2) là lịch sử, khối này chỉ là hiện tại. -->
+
+- **Đọc theo thứ tự:** `SPEC.md` → `PLAN.md` → mục 1 và mục 3 dưới đây → `REPORT.md` nếu đã có.
+- **Nguồn sự thật:** SPEC thắng PLAN, PLAN thắng PROGRESS; sprint đã đóng thì REPORT thắng PROGRESS; đã đẩy hoặc đã gộp thì Git thắng mọi file.
+- **Đang ở:** nhánh `sprint/spr-01`, thư mục làm việc `<đường thư mục>`, commit `<hash7>`; TK1 Đạt, TK2 chưa chạy.
+- **Việc kế:** TK2 (màn hình tra cứu); lệnh đầu: `pytest tests/test_orders.py -q` để thấy nền còn xanh.
+- **Đừng làm lại:** TK1 đã Đạt và qua review; không viết lại hàm tra cứu.
+- **Bẫy môi trường mới gặp:** Không có.
+
 ## 1. Bảng trạng thái việc
 
 <!-- Trạng thái: Chưa chạy · Đang làm · Đạt · Không đạt · Không áp dụng (kèm lý do) · bỏ.
@@ -44,8 +58,8 @@ links:
 
 | Việc | Vai · tier · model · effort | Trạng thái | Bằng chứng |
 |---|---|---|---|
-| TK1 (hàm tra cứu đơn) | Implementer · T2 · model-x · 3 | Đạt | `pytest tests/test_orders.py` → 6 passed; coverage 92% |
-| TK2 (màn hình tra cứu) | Implementer · T2 · model-x · 3 | Chưa chạy | — |
+| TK1 (hàm tra cứu đơn) | Implementer · Tier 2 · model-x · 3 | Đạt | `pytest tests/test_orders.py` → 6 passed; coverage 92% |
+| TK2 (màn hình tra cứu) | Implementer · Tier 2 · model-x · 3 | Chưa chạy | — |
 
 ## 2. Nhật ký
 
@@ -53,7 +67,7 @@ links:
      Điều chỉnh nội bộ trong phạm vi đã duyệt ghi đúng khuôn:
      "Phán quyết: <quyết gì> — <vì sao> — <sai thì tốn gì>". Không hỏi người cho loại điều chỉnh này. -->
 
-- **2026-01-15 09:00 +07** — Analyst nhận SPR-01 sau Cổng 1; giao TK1 (hàm tra cứu đơn) cho Implementer T2.
+- **2026-01-15 09:00 +07** — Analyst nhận SPR-01 sau Cổng 1; giao TK1 (hàm tra cứu đơn) cho Implementer Tier 2.
 - **2026-01-15 09:40 +07** — TK1 Đạt. Phán quyết: cắt khoảng trắng đầu/cuối mã đơn trước khi tra — vì người
   dùng hay dán mã kèm khoảng trắng — sai thì tốn một lần sửa hàm và test.
 
@@ -75,8 +89,8 @@ PROGRESS có 1 **blocker** (BR):
      Chặn hoặc Phải sửa thì báo người: số vòng, phát hiện còn mở, đề xuất làm tiếp hay dừng & bàn giao.
      Reviewer là agent KHÁC người làm. Chi tiết RF ghi ở REPORT; ở đây chỉ đếm và trỏ. -->
 
-Vòng 0 — chưa kiểm. Mẫu khi đã kiểm: *Vòng 1 — Business Reviewer (agent-c, T1) và Tech Reviewer (agent-d,
-T1): Đạt có điều kiện; 0 Chặn, 0 Phải sửa, 2 Nên sửa, 0 Ghi chú; RF2 (thông báo khó hiểu) đã sửa ở TK2,
+Vòng 0 — chưa kiểm. Mẫu khi đã kiểm: *Vòng 1 — Business Reviewer (agent-c, Tier 4) và Tech Reviewer (agent-d,
+Tier 3): Đạt có điều kiện; 0 Chặn, 0 Phải sửa, 2 Nên sửa, 0 Ghi chú; RF2 (thông báo khó hiểu) đã sửa ở TK2,
 RF3 (truy vấn chưa có chỉ mục) để lại → CO1.*
 
 ## 5. Bằng chứng routing (khi thuộc pilot)

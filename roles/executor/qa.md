@@ -1,7 +1,7 @@
 ---
 name: qa
 group: executor
-tier: T3
+tier: 2
 title: QA — run tests, measure coverage, browser checks, record VR
 ---
 

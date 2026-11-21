@@ -56,9 +56,9 @@ RULES: dict[str, tuple[str, str]] = {
     "frontmatter-value": (PHAI, "giá trị khoá sai miền hoặc mâu thuẫn"),
     "doc-unknown": (GHI, "khoá `doc` có nhưng không thuộc loại đã biết — chỉ áp luật chung"),
     "heading-missing": (PHAI, "thiếu tiêu đề cấp 2 bắt buộc"),
-    "sprint-size-mismatch": (PHAI, "hình tài liệu không khớp `size`: `SPRINT.md` ở cỡ vừa/lớn, hoặc bốn file ở cỡ rất nhỏ"),
+    "sprint-size-mismatch": (PHAI, "hình tài liệu không khớp `size`: `SPRINT.md` ở cỡ vừa/lớn, bốn file ở cỡ rất nhỏ, hoặc `TASK.md` sai cỡ / bốn phần / đứng cạnh tài liệu sprint khác"),
     "conclusion-missing": (PHAI, "thiếu khối `> **Kết luận:**` trước tiêu đề cấp 2 đầu tiên"),
-    "id-bare-single-letter": (PHAI, "mã một chữ cái + số ngoài dấu code (trừ T1/T2/T3)"),
+    "id-bare-single-letter": (PHAI, "mã một chữ cái + số ngoài dấu code (trừ T1/T2/T3, nhãn tier của hồ sơ cũ)"),
     "id-unknown-prefix": (PHAI, "định nghĩa mục bằng tiền tố hai chữ cái ngoài bảng mã"),
     "id-wrong-doc": (PHAI, "định nghĩa mục bằng tiền tố thuộc tài liệu khác"),
     "id-list-lead": (GHI, "bảng có cột đầu `Mã` mà dòng ngay trên không có câu dẫn in đậm (tài liệu + nghĩa của mã)"),
@@ -74,7 +74,7 @@ RULES: dict[str, tuple[str, str]] = {
     "self-review": (CHAN, "một nhãn agent vừa giữ vai thực thi vừa giữ vai kiểm định"),
     "qa-not-independent": (PHAI, "QA trùng nhãn với implementer/architect mà không khai tự kiểm, hoặc khai tự kiểm mà verdict là pass"),
     "vr-result-not-pass": (NEN, "dòng `VR` ghi 'Chưa chạy' (hoặc 'Không áp dụng' không kèm lý do) ở cột Kết quả trong khi `verdict` hoặc `gate_2` là pass"),
-    "roles-invalid": (PHAI, "`roles` sai hình: vai lạ, tier ngoài T1–T3, thiếu nhãn agent"),
+    "roles-invalid": (PHAI, "`roles` sai hình: vai lạ, tier ngoài thang (T1–T3 khi không có `tier_scale`; 1–5 khi `tier_scale: 2`, tier 5 chỉ người), thiếu nhãn agent"),
     "gate-invalid": (PHAI, "cổng đã kết luận mà thiếu thời điểm/câu nguyên văn, hoặc trạng thái vượt cổng"),
     "gate-delegation-invalid": (PHAI, "duyệt thay thiếu lời cấp/phạm vi/hạn/bản ghi, quá hạn, đã thu hồi, người duyệt không phải T1, hoặc vào vùng cấm"),
     "old-scale-label": (PHAI, "nhãn thang mức cũ (kiểu nguồn trong câu, hoặc tiếng Việt kiểu cũ) ngoài bảng quy đổi `method/severity.md`"),
@@ -82,17 +82,19 @@ RULES: dict[str, tuple[str, str]] = {
     "config-invalid": (PHAI, "`.agile.json` sai hình hoặc đổi ngưỡng coverage không ghi lý do"),
     "config-public-root": (CHAN, "`visibility: public` mà `artifact_root` nằm trong gốc dự án"),
     "ledger-missing-row": (PHAI, "dự án khai sổ tập trung mà sổ không có dòng cho sprint đang mở"),
-    "ledger-stale": (PHAI, "dòng sổ lệch `status` hoặc ngày cũ hơn `updated` của PROGRESS/SPRINT"),
+    "ledger-stale": (PHAI, "dòng sổ lệch `status` hoặc ngày cũ hơn `updated` của PROGRESS/SPRINT/TASK"),
     "ledger-unreadable": (PHAI, "file sổ không có, không đọc được UTF-8 hoặc không có bảng cột đầu 'Sprint'"),
     "ledger-unconfigured": (GHI, "dự án khai sổ tập trung mà máy chưa đặt mẫu đường `AGENT_AGILE_LEDGER`"),
     "leak-denylist": (CHAN, "`--self`: file của repo chứa từ trong danh sách cấm"),
     "root-junk": (PHAI, "`--self`: file hoặc thư mục ở gốc repo không được theo dõi và không bị ignore"),
     "agents-md-budget": (PHAI, "`--self`: `AGENTS.md` quá 120 dòng hoặc quá 10 KB"),
     "delegation-floor-file": (PHAI, "`delegation.files` nêu file thuộc sàn cứng (`FLOOR_FILES`): không duyệt thay được"),
-    "gate-signer-independence": (PHAI, "người ký cổng trùng nhãn phiên người làm ở tài liệu cùng sprint, tier người ký thấp hơn tier người làm, hoặc cổng đã kết luận thiếu `evidence/gate-<N>-verdict.md` / dòng đầu lệch quote (khối duyệt thay từ ngày hiệu lực)"),
-    "decision-log-missing": (PHAI, "REPORT hoặc SPRINT.md có Cổng 2 duyệt thay mới mà thiếu mục 'Nhật ký quyết định' đủ ai ký · model · bằng chứng · lệnh hoàn tác"),
-    "session-cap-missing": (PHAI, "PLAN hoặc SPRINT.md có Cổng 1 duyệt thay mới mà thiếu 'Trần phiên: <số>' hoặc sessions_cap không khớp (null/vắng không hợp lệ)"),
+    "gate-signer-independence": (PHAI, "người ký cổng trùng nhãn phiên người làm ở tài liệu cùng sprint, tier người ký thấp hơn tier người làm, hoặc cổng đã kết luận thiếu `evidence/GATE-<N>-VERDICT.md` (hoặc tên cũ `gate-<N>-verdict.md`) / dòng đầu lệch quote (khối duyệt thay từ ngày hiệu lực)"),
+    "decision-log-missing": (PHAI, "REPORT, SPRINT.md hoặc TASK.md có Cổng 2 duyệt thay mới mà thiếu mục 'Nhật ký quyết định' đủ ai ký · model · bằng chứng · lệnh hoàn tác"),
+    "session-cap-missing": (PHAI, "PLAN, SPRINT.md hoặc TASK.md có Cổng 1 duyệt thay mới mà thiếu 'Trần phiên: <số>' hoặc sessions_cap không khớp (null/vắng không hợp lệ)"),
     "session-cap-over": (GHI, "chỉ báo (không chặn): 'Trần phiên' vượt công thức cỡ × rủi ro mà không có dòng 'nâng trần' ở Nhật ký quyết định"),
+    "evidence-name": (GHI, "hồ sơ tạo từ ngày hiệu lực của quy ước tên (`NAMING_EFFECTIVE_DATE`) mà `evidence/` còn file đặt tên kiểu cũ (`gate-<N>-verdict.md`, `tk<n>-report.md`, `analysis.md`…): chỉ báo, không đổi mã thoát"),
+    "tier-label-legacy": (GHI, "tài liệu `tier_scale: 2` tạo từ ngày hiệu lực (`NAMING_EFFECTIVE_DATE`) mà thân còn nhãn tier cũ `T1`/`T2`/`T3` ngoài dấu code: chỉ báo, không đổi mã thoát"),
     "gate-route-floor": (PHAI, "cổng `delegated` (kể cả còn `pending`) mà bảng 'File luật và file sàn cứng sẽ chạm' khai file sàn cứng, hoặc `risk_tags` có `rules` mà `delegation.files` rỗng: chuyển cổng người, trình lời khuyến nghị"),
     "frontmatter-duplicate-key": (PHAI, "khoá `delegation` lặp trong frontmatter (chỉ một phiên điều phối ghi lời cấp)"),
     "decision-owner-missing": (NEN, "CQ/DN của sprint từ ngày chế độ mở mà bảng thiếu cột hoặc ô 'Người quyết'"),
@@ -110,11 +112,16 @@ INPUT_RULES = {"frontmatter-syntax", "config-syntax"}
 SPRINT_DOCS = ("spec", "plan", "progress", "report", "sprint")
 REGISTRY_DOCS = ("requests", "specs", "sprints")
 DOC_KINDS = SPRINT_DOCS + ("feature",) + REGISTRY_DOCS
+# Hai phần kèm (DN6, TK6.1): `check` nhận tên `doc: handoff` và `doc: roadmap` nhưng không áp luật hình nào (chỉ luật chung về mã). Cố ý KHÔNG nằm trong `DOC_KINDS`: thêm vào đó làm hồ sơ cũ dùng hai giá trị này ra Phải sửa mới.
+ADDON_DOCS = ("handoff", "roadmap")
 KNOWN_NAMES = {
     "SPEC.md": "spec", "PLAN.md": "plan", "PROGRESS.md": "progress", "REPORT.md": "report",
-    "SPRINT.md": "sprint", "REQUESTS.md": "requests", "SPECS.md": "specs", "SPRINTS.md": "sprints",
+    "SPRINT.md": "sprint", "TASK.md": "sprint", "REQUESTS.md": "requests", "SPECS.md": "specs", "SPRINTS.md": "sprints",
 }
 
+# `doc: task` là bí danh của loại `sprint` ở cỡ rất nhỏ (FR4): các nhánh luật `kind == "sprint"` giữ nguyên; giá trị `doc` gốc nằm ở `Doc.doc_name`.
+DOC_ALIASES = {"task": "sprint"}
+DOC_VALUE_BY_FILE = {"SPRINT.md": "sprint", "TASK.md": "task"}  # tên file → giá trị `doc` bắt buộc
 _SPRINT_KEYS = ("id", "doc", "title", "sprint", "request", "feature", "status", "size", "risk", "roles", "created", "updated")
 _GATE1 = ("gate_1", "gate_1_at", "gate_1_quote")
 _GATE2 = ("verdict", "gate_2", "gate_2_at", "gate_2_quote")
@@ -315,12 +322,13 @@ _INPUT_FIELD_LINE = re.compile(r"^(\s*)(?:[-*+]|[0-9]+\.)\s+\*\*" + lab.alternat
 _OUTPUT_FIELD_MARK = re.compile(r"\*\*" + lab.alternation("field.output") + r":\*\*")
 PARALLEL_MARK = "chạy cùng được với"
 
-SPRINT_TINY_HEADINGS = ("Kế hoạch", "Kết quả")  # `SPRINT.md` cỡ rất nhỏ: hai phần; bốn phần cũ vẫn hợp lệ
+SPRINT_TINY_HEADINGS = ("Kế hoạch", "Kết quả")  # cỡ rất nhỏ (`TASK.md`, hay `SPRINT.md` của hồ sơ cũ): hai phần; bốn phần cũ vẫn hợp lệ
 SPRINT_FOUR = REQUIRED_HEADINGS["sprint"]
 
 CODE = re.compile(r"(?<![\w/\-])([A-Z]{2})([0-9]+(?:\.[0-9]+)*)(?![\w\-])")
 CODE_AT_START = re.compile(r"([A-Z]{2})([0-9]+(?:\.[0-9]+)*)(?![\w\-])")
 BARE = re.compile(r"(?<![\w\-.])([A-Z])([0-9]+)(?![\w\-])")
+LEGACY_TIER_LABEL = re.compile(r"(?<![\w\-.])T[123](?![\w\-])")
 RANGE = re.compile(r"(?<![\w/\-])([A-Z]{2})([0-9]+)\s*[–—-]\s*([A-Z]{2})([0-9]+)(?![\w\-]|\.[0-9])")
 HEADING = re.compile(r"^(#{1,6})\s+(?:\*\*)?")
 BOLD_ITEM = re.compile(r"^\s*(?:[-*+]|[0-9]+\.)\s+\*\*")
@@ -354,7 +362,7 @@ AGENTS_MAX_BYTES = 10 * 1024
 SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", ".tmp"}
 # Thư mục `evidence` cạnh tài liệu sprint là hồ sơ kèm, không phải tài liệu sprint: quét thư mục thì bỏ qua (FR4.1).
 EVIDENCE_DIR = "evidence"
-SPRINT_DOC_NAMES = ("SPEC.md", "PLAN.md", "PROGRESS.md", "REPORT.md", "SPRINT.md")
+SPRINT_DOC_NAMES = ("SPEC.md", "PLAN.md", "REPORT.md") + c.STATE_DOC_NAMES
 OPEN_START, OPEN_END = "<!-- agile:open:start -->", "<!-- agile:open:end -->"  # khối do `index` sinh
 SPAN_HINT = (" — có dấu huyền kề bên: mã nằm trong code span lồng nhau hoặc ngắt dòng? Code span chứa dấu huyền"
              " thì bọc ngoài bằng hai dấu huyền")
@@ -1007,6 +1015,7 @@ class Doc:
     start: int  # số dòng của phần tử đầu tiên trong `raw`
     fm: c.Frontmatter | None = None
     kind: str | None = None
+    doc_name: str | None = None  # giá trị `doc` gốc của frontmatter (`task` khác `kind == "sprint"`)
     defs: list = field(default_factory=list)
     load_findings: list = field(default_factory=list)
 
@@ -1069,14 +1078,19 @@ def load_doc(path: Path) -> Doc:
             else:
                 doc.load_findings.append(Finding(path, exc.line, "frontmatter-syntax", exc.message))
         if doc.fm is None and not doc.load_findings:
-            doc.load_findings.append(Finding(path, 1, "frontmatter-missing", f"{path.name} là tài liệu chuẩn nhưng không có frontmatter"))
+            doc.load_findings.append(Finding(path, 1, "frontmatter-missing", f"{path.name} là tài liệu chuẩn nhưng không có frontmatter "
+                                             "(không phải hồ sơ sprint: đổi tên file hoặc trỏ `check` vào thư mục hồ sơ thay vì gốc repo; là hồ sơ sprint: thêm frontmatter)"))
         kind = doc.data.get("doc")
+        if isinstance(kind, str):
+            doc.doc_name = kind
+            kind = DOC_ALIASES.get(kind, kind)
         if kind in DOC_KINDS:
             doc.kind = kind
         elif doc.fm is not None and "doc" not in doc.data and path.name in KNOWN_NAMES:
             doc.load_findings.append(Finding(path, 1, "frontmatter-key-missing",
-                                             f"{path.name} là tài liệu chuẩn nhưng frontmatter thiếu khoá 'doc' (doc: {KNOWN_NAMES[path.name]})"))
-        elif doc.fm is not None and "doc" in doc.data:
+                                             f"{path.name} là tài liệu chuẩn nhưng frontmatter thiếu khoá 'doc' "
+                                             f"(doc: {DOC_VALUE_BY_FILE.get(path.name, KNOWN_NAMES[path.name])})"))
+        elif doc.fm is not None and "doc" in doc.data and (kind not in ADDON_DOCS or path.name in KNOWN_NAMES):
             doc.load_findings.append(Finding(path, doc.key_line("doc"), "doc-unknown", f"doc: {kind!r} không thuộc {', '.join(DOC_KINDS)}"))
     doc.defs = _definitions(doc)
     return doc
@@ -1184,6 +1198,13 @@ def _tier_scale(doc: Doc) -> int:
     return 2 if doc.data.get("tier_scale") == 2 else 1
 
 
+def _created_from_effective_date(doc: Doc) -> bool:
+    """`created` đúng định dạng `YYYY-MM-DD` và không trước `NAMING_EFFECTIVE_DATE` (hồ sơ MỚI); thiếu hay sai định dạng → False (hồ sơ cũ)."""
+    created = doc.data.get("created")
+    created = created.isoformat() if hasattr(created, "isoformat") else created
+    return isinstance(created, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) is not None and created >= c.NAMING_EFFECTIVE_DATE
+
+
 def _norm_tier(val: object, scale: int) -> str | None:
     """Chuẩn hoá giá trị tier theo `tier_scale` (1: T1–T3, 2: '1'..'5')."""
     if scale == 2:
@@ -1251,6 +1272,7 @@ class Engine:
         self.configs: dict = {}
         self.size_flagged: set = set()  # thư mục sprint bốn file đã báo `sprint-size-mismatch` (một lần mỗi thư mục)
         self.locales: dict = {}  # thư mục -> [(đường dẫn, locale hợp lệ, dòng khoá)] của tài liệu khai `locale` tường minh
+        self.evidence_name_flagged: set = set()  # (thư mục evidence, tên file) đã báo `evidence-name` (PROGRESS.md và SPRINT.md chung một thư mục)
         self.delegation_flagged: set = set()  # (tài liệu, khoá lạ) đã báo trong khối `delegation` (khối chung của hai cổng)
         self.report = Report()
         self.routing_records: list[tuple[dict, Path, int]] = []
@@ -1286,6 +1308,8 @@ class Engine:
         if doc.kind is None or doc.fm is None:
             return
         self.frontmatter_rules(doc)
+        self.evidence_name_rule(doc)
+        self.tier_label_legacy_rule(doc)
         self.locale_rules(doc)
         self.size_rules(doc)
         self.heading_rules(doc)
@@ -1303,6 +1327,45 @@ class Engine:
         if doc.kind in ("report", "sprint"):
             self.verification_rules(doc)
             self.stop_message_rules(doc)
+
+    def tier_label_legacy_rule(self, doc: Doc) -> None:
+        """`tier-label-legacy` (Ghi chú; FR5.3): tài liệu `tier_scale: 2` có `created` từ `NAMING_EFFECTIVE_DATE` mà thân còn nhãn tier cũ
+        `T1`/`T2`/`T3` ngoài dấu code, khối code và comment (đọc từ dòng đã che) thì báo từng dòng. Không có `tier_scale: 2` (hồ sơ cũ) hay
+        `created` thiếu/sai định dạng/trước ngày hiệu lực → không báo."""
+        if _tier_scale(doc) != 2:
+            return
+        if not _created_from_effective_date(doc):
+            return
+        for idx, line in enumerate(doc.masked):
+            match = LEGACY_TIER_LABEL.search(line)
+            if match:
+                self.add(doc.path, doc.line_no(idx), "tier-label-legacy",
+                         f"nhãn tier cũ '{match.group(0)}' — hồ sơ `tier_scale: 2` viết Tier 1…Tier 5 (hồ sơ tạo từ {c.NAMING_EFFECTIVE_DATE})")
+
+    def evidence_name_rule(self, doc: Doc) -> None:
+        """`evidence-name` (Ghi chú; FR3.3): từ tài liệu trạng thái của hồ sơ MỚI (`created` từ `NAMING_EFFECTIVE_DATE`), báo từng file trong
+        `evidence/` đặt tên kiểu cũ (khớp biểu thức cũ của một loại ở `EVIDENCE_NAMES` mà không khớp biểu thức mới). Đọc thẳng `os.listdir`
+        nên chạy cả khi không có `--include-evidence`. `created` thiếu hay sai định dạng → coi là hồ sơ cũ, không báo."""
+        if doc.path.name not in c.STATE_DOC_NAMES:
+            return
+        if not _created_from_effective_date(doc):
+            return
+        folder = doc.path.resolve().parent / EVIDENCE_DIR
+        try:
+            names = sorted(os.listdir(folder))
+        except OSError:
+            return
+        for name in names:
+            if not (folder / name).is_file():
+                continue
+            for kind, (new, old) in c.EVIDENCE_NAMES.items():
+                if re.fullmatch(old, name) and not re.fullmatch(new, name):
+                    key = (folder, name)
+                    if key not in self.evidence_name_flagged:
+                        self.evidence_name_flagged.add(key)
+                        self.add(doc.path, doc.key_line("created"), "evidence-name",
+                                 f"evidence/{name} đặt tên kiểu cũ — tên chuẩn {c.EVIDENCE_NAME_FORMS[kind]} (hồ sơ tạo từ {c.NAMING_EFFECTIVE_DATE})")
+                    break
 
     def locale_rules(self, doc: Doc) -> None:
         """Rules for an explicit `locale` key (GC4): a document without the key is never touched by them."""
@@ -1331,7 +1394,7 @@ class Engine:
 
     def locale_folder_rules(self) -> None:
         """Documents of one sprint folder with an explicit `locale` must agree: the folder majority is the reference and
-        the others are flagged. A tie goes to the locale of SPRINT.md, then SPEC.md, then the first file by name."""
+        the others are flagged. A tie goes to the locale of SPRINT.md, then TASK.md, then SPEC.md, then the first file by name."""
         for folder in sorted(self.locales):
             items = sorted(self.locales[folder], key=lambda item: c.display(item[0]))
             counts: dict = {}
@@ -1343,7 +1406,7 @@ class Engine:
                 ref = next(iter(leaders))
             else:
                 by_name = {item[0].name: item[1] for item in items}
-                ref = next((by_name[n] for n in ("SPRINT.md", "SPEC.md") if by_name.get(n) in leaders),
+                ref = next((by_name[n] for n in ("SPRINT.md", "TASK.md", "SPEC.md") if by_name.get(n) in leaders),
                            next(value for _, value, _ in items if value in leaders))
             for path, value, line in items:
                 if value != ref:
@@ -1455,7 +1518,7 @@ class Engine:
         data, kind, path = doc.data, doc.kind, doc.path
         for key in REQUIRED_KEYS[kind]:
             if key not in data:
-                self.add(path, 1, "frontmatter-key-missing", f"doc: {kind} thiếu khoá '{key}'")
+                self.add(path, 1, "frontmatter-key-missing", f"doc: {doc.doc_name or kind} thiếu khoá '{key}'")
         for key in data:
             if key not in KNOWN_KEYS:
                 self.add(path, doc.key_line(key), "frontmatter-key-unknown", f"khoá '{key}' ngoài bảng khoá (templates/README.md mục 3)")
@@ -1501,8 +1564,13 @@ class Engine:
             check_ids("request", "RQ", allow_null=True, allow_list=True)
             check_ids("feature", "FS", allow_null=True, allow_list=True)
             sprint = data.get("sprint")
-            if isinstance(sprint, str) and c.parse_id(sprint) and data.get("id") != f"{sprint}-{kind}":
-                bad("id", f"id: {data.get('id')!r} phải là '{sprint}-{kind}'")
+            doc_value = doc.doc_name or kind
+            expected = DOC_VALUE_BY_FILE.get(path.name)
+            # `doc` sai so với tên file thì chỉ báo `doc` (cách sửa đúng); không báo thêm `id` suy từ giá trị `doc` sai đó
+            if isinstance(sprint, str) and c.parse_id(sprint) and data.get("id") != f"{sprint}-{doc_value}" and not (expected and doc_value != expected):
+                bad("id", f"id: {data.get('id')!r} phải là '{sprint}-{doc_value}'")
+            if expected and doc_value != expected:
+                bad("doc", f"doc: {doc_value!r} không khớp tên file {path.name} (phải là doc: {expected})")
             tags = data.get("risk_tags", [])
             if not isinstance(tags, list) or not set(tags) <= RISK_TAGS:
                 bad("risk_tags", f"risk_tags: {tags!r} phải là danh sách con của {sorted(RISK_TAGS)}")
@@ -1844,15 +1912,16 @@ class Engine:
 
     @staticmethod
     def _verdict_file(doc: Doc, gate: str, once) -> None:
-        """Cổng `delegated` đã kết luận: `evidence/gate-<N>-verdict.md` (cạnh tài liệu) tồn tại và dòng đầu của nó bằng `gate_<N>_quote`
-        (`method/agile.md` mục 6.3). Thiếu hay lệch → một phát hiện ở dòng `gate_<N>_mode`."""
+        """Cổng `delegated` đã kết luận: `evidence/GATE-<N>-VERDICT.md` (hoặc tên cũ `gate-<N>-verdict.md`; cạnh tài liệu) tồn tại và dòng
+        đầu của nó bằng `gate_<N>_quote` (`method/agile.md` mục 6.3). Thiếu hay lệch → một phát hiện ở dòng `gate_<N>_mode`."""
         number = gate[-1]
-        name = f"gate-{number}-verdict.md"
-        verdict = doc.path.resolve().parent / "evidence" / name
+        verdict = _find_verdict(doc.path.resolve().parent / "evidence", int(number))
         line = doc.key_line(f"{gate}_mode")
-        if not verdict.is_file():
-            once(line, f"Cổng {number} duyệt thay mà thiếu evidence/{name} (kết luận của Gate Delegate)")
+        if verdict is None:
+            once(line, f"Cổng {number} duyệt thay mà thiếu evidence/GATE-{number}-VERDICT.md "
+                       f"(hoặc tên cũ evidence/gate-{number}-verdict.md; kết luận của Gate Delegate)")
             return
+        name = verdict.name
         try:
             first = verdict.read_text(encoding="utf-8-sig", errors="replace").split("\n", 1)[0].strip()
         except OSError:
@@ -1875,7 +1944,7 @@ class Engine:
             if not self._has_decision_log(doc, known_models(), unknown):
                 hint = f"; model không có trong bảng tier: {', '.join(sorted(set(unknown)))}" if unknown else ""
                 self.add(doc.path, doc.key_line("gate_2_mode"), "decision-log-missing",
-                         f"Cổng 2 duyệt thay mà {'REPORT' if doc.kind == 'report' else 'SPRINT.md'} không có mục 'Nhật ký quyết định' với dòng đủ ai ký "
+                         f"Cổng 2 duyệt thay mà {'REPORT' if doc.kind == 'report' else doc.path.name} không có mục 'Nhật ký quyết định' với dòng đủ ai ký "
                          f"(nhãn · vai · tier · model có trong bảng tier), bằng chứng và lệnh hoàn tác{hint}")
         elif gate == "gate_1" and doc.kind in ("plan", "sprint"):
             problem = self._session_cap_problem(doc, block)
@@ -1889,7 +1958,7 @@ class Engine:
         `delegation.sessions_cap` là số nguyên khớp N (null hay vắng không hợp lệ), N không vượt công thức theo `size`/`risk` — vượt thì
         Nhật ký quyết định (của file này hoặc tài liệu cùng sprint) phải có dòng 'nâng trần'."""
         cap = self._cap_line(doc)
-        where = "mục 'Ước lượng' của PLAN" if doc.kind == "plan" else "SPRINT.md"
+        where = "mục 'Ước lượng' của PLAN" if doc.kind == "plan" else doc.path.name
         if cap is None or cap < 1:
             return f"Cổng 1 duyệt thay mà {where} không có dòng 'Trần phiên: <số nguyên >= 1>'"
         held = block.get("sessions_cap")
@@ -2120,7 +2189,13 @@ class Engine:
         size = doc.data.get("size")
         if not isinstance(size, str):
             return
-        if doc.kind == "sprint" and size in ("medium", "large"):
+        if doc.kind == "sprint" and doc.path.name == "TASK.md":
+            reason = self._task_md_mismatch(doc, size)
+            folder = doc.path.resolve().parent
+            if reason and folder not in self.size_flagged:  # một lần cho cả thư mục, chung bộ nhớ với luật bốn file ở cỡ rất nhỏ
+                self.size_flagged.add(folder)
+                self.add(doc.path, doc.key_line("size"), "sprint-size-mismatch", reason)
+        elif doc.kind == "sprint" and size in ("medium", "large"):
             self.add(doc.path, doc.key_line("size"), "sprint-size-mismatch",
                      f"SPRINT.md ở cỡ {size} — cỡ vừa/lớn dùng bốn file SPEC · PLAN · PROGRESS · REPORT (method/sizing.md)")
         elif doc.kind in ("spec", "plan", "progress", "report") and size == "tiny":
@@ -2128,7 +2203,34 @@ class Engine:
             if folder not in self.size_flagged:
                 self.size_flagged.add(folder)
                 self.add(doc.path, doc.key_line("size"), "sprint-size-mismatch",
-                         "cỡ rất nhỏ dùng một file SPRINT.md, không dựng bốn file (method/sizing.md); nâng cỡ lên nhỏ nếu giữ bốn file")
+                         "cỡ rất nhỏ dùng một file TASK.md, không dựng bốn file (method/sizing.md); nâng cỡ lên nhỏ nếu giữ bốn file")
+
+    def _four_part(self, doc: Doc, headings: list) -> bool:
+        """Có tiêu đề cấp 2 **bắt đầu** bằng SPEC/PLAN/PROGRESS (hình bốn phần của `SPRINT.md` cũ)?"""
+        four = tuple(zip(REQUIRED_HEADING_KEYS["sprint"], SPRINT_FOUR))
+        return any(_heading_starts(h, key) for key, _ in four[:3] for h in headings)
+
+    def _task_md_mismatch(self, doc: Doc, size: str) -> str | None:
+        """Lý do `TASK.md` sai hình (hình bốn phần chỉ còn hợp lệ với `SPRINT.md` cũ); `None` khi đúng: cỡ rất nhỏ, hai phần, không có
+        tài liệu sprint nào khác trong thư mục. Ngoại lệ duy nhất: thư mục mẫu của plugin (`templates/sprint/`, so đường đã `resolve()`),
+        nơi các mẫu của nhiều hình đứng cạnh nhau."""
+        folder = doc.path.resolve().parent
+        if folder == (c.TEMPLATES / "sprint").resolve():
+            beside = []
+        else:
+            try:
+                names = set(os.listdir(folder))
+            except OSError:
+                names = set()
+            beside = [n for n in ("SPEC.md", "PLAN.md", "PROGRESS.md", "REPORT.md", "SPRINT.md") if n in names]
+        if beside:
+            return f"TASK.md đứng cạnh {', '.join(beside)} — một thư mục sprint chỉ có một hình: TASK.md, hoặc SPRINT.md, hoặc bốn file (method/sizing.md)"
+        if size != "tiny":
+            return f"TASK.md ở cỡ {size} — chỉ cỡ rất nhỏ dùng TASK.md; cỡ nhỏ dùng SPRINT.md, cỡ vừa/lớn dùng bốn file (method/sizing.md)"
+        headings = [NUMBERING.sub("", doc.raw[i][3:].strip()).casefold() for i, line in enumerate(doc.masked) if line.startswith("## ")]
+        if self._four_part(doc, headings):
+            return "TASK.md có bốn phần SPEC · PLAN · PROGRESS · REPORT — TASK.md chỉ có hai phần Kế hoạch · Kết quả; việc bốn phần dùng SPRINT.md"
+        return None
 
     def required_headings(self, doc: Doc, headings: list) -> tuple:
         """Cặp (khoá nhãn, chữ tiếng Việt cho lời báo) của tiêu đề bắt buộc; `SPRINT.md` cỡ rất nhỏ (hoặc cỡ chưa rõ) nhận hai phần "Kế hoạch" · "Kết quả" hoặc bốn phần cũ
@@ -2137,9 +2239,9 @@ class Engine:
             return tuple(zip(REQUIRED_HEADING_KEYS[doc.kind], REQUIRED_HEADINGS[doc.kind]))
         four = tuple(zip(REQUIRED_HEADING_KEYS["sprint"], SPRINT_FOUR))
         size = doc.data.get("size")
-        if size in ("small", "medium", "large"):
+        if size in ("small", "medium", "large") and doc.path.name != "TASK.md":  # TASK.md luôn hai phần: cỡ sai đã có luật riêng
             return four
-        four_part = any(_heading_starts(h, key) for key, _ in four[:3] for h in headings)  # bắt đầu bằng SPEC/PLAN/PROGRESS (đã bỏ số thứ tự)
+        four_part = self._four_part(doc, headings)  # bắt đầu bằng SPEC/PLAN/PROGRESS (đã bỏ số thứ tự)
         return four if four_part else tuple(zip(SPRINT_TINY_KEYS, SPRINT_TINY_HEADINGS))
 
     # -- tiêu đề --
@@ -2515,7 +2617,7 @@ class Engine:
             return found
         pattern = cfg["paths"]["sprint_dir"].replace("{date}", "*").replace("{slug}", "*")
         for folder in sorted(p for p in base.glob(pattern) if p.is_dir()):
-            for name in ("PROGRESS.md", "SPRINT.md"):
+            for name in c.STATE_DOC_NAMES:
                 path = folder / name
                 if not path.is_file():
                     continue
@@ -2523,11 +2625,27 @@ class Engine:
                 sprint = doc.data.get("sprint") if doc is not None and doc.kind in ("progress", "sprint") else None
                 if isinstance(sprint, str) and (c.parse_id(sprint) or ("", 0))[0] == "SPR":
                     found.append((sprint, doc))
-                break  # như index.py: PROGRESS.md trước, không có thì SPRINT.md
+                break  # như index.py: PROGRESS.md trước, rồi SPRINT.md, rồi TASK.md
         return found
 
 
 # --- Quét đường dẫn ------------------------------------------------------------------------------------
+
+
+def _find_verdict(evidence_dir: Path, number: int) -> Path | None:
+    """Biên bản cổng `number` trong `evidence_dir`: tên mới `GATE-<N>-VERDICT.md` trước, tên cũ `gate-<N>-verdict.md` sau, `None` nếu
+    không có. So tên bằng `os.listdir` (đúng kiểu chữ như trên Linux) chứ không dùng `Path.exists` với tên khác kiểu chữ: ở hệ file
+    không phân biệt hoa thường `exists` coi hai tên là một, kết quả khác CI Linux (FR3.2)."""
+    try:
+        names = os.listdir(evidence_dir)
+    except OSError:
+        return None
+    for pattern in c.EVIDENCE_NAMES["gate_verdict"]:
+        for name in sorted(names):
+            m = re.fullmatch(pattern, name)
+            if m and m.group(1) == str(number) and (evidence_dir / name).is_file():
+                return evidence_dir / name
+    return None
 
 
 def _has_sprint_document(folder: Path) -> bool:

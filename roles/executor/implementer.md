@@ -1,7 +1,7 @@
 ---
 name: implementer
 group: executor
-tier: T2
+tier: 2
 title: Implementer — code, tests and docs per task
 ---
 

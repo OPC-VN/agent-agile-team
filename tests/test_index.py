@@ -74,7 +74,7 @@ def test_sprints_open_block_from_progress_frontmatter(tmp_path):
     init.main([str(root), "--apply", "--date", DATE, "--sprint", "old-work", "--title", "Việc cũ"])
     old = root / "docs" / "plans" / f"{DATE}-old-work" / "PROGRESS.md"
     write_lf(old, old.read_text(encoding="utf-8").replace("status: drafting", "status: done", 1))
-    tiny = root / "docs" / "plans" / f"{DATE}-fix-typo" / "SPRINT.md"
+    tiny = root / "docs" / "plans" / f"{DATE}-fix-typo" / "TASK.md"
     write_lf(tiny, tiny.read_text(encoding="utf-8").replace("status: drafting", "status: verifying", 1)
              .replace("review_round: 0", "review_round: 2", 1))
     assert index.main([str(root)]) == 0

@@ -1,4 +1,4 @@
-"""Bảng tier mẫu schema 2 và ma trận vai × vendor mẫu: hình dạng, thang 1–5, khớp thẻ vai."""
+"""Bảng tier mẫu schema 3 và ma trận vai × vendor mẫu: hình dạng, thang 1–5, khớp thẻ vai."""
 
 from __future__ import annotations
 
@@ -31,13 +31,13 @@ def _load() -> dict:
     return json.loads(EXAMPLE.read_text(encoding="utf-8"))
 
 
-def _card_tier(role: str) -> str:
-    """Tier ghi ở dòng `tier: Tn` trong frontmatter của thẻ `roles/**/<role>.md`."""
+def _card_tier(role: str) -> int:
+    """Tier ghi ở dòng `tier: <số 1–5>` trong frontmatter của thẻ `roles/**/<role>.md` (số nguyên)."""
     card = next((ROOT / "roles").rglob(f"{role}.md"))
     for line in card.read_text(encoding="utf-8").splitlines()[1:12]:
-        match = re.fullmatch(r"tier:\s*(T[123])\s*", line)
+        match = re.fullmatch(r"tier:\s*([1-5])\s*", line)
         if match:
-            return match.group(1)
+            return int(match.group(1))
     raise AssertionError(f"thẻ {card} không có dòng tier")
 
 
@@ -51,6 +51,11 @@ def _effort_values(data: dict) -> list:
             continue
         values.extend(cell.values() if isinstance(cell, dict) else [cell])
     return values
+
+
+def _effort_ok(value: object) -> bool:
+    """Effort hợp lệ là số nguyên 1–5; `bool` là con của `int` nên phải loại riêng."""
+    return type(value) is int and 1 <= value <= 5
 
 
 def _model_cells(data: dict) -> list:
@@ -83,9 +88,19 @@ def _matrix_rows(path: Path) -> list[dict]:
     return rows
 
 
-def test_example_declares_schema_2():
+def test_example_declares_schema_3():
     data = _load()
-    assert data["schema"] == 2
+    assert data["schema"] == 3
+    assert data["tier_scale"] == 2
+    assert list(data["tiers"]) == ["1", "2", "3", "4", "5"]
+
+
+def test_effort_values_reject_bool():
+    bad = {"tiers": {"1": {"effort": True}}, "roles": {"qa": {"effort": {"claude": False, "codex": 2}}}}
+    values = _effort_values(bad)
+    assert values == [True, False, 2]
+    assert [_effort_ok(x) for x in values] == [False, False, True]
+    assert not all(_effort_ok(x) for x in values)
 
 
 def test_example_models_are_placeholders():
@@ -95,7 +110,7 @@ def test_example_models_are_placeholders():
 
 def test_example_effort_levels_in_1_to_5():
     data = _load()
-    assert all(isinstance(x, int) and 1 <= x <= 5 for x in _effort_values(data))
+    assert all(_effort_ok(x) for x in _effort_values(data))
     assert all(set(data["effort_scale"][h]) == {"1", "2", "3", "4", "5"} for h in HARNESSES)
 
 
@@ -113,7 +128,7 @@ def test_example_roles_are_known_role_keys():
 
 def test_example_role_tiers_match_cards():
     data = _load()
-    assert all(v["tier"] == _card_tier(k) for k, v in data["roles"].items())
+    assert all(int(v["tier"]) == _card_tier(k) for k, v in data["roles"].items())
 
 
 def test_role_matrix_example_shape():
@@ -127,11 +142,44 @@ def test_role_matrix_example_shape():
     assert all(r["Model"] == "`<model-id>`" for r in rows)
 
 
-def test_new_role_cards_are_t1():
-    assert _card_tier("gate-delegate") == "T1"
-    assert _card_tier("advisor") == "T1"
+def test_new_role_cards_are_tier_4():
+    assert _card_tier("gate-delegate") == 4
+    assert _card_tier("advisor") == 4
 
 
 def test_role_matrix_example_tiers_match_cards():
     names = {v: k for k, v in ROLE_NAMES.items()}
-    assert all(r["Tier"] == _card_tier(names[r["Vai"]]) for r in _matrix_rows(MATRIX))
+    assert all(int(r["Tier"]) == _card_tier(names[r["Vai"]]) for r in _matrix_rows(MATRIX))
+
+
+# Effort gốc theo vai (RF2 vòng 1): QA giữ effort của bảng cũ bằng ghi đè `roles.qa`; ô tier 2 = 3 là sàn của Implementer.
+EXPECTED_EFFORT = {
+    "analyst": (3, 3, 3), "architect": (3, 3, 3), "implementer": (3, 3, 3), "qa": (2, 2, 1), "researcher": (2, 2, 2),
+    "business-reviewer": (3, 3, 3), "tech-reviewer": (3, 3, 3), "gate-delegate": (3, 3, 3), "advisor": (3, 3, 3),
+}
+
+
+def _resolved_effort(data: dict, role: str, harness: str) -> int:
+    """Effort phân giải của một vai ở một harness: ghi đè `roles.<vai>` thắng ô của tier."""
+    cell = data.get("roles", {}).get(role, {}).get("effort")
+    if cell is None:
+        tier = _card_tier(role)
+        cell = data["tiers"][str(tier)]["effort"]
+    return cell[harness] if isinstance(cell, dict) else cell
+
+
+def test_example_resolved_effort_per_role():
+    data = _load()
+    for role, expected in EXPECTED_EFFORT.items():
+        assert tuple(_resolved_effort(data, role, h) for h in HARNESSES) == expected, role
+
+
+def test_role_matrix_example_effort_matches_table():
+    data = _load()
+    names = {v: k for k, v in ROLE_NAMES.items()}
+    native = data["effort_scale"]
+    for row in _matrix_rows(MATRIX):
+        role, harness = names[row["Vai"]], row["Vendor"]
+        value = _resolved_effort(data, role, harness)
+        assert int(row["Effort"]) == value, (role, harness)
+        assert row["Effort native"] == f"`{native[harness][str(value)]}`", (role, harness)
