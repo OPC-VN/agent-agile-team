@@ -288,6 +288,8 @@ def test_atomic_write_leaves_no_temp_and_keeps_original_on_failure(tmp_path, mon
 def test_cli_write_failure_is_exit_1(env, tmp_path, monkeypatch, capsys):
     mod = _cli_mod()
     monkeypatch.setenv("AGENT_AGILE_STATE_DIR", str(tmp_path / "st"))
+    for var in mod.NONINTERACTIVE_ENV:   # CI=true làm lần chạy thành không tương tác: không ghi gì, exit 0
+        monkeypatch.delenv(var, raising=False)
 
     def boom(src, dst):
         raise OSError("disk says no")
