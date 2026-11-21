@@ -80,7 +80,7 @@ ngoài tập con là lỗi đầu vào, `check` báo `đường-dẫn:dòng` và
 | Comment cuối dòng | ` #` (có khoảng trắng trước) ngoài dấu nháy kép; bị bỏ | `sprint: null  # chưa có sổ` |
 | Cặp khoá–giá trị | `khoá: giá trị`, bắt đầu ở cột 0 | `size: medium` |
 | Khoá | `[a-z][a-z0-9_-]*` — khoá gốc dùng `snake_case`, khoá vai dùng `kebab-case`; không trùng trong cùng cấp | `gate_1`, `business-reviewer` |
-| Khối lồng một cấp | khoá có giá trị rỗng; các dòng con thụt **đúng 2 dấu cách**, mỗi dòng là một cặp khoá–giá trị | `roles:` rồi `  analyst: [T1, agent-a]` |
+| Khối lồng một cấp | khoá có giá trị rỗng; các dòng con thụt **đúng 2 dấu cách**, mỗi dòng là một cặp khoá–giá trị | `roles:` rồi `  analyst: [3, agent-a]` |
 | `null` | chữ `null`; khoá rỗng **không có dòng con** cũng là `null` | `gate_1_at: null`, `feature:` |
 | Bool | `true` / `false` | |
 | Số nguyên | `-?[0-9]+` | `review_round: 0` |
@@ -255,7 +255,7 @@ Thiếu khoá `size` do `frontmatter-key-missing` báo; `sprint-size-mismatch` k
 |---|---|---|
 | REQUESTS | dòng bảng Timeline có trạng thái `mới` hoặc `đang làm` | Mã · Ngày · Tóm tắt · Trạng thái · Sprint |
 | SPECS | frontmatter các spec sống trong `paths.feature_specs_dir` có `status` là `proposed` hoặc `in_progress` | Mã · Tính năng · Trạng thái · Spec sống |
-| SPRINTS | frontmatter `PROGRESS.md` (hoặc `SPRINT.md`) của từng thư mục sprint có `status` khác `done` và `dropped`; mục tiêu lấy từ dòng Timeline cùng mã | Mã · Mở · Mục tiêu · Trạng thái · Vòng · Thư mục |
+| SPRINTS | frontmatter `PROGRESS.md` (hoặc `SPRINT.md`, `TASK.md`) của từng thư mục sprint có `status` khác `done` và `dropped`; mục tiêu lấy từ dòng Timeline cùng mã | Mã · Mở · Mục tiêu · Trạng thái · Vòng · Thư mục |
 
 Cột Trạng thái của khối viết chữ Việt: SPECS `proposed` → đề xuất, `in_progress` → đang làm; SPRINTS
 `drafting` → đang viết SPEC/PLAN, `awaiting_gate_1` → chờ Cổng 1, `in_progress` → đang làm, `verifying` → đang

@@ -468,3 +468,22 @@ def test_addon_heading_labels_in_vi_and_en():
         for key in keys:
             assert ADDON_LABELS[key] in text, (name, key)
     assert set(vi) == set(en)
+
+
+def readme_section(number: int) -> str:
+    parts = re.split(r"(?m)^## ", templates_readme())
+    return next(part for part in parts if part.startswith(f"{number}. "))
+
+
+def test_readme_section_2_example_uses_numeric_tier_scale():
+    """Section 2 shows `roles` values on the Tier 1-5 numeric scale, not the old `T1`-`T3` labels."""
+    section = readme_section(2)
+    assert re.search(r"\bT[123]\b", section) is None
+    assert "analyst: [3, agent-a]" in section
+
+
+def test_readme_section_6_sprints_source_names_task_md():
+    """The SPRINTS open block is read from every state document `index` reads, `TASK.md` included."""
+    row = next(ln for ln in readme_section(6).split(chr(10)) if ln.startswith("| SPRINTS |"))
+    assert "`TASK.md`" in row and "`SPRINT.md`" in row and "`PROGRESS.md`" in row
+
