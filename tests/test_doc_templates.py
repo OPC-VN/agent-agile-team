@@ -227,3 +227,177 @@ def test_new_label_keys_exist_in_vi_and_en():
 def test_new_template_text_names_no_harness():
     for name in ("SPEC.md", "PLAN.md", "PROGRESS.md", "REPORT.md", "SPRINT.md"):
         assert not HARNESS_NAMES.search(read(name)), name
+
+
+# --- SPR-35 TK6: add-on templates (FR2.1-FR2.5, FR3.1, FR3.4) ---------------------------------------------
+
+TEMPLATES_ROOT = REPO / "templates"
+ADDONS = {
+    "HANDOFF.md": TEMPLATES_ROOT / "sprint" / "HANDOFF.md",
+    "ANALYSIS.md": TEMPLATES_ROOT / "sprint" / "ANALYSIS.md",
+    "CLAIMS.md": TEMPLATES_ROOT / "sprint" / "CLAIMS.md",
+    "ROADMAP.md": TEMPLATES_ROOT / "registry" / "ROADMAP.md",
+}
+
+
+def addon(name: str) -> str:
+    return ADDONS[name].read_bytes().decode("utf-8")
+
+
+def templates_readme() -> str:
+    return (TEMPLATES_ROOT / "README.md").read_bytes().decode("utf-8")
+
+
+def test_addon_templates_exist():
+    for name, path in ADDONS.items():
+        assert path.is_file(), name
+
+
+def test_addon_templates_pass_check(tmp_path):
+    """Each add-on template, alone in its folder, gives no Chặn and no Phải sửa (Ghi chú `doc-unknown` is allowed)."""
+    for name, path in ADDONS.items():
+        root = tmp_path / name.replace(".", "_")
+        root.mkdir()
+        shutil.copyfile(path, root / name)
+        report = check.check_paths([root])
+        bad = [f.render() for f in report.findings if f.level in ("Chặn", "Phải sửa")]
+        assert bad == [], (name, bad)
+
+
+def test_handoff_has_give_and_return_parts():
+    text = addon("HANDOFF.md")
+    headings = [ln[3:].strip() for ln in text.split("\n") if ln.startswith("## ")]
+    assert headings == ["Giao", "Trả"]
+    give = section(text, "Giao")
+    assert len(re.findall(r"^[1-7]\. ", give, flags=re.M)) == 7  # seven numbered cells
+    back = section(text, "Trả")
+    for label in ("Đã đổi gì", "Cách chạy", "Hoàn tác", "Bằng chứng"):
+        assert f"**{label}:**" in back, label
+    assert "Giao → làm → Trả" in text.split("## Giao", 1)[0]  # three-line diagram in the head comment
+    assert "Trước khi giao" in text.split("## Giao", 1)[0]
+
+
+def test_handoff_give_part_at_most_40_lines():
+    assert len(section(addon("HANDOFF.md"), "Giao").strip("\n").split("\n")) <= 40
+
+
+def fixed_check_block(text: str) -> list:
+    lines = text.split("\n")
+    start = next(i for i, ln in enumerate(lines) if "Khối kiểm" in ln and ln.startswith("1") is False and "**" in ln)
+    block = []
+    for ln in lines[start + 1:]:
+        if not ln.startswith(">"):
+            if block:
+                break
+            continue
+        block.append(ln)
+    return block
+
+
+def test_handoff_check_block_at_most_10_lines():
+    block = fixed_check_block(addon("HANDOFF.md"))
+    assert 1 <= len(block) <= 10
+    joined = " ".join(block)
+    for phrase in ("Đạt · Không đạt · Chưa chạy · Không áp dụng", "Viết test hỏng trước khi viết mã",
+                   "Chạy cả bộ test trước khi báo xong", "không đoán"):
+        assert phrase in joined, phrase
+
+
+def test_addon_templates_name_no_harness_tool():
+    for name in ADDONS:
+        assert not HARNESS_NAMES.search(addon(name)), name
+
+
+def test_addon_headings_follow_spec():
+    analysis = [ln[3:].strip() for ln in addon("ANALYSIS.md").split("\n") if ln.startswith("## ")]
+    assert len(analysis) == 6
+    for word, heading in zip(("Kết luận", "nguồn", "an toàn", "Đánh giá", "tiên quyết", "khuyến nghị"), analysis):
+        assert word.lower() in heading.lower(), (word, heading)
+    claims = addon("CLAIMS.md")
+    assert table_header(claims, "Số") == ["Số", "Khẳng định", "Bằng chứng"] or "| Số | Khẳng định | Bằng chứng |" in claims
+    assert "Chưa kiểm" in claims
+    roadmap = addon("ROADMAP.md")
+    assert re.search(r"^doc: roadmap$", roadmap, flags=re.M)
+    assert len([ln for ln in roadmap.split("\n") if ln.startswith("## ")]) == 7
+
+
+def test_init_does_not_scaffold_addons(tmp_path):
+    import init
+    for flags in ([], ["--sprint", "alpha", "--size", "medium"], ["--sprint", "beta", "--size", "small"],
+                  ["--sprint", "gamma", "--tiny"]):
+        extra = ["--title", "Goal"] if flags else []
+        assert init.main([str(tmp_path), "--apply", "--date", "2026-11-21", *flags, *extra]) == 0
+    names = {p.name for p in tmp_path.rglob("*") if p.is_file()}
+    assert names.isdisjoint(ADDONS), names & set(ADDONS)
+
+
+def test_templates_readme_lists_every_template_file():
+    readme = templates_readme()
+    for folder in ("sprint", "registry", "project"):
+        for path in sorted((TEMPLATES_ROOT / folder).iterdir()):
+            assert f"`{folder}/{path.name}`" in readme, f"{folder}/{path.name}"
+
+
+def naming_rows() -> list:
+    readme = templates_readme()
+    rows = []
+    for ln in readme.split("\n"):
+        if ln.startswith("|") and "`" in ln:
+            rows.append(ln)
+    return rows
+
+
+def test_naming_table_matches_evidence_names():
+    import _common
+    rows = naming_rows()
+    for key in _common.EVIDENCE_NAMES:
+        hit = [ln for ln in rows if f"`{key}`" in ln]
+        assert len(hit) == 1, key
+        form = _common.EVIDENCE_NAME_FORMS[key]
+        assert form in hit[0], (key, form)
+
+
+def test_naming_table_distinguishes_brief_and_handoff():
+    readme = templates_readme()
+    row = next(ln for ln in readme.split("\n") if ln.startswith("| `sprint/BRIEF.md`"))
+    assert "HANDOFF.md" in row and "người" in row.lower()
+    assert "core.md" in readme and "VERIFICATION" in readme and "HANDOFF" in readme
+
+
+def test_ledger_template_names_task_md():
+    text = (TEMPLATES_ROOT / "registry" / "LEDGER.md").read_bytes().decode("utf-8")
+    assert "`SPRINT.md` hoặc `TASK.md`" in text
+
+
+ADDON_LABELS = {
+    "heading.handoff_give": "Giao",
+    "heading.handoff_return": "Trả",
+    "heading.analysis_sources": "Bảng nguồn",
+    "heading.analysis_source_safety": "Kiểm an toàn nguồn",
+    "heading.analysis_assessment": "Đánh giá từng thay đổi",
+    "heading.analysis_prerequisites": "Điều kiện tiên quyết",
+    "heading.analysis_options": "Phương án và khuyến nghị",
+    "heading.claims_checked": "Khẳng định đã kiểm",
+    "heading.claims_unchecked": "Chưa kiểm",
+    "heading.roadmap_goal": "Mục tiêu và xong khi",
+    "heading.roadmap_slices": "Bảng lát",
+    "heading.roadmap_shared_contract": "Hợp đồng dùng chung",
+    "heading.roadmap_decisions": "Quyết định còn hiệu lực",
+    "heading.roadmap_lessons": "Bài học áp lát sau",
+    "heading.roadmap_entry": "Điểm vào cho phiên mới",
+    "heading.roadmap_risks": "Rủi ro chương trình",
+}
+
+
+def test_addon_heading_labels_in_vi_and_en():
+    vi = json.loads((LABELS / "vi.json").read_text(encoding="utf-8"))
+    en = json.loads((LABELS / "en.json").read_text(encoding="utf-8"))
+    for key, vi_label in ADDON_LABELS.items():
+        assert vi.get(key) == vi_label, key
+        assert key in en and not VIETNAMESE.search(en[key]), key
+    for name, keys in (("ANALYSIS.md", [k for k in ADDON_LABELS if "analysis" in k]),
+                       ("ROADMAP.md", [k for k in ADDON_LABELS if "roadmap" in k])):
+        text = addon(name)
+        for key in keys:
+            assert ADDON_LABELS[key] in text, (name, key)
+    assert set(vi) == set(en)

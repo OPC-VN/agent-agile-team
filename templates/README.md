@@ -15,7 +15,11 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 | `sprint/REPORT.md` | `<thư mục sprint>/REPORT.md` | Như trên — kết quả, bàn giao |
 | `sprint/SPRINT.md` | `<thư mục sprint>/SPRINT.md` | Cỡ nhỏ: bốn phần SPEC · PLAN · PROGRESS · REPORT gộp một file (`size: small`) |
 | `sprint/TASK.md` | `<thư mục sprint>/TASK.md` | Cỡ rất nhỏ: hai phần "Kế hoạch" / "Kết quả" (`size: tiny`, `doc: task`); thay `SPRINT.md` hai phần của hồ sơ cũ |
-| `sprint/BRIEF.md` | không dựng — `init` không chép; người giao tự điền | Brief người giao 4 ô, điền trước khi giao việc |
+| `sprint/BRIEF.md` | không dựng — `init` không chép; người giao tự điền | Brief người giao 4 ô, điền trước khi giao việc. `BRIEF.md` là lời giao của NGƯỜI cho agent ở bước tiếp nhận (skill intake); `HANDOFF.md` là bàn giao của AGENT cho agent khác phiên hoặc khác hãng |
+| `sprint/HANDOFF.md` | không dựng — `init` không chép; người hoặc agent tự thêm ở gốc thư mục sprint khi giao ra ngoài phiên | Hai phần: **Giao** (≤40 dòng, bảy ô đánh số, khối kiểm cố định ≤10 dòng) và **Trả** (bốn ô). `doc: handoff` chưa thuộc loại `check` biết: Ghi chú `doc-unknown` |
+| `sprint/ANALYSIS.md` | không dựng — tự thêm vào `evidence/` khi dùng hay nâng một nguồn ngoài, hoặc phương án dài hơn một đoạn | Sáu mục: kết luận · bảng nguồn · kiểm an toàn nguồn · đánh giá từng thay đổi · điều kiện tiên quyết · phương án và khuyến nghị |
+| `sprint/CLAIMS.md` | không dựng — tự thêm vào `evidence/` khi PLAN từ cỡ vừa khẳng định điều gì về mã, bản cài hay thứ đang chạy | Bảng ba cột Số · Khẳng định · Bằng chứng, và bảng "Chưa kiểm" |
+| `registry/ROADMAP.md` | không dựng — tự thêm ở gốc thư mục hồ sơ chương trình khi một mục tiêu cần từ hai sprint | Bảy mục: mục tiêu · bảng lát · hợp đồng dùng chung · quyết định còn hiệu lực · bài học · điểm vào cho phiên mới · rủi ro. `doc: roadmap` chưa thuộc loại `check` biết: Ghi chú `doc-unknown` |
 | `registry/REQUESTS.md` | `paths.requests` | Sổ yêu cầu theo timeline |
 | `registry/SPECS.md` | `paths.specs` | Mục lục tính năng |
 | `registry/feature-spec.md` | `<paths.feature_specs_dir>/<slug>.md` | Spec sống của một tính năng |
@@ -23,6 +27,27 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 | `registry/LEDGER.md` | file sổ tập trung trong kho sổ của máy (không thuộc repo dự án; `init` không dựng) | Sổ tập trung nhiều dự án, bật bằng `ledger.project` (mục 7); khi nào ghi: [`method/process.md`](../method/process.md) mục 11 |
 | `project/agile.json` | `.agile.json` ở gốc dự án | Cấu hình đường dẫn, coverage, chế độ hiển thị |
 | `repo-skeleton/` | cả cây sao chép ra gốc repo xưởng mới (không phải mẫu hồ sơ sprint; `init` không dựng) | Khung repo xưởng, 7 file: `.gitignore` (cache, `.tmp/`, `.worktrees/`, `.claude/worktrees/`), `.gitattributes` (LF), `NOTICE` tối thiểu (chỉ điều giấy phép buộc), `README.md` mẫu của repo mới, `docs/README.md`, `hosts/README.md` và `scripts/README.md` tuỳ chọn; quy tắc cấu trúc ở `docs/STRUCTURE.md` |
+
+**Bảng tên chuẩn của file kèm** (khoá khớp `_common.EVIDENCE_NAMES`; tên cũ của hồ sơ có từ trước quy ước vẫn đọc được, `check` chỉ ghi chú `evidence-name` với hồ sơ mới):
+
+| Khoá | Tên chuẩn | Tên cũ | Đặt ở |
+|---|---|---|---|
+| `gate_verdict` | `GATE-<N>-VERDICT.md` | `gate-<N>-verdict.md` | `evidence/` |
+| `task_report` | `REPORT-TK<n>.md` | `tk<n>-report.md`, `TK<n>-REPORT.md` | `evidence/` |
+| `plan_review` | `PLAN-REVIEW-<vai>.md` | `plan-review.md`, `plan-review-<vai>.md` | `evidence/` |
+| `research` | `RESEARCH-<chủ-đề>.md` | `research.md`, `research-<chủ-đề>.md` | `evidence/` |
+| `analysis` | `ANALYSIS.md` | `analysis.md` | `evidence/` |
+| `claims` | `CLAIMS.md` | `claims.md` | `evidence/` |
+| (ngoài `EVIDENCE_NAMES`) | `HANDOFF.md`, `ROADMAP.md` | `HANDOFF-BRIEF.md` | gốc thư mục sprint · gốc thư mục hồ sơ chương trình |
+
+**Ánh xạ với luật nền `core.md`** (mục *Workflow*: bốn artifact PLAN · CHANGESET · VERIFICATION · HANDOFF):
+
+| Artifact của `core.md` | Ở hồ sơ agile |
+|---|---|
+| PLAN | `PLAN.md` |
+| CHANGESET | diff và commit Git của nhánh sprint; REPORT mục "Cách dùng, đã đổi gì, cách hoàn tác" tóm tắt |
+| VERIFICATION | REPORT mục "Kết quả kiểm định" (bảng `VR`); báo cáo việc `REPORT-TK<n>.md` làm nguồn |
+| HANDOFF | REPORT mục "Cách dùng, đã đổi gì, cách hoàn tác" khi không giao ra ngoài phiên; `HANDOFF.md` khi giao cho phiên hoặc agent khác |
 
 **Giá trị trong mẫu là ví dụ hợp lệ**, không phải chỗ trống kiểu `<...>`: nhờ vậy `check` chạy được trên
 chính thư mục `templates/`. Phần thân ví dụ là để người viết thay. Dòng ví dụ của sổ gốc nằm trong comment
