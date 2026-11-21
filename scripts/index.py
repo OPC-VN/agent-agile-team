@@ -12,6 +12,12 @@ Nguồn (hợp đồng `templates/README.md` mục 6):
 Sắp theo mã giảm dần (mới nhất ở trên). Cùng đầu vào cho cùng đầu ra, từng byte.
 
 Mã thoát: 0 = xong / đã cập nhật · 1 = `--check` thấy sổ cũ · 2 = lỗi đầu vào (gồm file không phải UTF-8).
+
+Locale (SPR-33): the tool reads the column names and the open-status words of every shipped locale (labels/*.json),
+so a registry written in English is read like a Vietnamese one. The block it writes uses the locale of the registry
+itself, detected from the registry's own headings, table headers and field labels (never from the config): English
+column names, status words, empty sentence and notice for an English registry, the unchanged Vietnamese output for a
+Vietnamese one. A registry whose labels are shared or mixed (no single owner locale) is treated as Vietnamese.
 """
 
 from __future__ import annotations
@@ -24,16 +30,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _common as c  # noqa: E402
+import _labels as lab  # noqa: E402
 
 START = "<!-- agile:open:start -->"
 END = "<!-- agile:open:end -->"
 NOTICE = "<!-- Khối này do công cụ `index` ghi lại — đừng sửa tay. -->"
-EMPTY = {"requests": "Không có yêu cầu nào đang mở.", "specs": "Không có tính năng nào đang mở.",
-         "sprints": "Không có sprint nào đang mở."}
-OPEN_REQUEST = {"mới", "đang làm"}
-FEATURE_LABEL = {"proposed": "đề xuất", "in_progress": "đang làm"}
-SPRINT_LABEL = {"drafting": "đang viết SPEC/PLAN", "awaiting_gate_1": "chờ Cổng 1", "in_progress": "đang làm",
-                "verifying": "đang kiểm định", "blocked": "vướng", "awaiting_gate_2": "chờ Cổng 2"}
+NOTICES = {"vi": NOTICE, "en": "<!-- This block is rewritten by the `index` tool — do not edit by hand. -->"}
+# Words are label keys (labels/<locale>.json); the text comes from the registry's locale. Frontmatter value -> status key.
+OPEN_REQUEST = ("status.new", "status.in_progress")
+FEATURE_LABEL = {"proposed": "status.proposed", "in_progress": "status.in_progress"}
+SPRINT_LABEL = {"drafting": "status.drafting", "awaiting_gate_1": "status.awaiting_gate_1", "in_progress": "status.in_progress",
+                "verifying": "status.verifying", "blocked": "status.blocked", "awaiting_gate_2": "status.awaiting_gate_2"}
+COLUMNS = {"requests": ("column.code", "column.date", "column.summary", "column.status", "column.sprint"),
+           "specs": ("column.code", "column.feature", "column.status", "column.living_spec"),
+           "sprints": ("column.code", "column.opened", "heading.goal", "column.status", "column.round", "column.folder")}
 
 
 class InputError(Exception):
@@ -53,11 +63,45 @@ def _read(path: Path) -> str:
     return _plain(Path(path).read_bytes().decode("utf-8").lstrip(chr(0xFEFF)))
 
 
-def table_under(text: str, heading: str) -> list[dict]:
-    """Các dòng dữ liệu của bảng đầu tiên dưới tiêu đề cấp 2 chứa `heading`, dạng {cột: ô}."""
+def _words(key: str) -> tuple:
+    """Every label of a key in every shipped locale, exactly as written (index matches cells byte for byte)."""
+    return tuple(dict.fromkeys(alt for loc in lab.shipped() for alt in lab.alternates(key, loc)))
+
+
+def cell(row: dict, key: str) -> str:
+    """The cell of the column that carries the label key, whatever locale its header is written in ("" when absent)."""
+    for header, value in row.items():
+        if header in _words(key):
+            return value
+    return ""
+
+
+def registry_locale(text: str) -> str:
+    """Locale of a registry, from its own labels outside the machine-written block; no single owner locale -> vi."""
+    lines = text.split("\n")
+    starts = [i for i, line in enumerate(lines) if line.strip() == START]
+    ends = [i for i, line in enumerate(lines) if line.strip() == END]
+    if len(starts) == 1 and len(ends) == 1 and starts[0] < ends[0]:
+        lines = lines[:starts[0]] + lines[ends[0] + 1:]
+    found = lab.locales_in("\n".join(lines))
+    return found[0] if len(found) == 1 else lab.DEFAULT_LOCALE
+
+
+def empty_block(kind: str, locale: str) -> list:
+    """The sentence a ledger shows when nothing is open (`kind` is requests, specs or sprints)."""
+    return [lab.label(f"phrase.empty_{kind}", locale)]
+
+
+def _header(kind: str, locale: str) -> list:
+    return [lab.label(key, locale) for key in COLUMNS[kind]]
+
+
+def table_under(text: str, heading_key: str) -> list[dict]:
+    """Các dòng dữ liệu của bảng đầu tiên dưới tiêu đề cấp 2 mang nhãn `heading_key` (mọi locale), dạng {cột: ô}."""
     lines = c.mask_markdown(text.split("\n"))
     raw = text.split("\n")
-    start = next((i for i, line in enumerate(lines) if line.startswith("## ") and heading in line), None)
+    names = _words(heading_key)
+    start = next((i for i, line in enumerate(lines) if line.startswith("## ") and any(n in line for n in names)), None)
     if start is None:
         return []
     header = None
@@ -100,14 +144,19 @@ def _link(target: Path, ledger: Path, folder: bool = False) -> str:
 
 
 def requests_block(ledger: Path) -> list:
-    rows = [r for r in table_under(_read(ledger), "Timeline") if r.get("Trạng thái") in OPEN_REQUEST and c.parse_id(r.get("Mã"))]
-    rows.sort(key=lambda r: _id_key(r["Mã"]), reverse=True)
-    cols = ("Mã", "Ngày", "Tóm tắt", "Trạng thái", "Sprint")
-    return _table(list(cols), [[r.get(col, "") for col in cols] for r in rows]) if rows else [EMPTY["requests"]]
+    text = _read(ledger)
+    loc = registry_locale(text)
+    open_words = {w for key in OPEN_REQUEST for w in _words(key)}
+    rows = [r for r in table_under(text, "heading.timeline") if cell(r, "column.status") in open_words and c.parse_id(cell(r, "column.code"))]
+    rows.sort(key=lambda r: _id_key(cell(r, "column.code")), reverse=True)
+    keys = COLUMNS["requests"]
+    return _table(_header("requests", loc), [[cell(r, k) for k in keys] for r in rows]) if rows else empty_block("requests", loc)
 
 
 def specs_block(ledger: Path, feature_dir: Path) -> list:
-    names = {r.get("Mã"): r.get("Tính năng", "") for r in table_under(_read(ledger), "Danh mục")}
+    text = _read(ledger)
+    loc = registry_locale(text)
+    names = {cell(r, "column.code"): cell(r, "column.feature") for r in table_under(text, "heading.catalog")}
     rows = []
     for path in sorted(feature_dir.glob("*.md")) if feature_dir.is_dir() else []:
         if path.resolve() == ledger.resolve():
@@ -116,13 +165,15 @@ def specs_block(ledger: Path, feature_dir: Path) -> list:
         if data.get("doc") != "feature" or data.get("status") not in FEATURE_LABEL:
             continue
         fid = str(data.get("id"))
-        rows.append([fid, names.get(fid) or str(data.get("title", "")), FEATURE_LABEL[data["status"]], _link(path, ledger)])
+        rows.append([fid, names.get(fid) or str(data.get("title", "")), lab.label(FEATURE_LABEL[data["status"]], loc), _link(path, ledger)])
     rows.sort(key=lambda r: _id_key(r[0]), reverse=True)
-    return _table(["Mã", "Tính năng", "Trạng thái", "Spec sống"], rows) if rows else [EMPTY["specs"]]
+    return _table(_header("specs", loc), rows) if rows else empty_block("specs", loc)
 
 
 def sprints_block(ledger: Path, base: Path, pattern: str) -> list:
-    timeline = {r.get("Mã"): r for r in table_under(_read(ledger), "Timeline")}
+    text = _read(ledger)
+    loc = registry_locale(text)
+    timeline = {cell(r, "column.code"): r for r in table_under(text, "heading.timeline")}
     rows = []
     for folder in sorted(p for p in base.glob(pattern.replace("{date}", "*").replace("{slug}", "*")) if p.is_dir()):
         state = next((folder / n for n in ("PROGRESS.md", "SPRINT.md") if (folder / n).is_file()), None)
@@ -133,13 +184,13 @@ def sprints_block(ledger: Path, base: Path, pattern: str) -> list:
         if data.get("status") not in SPRINT_LABEL or not c.parse_id(sid):
             continue
         row = timeline.get(sid, {})
-        rows.append([sid, row.get("Mở") or str(data.get("created", "")), row.get("Mục tiêu") or str(data.get("title", "")),
-                     SPRINT_LABEL[data["status"]], str(data.get("review_round", 0)), _link(folder, ledger, folder=True)])
+        rows.append([sid, cell(row, "column.opened") or str(data.get("created", "")), cell(row, "heading.goal") or str(data.get("title", "")),
+                     lab.label(SPRINT_LABEL[data["status"]], loc), str(data.get("review_round", 0)), _link(folder, ledger, folder=True)])
     rows.sort(key=lambda r: _id_key(r[0]), reverse=True)
-    return _table(["Mã", "Mở", "Mục tiêu", "Trạng thái", "Vòng", "Thư mục"], rows) if rows else [EMPTY["sprints"]]
+    return _table(_header("sprints", loc), rows) if rows else empty_block("sprints", loc)
 
 
-def rewrite(raw: str, block: list, path: Path) -> str:
+def rewrite(raw: str, block: list, path: Path, locale: str = lab.DEFAULT_LOCALE) -> str:
     """Thay khối giữa hai dấu mốc trên văn bản THÔ: dòng ngoài khối giữ nguyên từng byte; dòng trong khối
     dùng đúng đuôi cuối dòng của dòng dấu mốc đầu (LF, CRLF hay CR-CR-LF)."""
     lines = raw.split("\n")  # mỗi đoạn có thể còn đuôi CR
@@ -149,7 +200,7 @@ def rewrite(raw: str, block: list, path: Path) -> str:
         raise InputError(f"{c.display(path)}: cần đúng một cặp dấu mốc {START} … {END}")
     marker = lines[starts[0]]
     tail = "\r" * (len(marker) - len(marker.rstrip("\r")))
-    inner = [line + tail for line in [NOTICE] + block]
+    inner = [line + tail for line in [NOTICES.get(locale, NOTICE)] + block]
     return "\n".join(lines[:starts[0] + 1] + inner + lines[ends[0]:])
 
 
@@ -175,7 +226,7 @@ def build(root: Path) -> list:
     out = []
     for key, path in ledgers.items():
         old = path.read_bytes().decode("utf-8")  # thô: giữ BOM và cuối dòng
-        out.append((path, old, rewrite(old, blocks[key], path)))
+        out.append((path, old, rewrite(old, blocks[key], path, registry_locale(_plain(old).lstrip(chr(0xFEFF))))))
     return out
 
 

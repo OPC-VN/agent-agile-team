@@ -5,13 +5,37 @@ Ba công cụ cho dự án áp dụng, chỉ dùng thư viện chuẩn Python (3
 
 | Script | Việc |
 |---|---|
-| `init.py` | Dựng `.agile.json`, ba sổ gốc và khung sprint từ `templates/`; mặc định chạy thử, không ghi đè |
+| `init.py` | Dựng `.agile.json`, ba sổ gốc và khung sprint từ `templates/`; mặc định chạy thử, không ghi đè. `--locale vi\|en` (SPR-33): language of the machine-read labels of the files created, rendered from the Vietnamese templates by the shared `_labels.translate`; default is the repo `.agile.json` `locale`, then the user config, then `vi`. `locale: <value>` goes into every sprint document created when the locale is not `vi` or the flag is given (a plain Vietnamese run is byte-identical to before). A new `.agile.json` made together with `--locale` records it. On an existing sprint folder a conflicting `--locale` is refused (exit 2, nothing written) |
 | `check.py` | Kiểm chuẩn tài liệu; `--self` kiểm lõi sạch và ngân sách `AGENTS.md` của chính repo |
-| `index.py` | Sinh lại khối "Đang mở" ở đầu ba sổ gốc |
+| `index.py` | Sinh lại khối "Đang mở" ở đầu ba sổ gốc. SPR-33: reads the column names and open-status words of every shipped locale and writes the block in the locale of the registry itself (detected from its own headings and labels, not from the config; English columns, status words, empty sentence and notice for an English registry, unchanged output for a Vietnamese one) |
 | `agile_guard.py` | Hook `PreToolUse` của agile: từ chối lệnh shell thuộc danh sách loại khi công tắc agile BẬT (trạng thái ngoài dự án; không còn file dấu); đã đăng ký cho Claude qua `hooks/hooks.json`, Codex và Antigravity chưa (mục "Rào máy agile") |
 | `_agile_rules.py` | Rào agile gom một chỗ (SPR-16): hằng `AGILE_*`/`DELEGATION_*`, `FENCE_FILES`, `FLOOR_ZONES`/`FLOOR_FILES`, `zone_spans`, hàm `agile_problem(block)` mà `check.py` gọi; guard và `check` nhập từ đây, guard không nhập `check`; không chạy trực tiếp |
 | `floor_check.py` | `python -X utf8 scripts/floor_check.py --base <ref> [--head <ref>] [--mode strict\|report] [--json] [--root <repo>]`: so vùng giữa mốc `san-cung`, vị trí mốc và nội dung `FLOOR_FILES` của head với base; thoát 0 đạt / `bootstrap` / `report`, 1 vi phạm ở `strict`, 2 lỗi dùng. Bước CI `Floor vs base` giải `git archive <base> scripts` ra thư mục tạm rồi chạy **bản của base** (khe hở workflow-từ-head: xem `.github/workflows/verify.yml`; tới SPR-17 đây là rào hành vi có kiểm) |
+| `locale_cli.py` | Locale status and settings (SPR-33): `status [--root DIR] [--locale L] [--sprint-file FILE] [--non-interactive] [--json]` resolves the locale (explicit flag, sprint front matter, repo `.agile.json`, user config, default `vi`) and reports `ask_needed`; `set --scope user\|repo --locale L` stores it. The user config is `user-config.json` in the agile state directory (`AGENT_AGILE_STATE_DIR` applies). Writes are atomic; for `status` and `set --scope user` a non-interactive run (`--non-interactive`, `CI` or `AGENT_AGILE_NONINTERACTIVE` set) never asks and writes nothing (`set --scope repo` is a deliberate choice and writes in any session). `status` walks up from `--root` to the nearest `.agile.json` without stopping at `.git` (read-only; it only affects the resolved locale), while `set --scope repo` stops at the first folder with `.git` (a file counts too, as in a worktree) and refuses outside the repository Exit 0 ok / 1 I/O failure / 2 bad usage |
+| `_labels.py` | Label tables loader (`labels/vi.json`, `labels/en.json`), matchers, `translate()` and `resolve_locale()` (SPR-33); not run directly |
 | `_common.py` | Thư viện chung: đọc frontmatter tập con YAML, che mã trong Markdown, đọc `.agile.json`; không chạy trực tiếp |
+
+## Locale and label tables (SPR-33)
+
+Documents keep one language per sprint. `labels/<code>.json` (shipped: `vi`, `en`) maps an immutable English key
+(for example `heading.plain_summary`) to the text a document shows in that locale; `_labels.py` loads the tables,
+and `check.py`, `index.py` and `init.py` match and write labels through it, so a label of any shipped locale is
+recognised (a mixed-language document is noted by `locale-label-mixed`, not rejected).
+
+**Locale layers, first hit wins:** `--locale` at sprint open, then the sprint front matter `locale` (frozen at
+open), then the repo `.agile.json` key `locale`, then the user config key `locale`, then `vi`. A document with no
+`locale` key resolves to `vi`. Inspect it with `locale_cli.py status`; store it with `locale_cli.py set --scope user|repo`.
+
+**Ask once:** `status` reports `ask_needed: true` only when the resolution falls to the default, that is when no layer 1 to 4 holds a valid locale (a layer with an invalid value counts as holding none), `locale_asked` is
+not recorded and the session is interactive; answering (or proceeding without an answer) runs `set --scope user`,
+which writes `locale_asked: true` (no answer stores `vi`), so the question is never asked a second time. A
+non-interactive run (`CI` or `AGENT_AGILE_NONINTERACTIVE` set) returns the resolved locale with `ask_needed: false`
+and records nothing. The script side is done; the skill text that makes an agent ask (step 6 of `skills/agile/SKILL.md`) was applied after the owner's approval on 16/11 (commit `7949864`) and pressure-tested (GREEN 17/18 strict, 18/18 only on a lenient reading of one case, n = 2).
+
+**Adding a third locale:** add `labels/<code>.json` with exactly the same keys as `vi.json` (list-valued keys keep
+the same number of alternates, in the same positions) (the shipped list is the set of files in `labels/`), then run
+`tests/test_labels.py` and `tests/test_locale_parity.py` (the parity suite builds a twin per shipped locale from the
+Vietnamese originals and compares findings). Hand-written golden fixtures for the new locale go in `tests/fixtures/<code>/`.
 
 ## Cách chạy
 
@@ -20,7 +44,7 @@ python scripts/init.py <gốc-dự-án>                     # chạy thử: in "
 python scripts/init.py <gốc-dự-án> --apply             # ghi .agile.json + REQUESTS, SPRINTS, SPECS
 python scripts/init.py <gốc-dự-án> --apply --sprint <slug> (--title "<mục tiêu>" | --title-file <file>) [--tiny]
        [--size tiny|small|medium|large] [--risk normal|high] [--risk-tags a,b] [--request RQ-NNN] [--feature FS-NNN]
-       [--date YYYY-MM-DD]
+       [--date YYYY-MM-DD] [--locale vi|en]
 python scripts/check.py <file.md|.agile.json|thư-mục> [...] [--include-evidence] [--by-dir]   # thư mục: quét đệ quy *.md và mọi .agile.json
 python scripts/check.py <thư-mục-pilot> --routing-manifest <manifest.json>
 python scripts/check.py --self [--root <repo>]
@@ -113,6 +137,9 @@ dấu huyền. Mã bị bắt có dấu huyền sát bên thì phát hiện kèm
 | `frontmatter-missing` | Phải sửa | File tên chuẩn (`SPEC.md`, `PLAN.md`, `PROGRESS.md`, `REPORT.md`, `SPRINT.md`, ba sổ) không có frontmatter |
 | `frontmatter-key-missing` | Phải sửa | Thiếu khoá bắt buộc theo loại tài liệu (`templates/README.md` mục 3); file tên chuẩn có frontmatter mà thiếu `doc` |
 | `frontmatter-key-unknown` | Ghi chú | Khoá ngoài bảng khoá của hợp đồng |
+| `locale-invalid` | Phải sửa | Khoá `locale` khai giá trị không thuộc các ngôn ngữ đã phát hành (`vi`, `en`); chỉ xét tài liệu có khoá `locale` |
+| `locale-differs` | Nên sửa | Tài liệu cùng một thư mục sprint khai `locale` khác nhau (tài liệu đầu theo tên file là chuẩn); chỉ xét tài liệu có khoá `locale` |
+| `locale-label-mixed` | Ghi chú | Tài liệu khai `locale` có nhãn máy đọc (tiêu đề, đầu cột, nhãn in đậm) chỉ thuộc ngôn ngữ kia; nhãn giống nhau ở hai ngôn ngữ không tính; chỉ xét tài liệu có khoá `locale` |
 | `frontmatter-value` | Phải sửa | Giá trị sai miền (`status`, `size`, `risk`, ngày, mã `RQ-`/`FS-`/`SPR-` kể cả độ rộng theo `id_width` của `.agile.json` gần nhất, `id`, `next_id`, `links`, `review_round`) hoặc mâu thuẫn (`risk: high` mà không `large`, `risk_tags` khác rỗng mà không `high`) |
 | `doc-unknown` | Ghi chú | Có khoá `doc` nhưng không thuộc loại đã biết — chỉ áp luật chung |
 | `heading-missing` | Phải sửa | Thiếu tiêu đề cấp 2 bắt buộc theo loại tài liệu (SPEC cỡ vừa trở lên thiếu "Truy vết" cũng báo); `SPRINT.md` cỡ rất nhỏ (hoặc chưa rõ cỡ) nhận hai phần "Kế hoạch" · "Kết quả" hoặc bốn phần cũ — bốn phần chỉ được suy ra khi có tiêu đề **bắt đầu** bằng SPEC, PLAN hay PROGRESS (sau số thứ tự); cỡ nhỏ trở lên luôn cần bốn phần |
@@ -133,6 +160,7 @@ dấu huyền. Mã bị bắt có dấu huyền sát bên thì phát hiện kèm
 | `report-fr-without-vr` | Phải sửa | Chỉ chạy cho REPORT, không chạy cho `SPRINT.md`. Mỗi `FR` của SPEC, gộp theo cấp đỉnh (`FR3.2` tính vào `FR3`), phải xuất hiện — hoặc có kịch bản con `FRn.m` xuất hiện — trên dòng định nghĩa của ít nhất một `VR`; vắng ở mọi `VR` thì báo, một lần cho mỗi `FR`. Miễn khi dòng định nghĩa ở SPEC mang trạng thái `bỏ` (dạng "(bỏ)" hoặc "— bỏ" cuối dòng), hoặc có `NOT_APPLICABLE` kèm lý do ở dòng đó hay ở một dòng REPORT nhắc tới `FR` ấy. Máy không xét từng kịch bản con |
 | `self-review` | Chặn | Một nhãn agent vừa giữ vai thực thi vừa giữ vai kiểm định trong `roles` (`gate-delegate` là vai kiểm định, so với mọi vai thực thi; `advisor` không phải vai kiểm định, chỉ so với `analyst`/`architect`/`gate-delegate`; trùng `business-reviewer`/`tech-reviewer` là hợp lệ); hoặc `delegation.by` (người duyệt thay) trùng nhãn một vai thực thi trong `roles` cùng file, hoặc nhãn `delegation.by` giữ `advisor` |
 | `qa-not-independent` | Phải sửa | Có `VR` mà `qa` trùng nhãn `implementer`/`architect` không ghi "tự kiểm, chưa độc lập"; hoặc có ghi mà `verdict: pass` |
+| `vr-result-not-pass` | Nên sửa | Chỉ khi `verdict` hoặc `gate_2` đúng chuỗi `pass`: dòng `VR` của bảng đã đăng ký (cột đầu `Mã`/`Code`) có ô ở cột Kết quả mở đầu bằng 'Chưa chạy'/'Not run', hoặc 'Không áp dụng'/'Not applicable'/`NOT_APPLICABLE` trơ trọi (sau chữ không còn chữ/số, và ô cuối dòng rỗng hoặc chính là ô Kết quả). Giới hạn: chỉ xét chữ đầu ô (chữ đến sau không bị bắt), chỉ bảng `VR` đã đăng ký, cột Kết quả là cột đầu tiên có tiêu đề khớp; không đổi mã thoát (Nên sửa) |
 | `roles-invalid` | Phải sửa | `roles` sai hình: vai lạ (khoá vai thực thi gồm `researcher`; vai chuyên đề ngoài bốn chuyên đề `security-specialist`, `data-specialist`, `backend-specialist`, `frontend-specialist` = vai lạ), tier ngoài `T1`–`T3`, thiếu nhãn agent; `gate-delegate` và `advisor` tier khác `T1` |
 | `gate-invalid` | Phải sửa | Cổng đã kết luận mà thiếu `*_at`/`*_quote`; `status: approved` khi `gate_1` chưa approved; REPORT `accepted` hoặc SPRINT `done` khi `gate_2` còn pending |
 | `gate-delegation-invalid` | Phải sửa | Cổng `gate_N_mode: delegated` đã kết luận mà hồ sơ duyệt thay thiếu hoặc sai: khối `delegation` (tám khoá `grant`, `grant_at`, `scope`, `expires`, `by`, `tier`, `files`, `revoked_at` cùng năm khoá agile tuỳ chọn `level`, `program`, `channel`, `orchestrator`, `sessions_cap` — khoá ngoài mười ba khoá đó (kể cả `exclusions`, `mode` của bản cũ) cũng báo; luật agile **kích** khi `grant` bắt đầu `Bật autopilot` (không phân biệt hoa thường) hoặc khối có bất kỳ khoá agile (lời cấp thường trực mặc định mang `level: gate_1_2`), khi đã kích thì `level` (`gate_1`/`gate_1_2`/`program`) và `expires` bắt buộc và báo lời cấp thiếu mức/hạn, `program` thiếu tên hoặc `expires` không phải ngày, `scope` khác đúng tập cổng của `level` (`gate_1` → `[gate_1]`; `gate_1_2` → cả hai; `program` → cả hai khi `grant` có `cổng 1+2`, ngược lại `[gate_1]`), `channel` ngoài `chat`/`host_comment`, `sessions_cap` không phải số nguyên ≥1 hoặc `null`, `orchestrator` trùng `by`; hai lỗi cùng lúc chỉ báo lỗi đứng trước theo thứ tự đó, rồi mới tới các kiểm bên dưới; hồ sơ chỉ tám khoá cũ không đổi kết quả; khoá lạ cũng báo, kể cả khi cổng còn mở (`SPRINT.md` có khối chung cho hai cổng: một khoá lạ báo một lần, cổng thứ hai không báo lại khoá lạ đã báo); `grant`; `grant_at` không sau thời điểm cổng; `scope` chứa cổng; `expires` là `sprint_end` hoặc ngày chưa qua ngày cổng; `tier` = `T1`; `by` khác rỗng và khác `pending`; ở PLAN, REPORT, `SPRINT.md` (tài liệu có bản ghi duyệt thay) `by` phải giữ vai kiểm định (`business-reviewer`, `tech-reviewer`, `gate-delegate`, hoặc một chuyên đề trong danh sách đã liệt kê: `security-specialist`, `data-specialist`, `backend-specialist`, `frontend-specialist`) tier T1 trong `roles` của chính tài liệu — `roles` vắng, nhãn không có trong `roles`, hoặc vai kiểm định chỉ tier khác T1 đều báo; giữ nhiều vai kiểm định khác tier thì đủ một vai T1; SPEC không đòi (Cổng 1 duyệt thay ghi ở cả SPEC lẫn PLAN); `by` trùng nhãn vai thực thi thì chỉ báo `self-review`; `revoked_at` rỗng hoặc sau cổng (chỉ ghi ngày: trùng hoặc trước ngày cổng thì báo)); `gate_N_quote` không bắt đầu `duyệt thay:`; PLAN, REPORT, `SPRINT.md` thiếu mục `## Bản ghi duyệt thay` hoặc thiếu một trong ba nhãn; `risk_tags` vắng hoặc không phải danh sách chuỗi (dùng `[]` khi không có nhãn); `risk_tags` có `secret`/`auth`; `rules` mà `delegation.files` rỗng; thời điểm không đọc được. Báo lỗi đầu tiên của mỗi cổng. `gate_N_mode` ngoài `human`/`delegated` → `frontmatter-value`. Vắng `gate_N_mode` hoặc `human` → không kiểm hồ sơ, trừ khi `gate_N_quote` bắt đầu `duyệt thay:` hoặc có khối `delegation` mà cổng đã kết luận (lời trình/khối duyệt thay mà `gate_N_mode` không phải `delegated` cũng báo) |

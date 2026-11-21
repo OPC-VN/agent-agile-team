@@ -584,6 +584,11 @@ def config_problems(cfg: dict) -> list[str]:
             problems.append("ledger.project phải là chuỗi (rỗng = tắt sổ tập trung)")
         elif project and (not _LEDGER_NAME.fullmatch(project) or ".." in project):
             problems.append(f"ledger.project: '{project}' chỉ gồm chữ, số, '.', '_', '-' (không có dấu gạch chéo, không có '..')")
+    if "locale" in cfg:  # khoá tùy chọn, vắng theo mặc định (SPR-33); giá trị phải là một ngôn ngữ có trong labels/
+        import _labels  # nhập muộn: giữ thời gian khởi động của hook
+
+        if not _labels.valid_locale(cfg["locale"]):
+            problems.append(f"locale: {repr(cfg['locale'])[:40]} phải là một trong {', '.join(_labels.shipped())}")
     return problems
 
 

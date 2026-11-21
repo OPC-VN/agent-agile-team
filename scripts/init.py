@@ -6,7 +6,7 @@ Cách chạy:
     python scripts/init.py <gốc-dự-án> --apply            # ghi thật; file có sẵn không bao giờ bị ghi đè
     python scripts/init.py <gốc-dự-án> --apply --sprint <slug> (--title "<mục tiêu>" | --title-file <file>)
         [--tiny | --size tiny|small|medium|large] [--risk normal|high] [--risk-tags a,b] [--request RQ-NNN] [--feature FS-NNN]
-        [--date YYYY-MM-DD]
+        [--date YYYY-MM-DD] [--locale vi|en]
 
 Sprint mới lấy mã từ `next_id` của SPRINTS, đặt lại trạng thái (`status: drafting` cho PROGRESS/SPRINT, cổng
 và `verdict` về pending/null, `review_round: 0`, mọi vai về nhãn `pending`) rồi ghi một dòng Timeline vào
@@ -19,6 +19,17 @@ Tiêu đề có dấu: `--title-file` đọc UTF-8 từ file, không qua shell. 
 cảnh báo sớm ra stderr.
 
 Mã thoát: 0 = xong (hoặc chạy thử xong) · 2 = lỗi đầu vào.
+
+Locale (SPR-33): `--locale vi|en` picks the language of the machine-read labels of the files this run creates. Without the
+flag the locale is resolved by _labels.resolve_locale: `locale` in the repo's .agile.json, then `locale` in the user config
+(same state directory as locale_cli.py), then `vi`. The templates stay the Vietnamese skeleton; another locale is
+rendered by the shared _labels.translate (headings, table headers, bold field labels; prose, HTML comment hints and
+example rows stay as written). `locale: <value>` goes into the front matter of every sprint document created, only when the
+resolved locale is not `vi` or the flag was given; a plain Vietnamese run is byte-identical to the version before SPR-33.
+The ledgers created by the run follow the repo config locale (or, when this run also creates .agile.json, the flag, which
+is then recorded there). `--sprint SLUG` on an existing sprint folder never writes; a --locale that conflicts with the
+locale its documents declare (no key = vi) is refused with exit 2. The value is checked against the shipped locales, so a
+path-like value never reaches a file name.
 """
 
 from __future__ import annotations
@@ -33,6 +44,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _common as c  # noqa: E402
+import _labels  # noqa: E402
+import index  # noqa: E402  (empty "open" block of a ledger rendered in a non-Vietnamese locale)
+import locale_cli  # noqa: E402  (user config layer of the locale: same state directory logic)
 
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 LEDGERS = (("requests", "REQUESTS.md", "RQ", "request"), ("sprints", "SPRINTS.md", "SPR", "sprint"),
@@ -41,6 +55,7 @@ SPRINT_FILES = ("SPEC", "PLAN", "PROGRESS", "REPORT")
 ONE_FILE_TEMPLATE = {"tiny": "SPRINT-tiny", "small": "SPRINT"}  # cỡ → mẫu của `SPRINT.md` (hai phần / bốn phần)
 STATUS_NEW = {"spec": "draft", "plan": "draft", "progress": "drafting", "report": "draft", "sprint": "drafting"}
 EXAMPLE_COMMENT = "<!-- Ví dụ một dòng"
+SKELETON_LOCALE = _labels.DEFAULT_LOCALE  # the templates are written in this locale; others are rendered by _labels.translate
 SUSPECT_TITLE = re.compile(r"\ufffd|\w\?\w")  # ký tự thay thế, hoặc "?" kẹp giữa hai chữ ("c?ch")
 RESET = {"gate_1": "pending", "gate_1_at": "null", "gate_1_quote": "null", "verdict": "pending",
          "gate_2": "pending", "gate_2_at": "null", "gate_2_quote": "null", "review_round": "0"}
@@ -132,7 +147,7 @@ def template(rel: str) -> str:
     return c.read_text(c.TEMPLATES / rel)
 
 
-def plan_project(root: Path, date: str, plan: Plan) -> dict:
+def plan_project(root: Path, date: str, plan: Plan, explicit_locale: str | None = None) -> dict:
     config_path = root / c.CONFIG_NAME
     if config_path.exists():
         try:
@@ -142,13 +157,21 @@ def plan_project(root: Path, date: str, plan: Plan) -> dict:
         plan.create(config_path, "")  # đã có → in "= giữ", không ghi
     else:
         raw = template("project/agile.json")
+        if explicit_locale is not None:  # a new repo config records the flag, so the repo declares its locale
+            data = json.loads(raw)
+            raw = json.dumps({"schema": data.pop("schema"), "locale": explicit_locale, **data},
+                             ensure_ascii=False, indent=2) + "\n"
         plan.create(config_path, raw)
         cfg = c.merge_config(json.loads(raw))
     problems = c.config_problems(cfg)
     if problems:
         raise InputError(f"{c.display(config_path)}: " + "; ".join(problems))
+    ledger_locale = cfg.get("locale") or SKELETON_LOCALE  # GC9: registry locale = repo config locale at creation
     for key, name, rec_prefix, width_key in LEDGERS:
         text = template(f"registry/{name}")
+        if ledger_locale != SKELETON_LOCALE:
+            text = index.rewrite(_labels.translate(text, ledger_locale), index.empty_block(key, ledger_locale),
+                                 config_path, ledger_locale)
         first = c.format_id(rec_prefix, 1, cfg["id_width"][width_key])
         plan.create(target(root, cfg, cfg["paths"][key]), set_keys(text, {"next_id": first, "updated": date}))
     return cfg
@@ -183,9 +206,13 @@ def plan_sprint(root: Path, cfg: dict, args, plan: Plan) -> None:
     existing = sorted(p for p in base.glob(pattern.replace("{date}", "*").replace("{slug}", "*"))
                       if p.is_dir() and exact.fullmatch(p.relative_to(base).as_posix()))
     if existing:
+        if args.locale is not None:
+            check_existing_locale(existing, args.locale)
         for p in existing:
             plan.actions.append(("skip", p, None, None))
         return
+    locale = _labels.resolve_locale(args.locale, None, cfg.get("locale"), user_locale()).locale
+    write_locale = args.locale is not None or locale != SKELETON_LOCALE
     ledger, style = _pending_content(plan, ledger_path)
     try:
         fm = c.parse_frontmatter(ledger) if ledger is not None else None
@@ -209,8 +236,13 @@ def plan_sprint(root: Path, cfg: dict, args, plan: Plan) -> None:
         files = tuple((n, n) for n in SPRINT_FILES)
     for tmpl, name in files:
         doc = name.lower()
-        text = set_keys(template(f"sprint/{tmpl}.md"), {**values, "id": f"{sprint_id}-{doc}", "status": STATUS_NEW[doc]})
-        text = reset_roles(text).replace("# Tên mục tiêu sprint —", f"# {args.title} —", 1)
+        skeleton = template(f"sprint/{tmpl}.md")
+        if locale != SKELETON_LOCALE:  # translate before the title goes in (so it is never read as a label); the placeholder heading is translated too
+            skeleton = _labels.translate(skeleton, locale)
+        text = set_keys(skeleton, {**values, "id": f"{sprint_id}-{doc}", "status": STATUS_NEW[doc]})
+        text = reset_roles(text).replace(f"# {_labels.label('heading.title_sprint_placeholder', locale)} —", f"# {args.title} —", 1)
+        if write_locale:
+            text = add_locale(text, locale)
         plan.create(folder / f"{name}.md", text)
 
     rel = Path(os.path.relpath(folder, ledger_path.parent)).as_posix()
@@ -218,6 +250,34 @@ def plan_sprint(root: Path, cfg: dict, args, plan: Plan) -> None:
     row = f"| {sprint_id} | {args.date} |  | {title_cell} |  | [{folder.name}]({rel}/) |"
     updated = set_keys(ledger, {"next_id": c.format_id("SPR", parsed[1] + 1, width), "updated": args.date})
     plan.update(ledger_path, insert_timeline_row(updated, row, ledger_path), style)
+
+
+def user_locale():
+    """The raw `locale` of the user config, or None when it declares none; a missing or corrupt file declares nothing."""
+    return locale_cli.user_locale_value()
+
+
+def add_locale(text: str, locale: str) -> str:
+    """Insert `locale: <value>` after the `doc:` line of the front matter (first line of it when there is none)."""
+    lines = text.split("\n")
+    end = next(i for i in range(1, len(lines)) if lines[i].rstrip() == "---")
+    at = next((i for i in range(1, end) if lines[i].startswith("doc:")), 0)
+    lines.insert(at + 1, f"locale: {locale}")
+    return "\n".join(lines)
+
+
+def check_existing_locale(folders: list, wanted: str) -> None:
+    """GC7: refuse a --locale that conflicts with the locale the documents of an existing sprint declare (no key = vi)."""
+    for folder in folders:
+        for path in sorted(folder.glob("*.md")):
+            try:
+                declared = locale_cli.read_sprint_locale(path)
+            except locale_cli.UsageError as exc:
+                raise InputError(f"{c.display(path)}: {exc}") from exc
+            declared = SKELETON_LOCALE if declared is None else declared
+            if _labels.valid_locale(declared) and declared != wanted:
+                raise InputError(f"--locale {wanted} conflicts with locale: {declared} declared by {c.display(path)}; "
+                                 "an existing sprint keeps its locale, nothing was written")
 
 
 def insert_timeline_row(text: str, row: str, path: Path) -> str:
@@ -249,6 +309,8 @@ def _drop_example(lines: list, start: int) -> list:
 
 
 def validate(args) -> None:
+    if args.locale is not None and not _labels.valid_locale(args.locale):
+        raise InputError(f"--locale {args.locale[:40]!r} is not a shipped locale (shipped: {', '.join(_labels.shipped())})")
     if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", args.date):
         raise InputError(f"--date {args.date!r} phải có dạng YYYY-MM-DD")
     if args.title is not None and args.title_file is not None:
@@ -314,12 +376,14 @@ def main(argv=None, env=None) -> int:
     parser.add_argument("--risk-tags", help="danh sách nhãn rủi ro, phân cách bằng dấu phẩy")
     parser.add_argument("--request", help="RQ-NNN của yêu cầu gốc")
     parser.add_argument("--feature", help="FS-NNN của tính năng")
+    parser.add_argument("--locale", help="language of the machine-read labels of the files created: one of "
+                        + "|".join(_labels.shipped()) + " (default: repo .agile.json, then user config, then vi)")
     args = parser.parse_args(argv)
     root = Path(args.root)
     plan = Plan()
     try:
         validate(args)
-        cfg = plan_project(root, args.date, plan)
+        cfg = plan_project(root, args.date, plan, args.locale)
         if args.sprint:
             plan_sprint(root, cfg, args, plan)
     except InputError as exc:

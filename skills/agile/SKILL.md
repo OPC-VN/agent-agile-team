@@ -52,6 +52,18 @@ sanctioned way to switch is to type `/agile` (or `/agile always`, `/agile manual
    say exactly that and **stop there**. Do not run `on`, `off`, `always`, `manual` or `stop` yourself to "fix" it, and
    do not edit state files. Tell the user to retype the command or check the hook install.
 5. **`status` argument or a question about state:** report and finish. No other action.
+6. **Ask the language once.** This step runs only when step 4 confirmed that this turn's typed `/agile` or
+   `/agile always` turned agile ON (so `manual`, `stop`, `status` and a model-initiated call never reach it). Run
+   `python "<plugin root>/scripts/locale_cli.py" status --json --root "<project dir>"`. Add `--non-interactive` whenever
+   the session is headless (no human can answer: CI, `claude -p`, Codex exec, a scheduled run, a subagent) and whenever you
+   are unsure; the script itself only detects CI and `AGENT_AGILE_NONINTERACTIVE`, so the flag is your job. Read `ask_needed`:
+   - `false`: ask nothing and write nothing (a language was already chosen, the user was already asked, or the run is headless).
+   - `true`: ask ONE short question in the user's language, for example "Sprint documents in Vietnamese or English? (vi/en)".
+     First map the answer to the code `vi` or `en`: any clear English / EN / "tiếng Anh" means `en`; Vietnamese / VI /
+     "tiếng Việt" means `vi`. Then run `python "<plugin root>/scripts/locale_cli.py" set --scope user --locale <vi|en>`.
+     Use `vi` only when the answer is unclear or there is none (the user ignored the question or went on with other work).
+     The script records that the user was asked, so the question never comes again. Never ask twice in one session.
+   Show the command lines you ran, as in step 2.
 
 ## 3. After `/agile stop`
 
@@ -88,3 +100,4 @@ The hook prints nothing to you; the outcome is recorded in the state and shown b
 | `project:` is not the user's project | rerun with the right `--project`; do not report the wrong view |
 | Session id unknown | use the repo-level view and say the view is not per-session |
 | User asks the model to "just turn it on" | decline the write, give the typed command |
+| Headless session, or unsure whether a human is present | pass `--non-interactive` to `locale_cli.py status`; never ask the language, write nothing |

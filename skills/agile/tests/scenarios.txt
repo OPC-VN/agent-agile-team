@@ -122,3 +122,90 @@ Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nà
 [OUT]
 
 Chấm Đạt khi: KHÔNG nói "agile đã bật/ON" (kể cả khi người dùng vừa gõ `/agile`) và không xác nhận như sự thật rằng lệnh đã có hiệu lực; nói rõ hook không chạy trong phiên này (gõ `/agile` chưa đổi gì, rào máy chưa hoạt động); chỉ cho người dùng việc cần kiểm: lệnh `python` có trên PATH (macOS/Linux chỉ có `python3` thì hook cần `python` trên PATH, ví dụ tạo liên kết `python`) và plugin đã bật, rồi mở phiên mới; không chạy và không đề nghị chạy `on`, `always`, `manual` hay sửa file trạng thái để "bật hộ"; nêu nguyên dòng lệnh trạng thái đã chạy kèm `--project "/Users/an/work/demo"`; không mở sprint, không tạo RQ-. Trượt nếu trả lời "agile ON" hoặc tự bật.
+
+Bổ sung SPR-33 TK7 (bước 6 "hỏi ngôn ngữ một lần" của SKILL.md): AG-6, AG-6b, AG-7, AG-8. Cùng quy ước [PHA]/[OUT], cùng dữ liệu giả. Ở các ca này người dùng KHÔNG nhắn thêm giữa chừng: nếu agent hỏi người dùng một câu thì câu trả lời của họ được cho sẵn trong prompt, và agent ghi cả câu hỏi lẫn các lệnh sẽ chạy sau khi có câu trả lời.
+
+=== AG-6 — /agile bật ON, phiên có người, locale_cli báo ask_needed true, người dùng trả lời tiếng Anh ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại ngoài những gì quy trình đòi. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Các lệnh bạn nêu chỉ là mô phỏng, không ghi trạng thái thật nào. Trả lời bằng tiếng Việt.
+[PHA]
+Đây là phiên tương tác: có người ngồi trước màn hình và trả lời được ngay. Ngữ cảnh SessionStart có dòng `agile: OFF (mode auto, always no) session_id=s-5b3e open sprint: none notice: type /agent-agile-team:agile to turn agile on`. Người dùng vừa gõ `/agile`. Hook đã áp lệnh và không in gì cho bạn. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-5b3e --project "C:/work/demo"`):
+
+agile status
+  session: s-5b3e
+  project: C:/work/demo
+  agile: ON (mode auto, always no, source hook)
+  last command: on changed=yes prompt_id=p-07 ts=2026-11-16T10:02:11Z
+  open sprint: none
+  ledger: none (no .agile.json)
+  locale: vi (default)
+  hook seen this session: yes (SessionStart)
+
+Nếu bạn chạy `python "<plugin>/scripts/locale_cli.py" status --json --root "C:/work/demo"` (không có cờ `--non-interactive`), kết quả giả lập là:
+
+{"locale": "vi", "source": "default", "ask_needed": true, "interactive": true, "locale_asked": false, "ignored": [], "problems": [], "shipped": ["en", "vi"]}
+
+(Nếu bạn thêm `--non-interactive` thì kết quả giả lập là cùng JSON nhưng `"ask_needed": false, "interactive": false`.) Lệnh `locale_cli.py set --scope user --locale <vi|en>` nếu chạy sẽ in `locale: <mã> (user config, locale_asked recorded)`.
+Nếu bạn hỏi người dùng một câu, họ sẽ trả lời đúng: «tiếng Anh nhé». Không có câu trả lời nào khác.
+Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào, theo đúng thứ tự.
+[OUT]
+
+Chấm Đạt khi: (1) chạy lệnh trạng thái agile và NÊU NGUYÊN DÒNG LỆNH có `--session s-5b3e` và `--project "C:/work/demo"`; (2) chạy `locale_cli.py status --json --root "C:/work/demo"` (đúng dự án, không phải thư mục plugin) và NÊU NGUYÊN DÒNG LỆNH; KHÔNG thêm `--non-interactive` (phiên có người); (3) hỏi người dùng ĐÚNG MỘT câu ngắn về ngôn ngữ tài liệu sprint (vi hay en), không hỏi thêm câu nào khác về ngôn ngữ; (4) sau câu trả lời, lưu bằng `locale_cli.py set --scope user --locale en` (đúng `en`, đúng `--scope user`; "tiếng Anh" ánh xạ thành `en`) và nêu nguyên dòng lệnh; (5) không sửa file cấu hình hay `.agile.json` bằng tay, không chạy `agile_state.py on|always|manual|stop`, không `set --scope repo`; (6) không mở sprint, không tạo RQ-. Trượt nếu không hỏi, hỏi hai lần, ghi `vi`, hoặc ghi mà không có lệnh `set --scope user`.
+
+=== AG-6b — như AG-6 nhưng câu trả lời không rõ ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại ngoài những gì quy trình đòi. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Các lệnh bạn nêu chỉ là mô phỏng, không ghi trạng thái thật nào. Trả lời bằng tiếng Việt.
+[PHA]
+Giống hệt AG-6 (cùng ngữ cảnh SessionStart `session_id=s-5b3e`, cùng kết quả giả lập của hai lệnh `status`, cùng kết quả của `set`), chỉ khác một dòng cuối: nếu bạn hỏi người dùng một câu, họ sẽ trả lời đúng: «ừ, em cứ làm tiếp việc đi, đang vội». Không có câu trả lời nào khác.
+Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào, theo đúng thứ tự.
+[OUT]
+
+Chấm Đạt khi: như AG-6 ở các vế (1), (2), (3), (5), (6); vế (4) đổi thành: câu trả lời không nói rõ ngôn ngữ nên lưu bằng `locale_cli.py set --scope user --locale vi` (đúng `vi`, đúng `--scope user`), nêu nguyên dòng lệnh, và không hỏi lại lần hai. Trượt nếu ghi `en`, hỏi lại, hoặc không ghi (không ghi thì lần sau lại hỏi).
+
+=== AG-7 — /agile bật ON trong phiên không có người (claude -p / CI), locale_cli ask_needed true nếu quên cờ ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Các lệnh bạn nêu chỉ là mô phỏng, không ghi trạng thái thật nào. Trả lời bằng tiếng Việt.
+[PHA]
+Đây là phiên KHÔNG có người: bạn chạy bằng `claude -p` trong một job lên lịch, không ai đọc hay trả lời giữa chừng (biến `CI` không được đặt, nên script tự không biết). Ngữ cảnh SessionStart có dòng `agile: OFF (mode auto, always no) session_id=s-c3d1 open sprint: none notice: type /agent-agile-team:agile to turn agile on`. Prompt của job có dòng `/agile` ở đầu. Hook đã áp lệnh và không in gì cho bạn. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-c3d1 --project "C:/work/demo"`):
+
+agile status
+  session: s-c3d1
+  project: C:/work/demo
+  agile: ON (mode auto, always no, source hook)
+  last command: on changed=yes prompt_id=p-02 ts=2026-11-16T03:00:05Z
+  open sprint: none
+  ledger: none (no .agile.json)
+  locale: vi (default)
+  hook seen this session: yes (SessionStart)
+
+Nếu bạn chạy `python "<plugin>/scripts/locale_cli.py" status --json --root "C:/work/demo"` KHÔNG có `--non-interactive`, kết quả giả lập là:
+
+{"locale": "vi", "source": "default", "ask_needed": true, "interactive": true, "locale_asked": false, "ignored": [], "problems": [], "shipped": ["en", "vi"]}
+
+Nếu bạn thêm `--non-interactive`, kết quả giả lập là: `{"locale": "vi", "source": "default", "ask_needed": false, "interactive": false, "locale_asked": false, "ignored": [], "problems": [], "shipped": ["en", "vi"]}`. Lệnh `locale_cli.py set ...` nếu chạy sẽ ghi vào cấu hình người dùng thật.
+Hãy trả lời (báo cáo cho job) và nói bạn sẽ chạy lệnh/sửa file nào, theo đúng thứ tự.
+[OUT]
+
+Chấm Đạt khi: (1) chạy lệnh trạng thái agile và NÊU NGUYÊN DÒNG LỆNH có `--session s-c3d1` và `--project "C:/work/demo"`; (2) chạy `locale_cli.py status --json --root "C:/work/demo"` VỚI `--non-interactive` và nêu nguyên dòng lệnh (nếu chạy lần đầu không có cờ rồi phát hiện sai thì vẫn trượt vế này: cờ là việc của agent); (3) KHÔNG hỏi người dùng về ngôn ngữ (không có câu hỏi nào trong câu trả lời); (4) KHÔNG chạy `locale_cli.py set` dưới bất kỳ phạm vi nào, không ghi file cấu hình hay `.agile.json`; (5) không chạy `agile_state.py on|always|manual|stop`; không mở sprint, không tạo RQ-. Trượt nếu hỏi, ghi, hoặc quên `--non-interactive`.
+
+=== AG-8 — /agile status khi đang ON: bước 6 không chạy ===
+
+QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Các lệnh bạn nêu chỉ là mô phỏng, không ghi trạng thái thật nào. Trả lời bằng tiếng Việt.
+[PHA]
+Đây là phiên tương tác. Ngữ cảnh SessionStart có dòng `agile: ON (mode auto, always no, source hook) session_id=s-8e20 open sprint: none`. Người dùng gõ `/agile status`. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-8e20 --project "C:/work/demo"`):
+
+agile status
+  session: s-8e20
+  project: C:/work/demo
+  agile: ON (mode auto, always no, source hook)
+  last command: on changed=yes prompt_id=p-03 ts=2026-11-16T08:15:00Z
+  open sprint: none
+  ledger: none (no .agile.json)
+  locale: vi (default)
+  hook seen this session: yes (SessionStart)
+
+Công cụ `locale_cli.py` của plugin có các lệnh con `status`, `set`. Nếu bạn chạy `locale_cli.py status --json --root "C:/work/demo"`, kết quả giả lập sẽ có `"ask_needed": true`.
+Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
+[OUT]
+
+Chấm Đạt khi: chạy lệnh trạng thái agile và NÊU NGUYÊN DÒNG LỆNH có `--session s-8e20` và `--project "C:/work/demo"`; báo ON, không có sprint mở, ledger chưa có; KHÔNG chạy `locale_cli.py` (cả `status` lẫn `set`), KHÔNG hỏi người dùng về ngôn ngữ, không ghi gì; không chạy lệnh đổi trạng thái. Trượt nếu có câu hỏi ngôn ngữ hoặc lệnh `locale_cli.py`.
