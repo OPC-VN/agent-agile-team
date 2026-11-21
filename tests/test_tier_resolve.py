@@ -77,7 +77,7 @@ def test_error_order_matches_contract_text():
 def test_tier_word_form_and_int_accepted():
     kw = dict(env={}, table=str(GOLD / "table.json"), catalog=str(GOLD / "catalog.json"))
     assert tr.resolve("tech-reviewer", "claude", "tier 3", **kw)["tier"] == 3
-    assert tr.resolve("tech-reviewer", "claude", 4, **kw)["model"] == "fake-claude-t4"
+    assert tr.resolve("advisor", "claude", 4, **kw)["model"] == "fake-claude-t4"
 
 
 def test_snapshot_mode_reads_and_does_not_resolve(tmp_path):
@@ -174,8 +174,8 @@ def test_opcos_refuses_pins_instead_of_ignoring_them(tmp_path):
 
 def test_tier_float_json_number_is_integer():
     kw = dict(env={}, table=str(GOLD / "table.json"), catalog=str(GOLD / "catalog.json"))
-    assert tr.resolve("tech-reviewer", "claude", 4.0, **kw)["tier"] == 4
-    assert tr.resolve("tech-reviewer", "claude", "4.0", **kw)["code"] == "unknown_tier"
+    assert tr.resolve("advisor", "claude", 4.0, **kw)["tier"] == 4
+    assert tr.resolve("advisor", "claude", "4.0", **kw)["code"] == "unknown_tier"
 
 
 def _table_with(tmp_path, mutate):
@@ -241,3 +241,33 @@ def test_unicode_digits_are_not_tiers():
     import re
     assert not re.fullmatch(r"[0-9]+", "\u0663")
     assert not re.fullmatch(r"[0-9]+", "\u00b2")
+
+
+def test_effective_tier_from_table_and_pin_rule():
+    kw = dict(env={}, table=str(GOLD / "table.json"), catalog=str(GOLD / "catalog.json"))
+    assert tr.resolve("qa", "claude", **kw)["tier"] == 1  # roles.qa.tier = 1 wins over the catalog default 2
+    assert tr.resolve("business-reviewer", "claude", **kw)["code"] == "catalog_table_mismatch"
+    assert tr.resolve("implementer", "claude", "03", **kw)["code"] == "role_tier_mismatch"
+    assert tr.resolve("implementer", "claude", "03", effort=4, **kw)["tier"] == 3
+    assert tr.resolve("implementer", "claude", "03", model="fake-pinned", **kw)["model"] == "fake-pinned"
+    assert tr.resolve("implementer", "claude", "02", **kw)["tier"] == 2  # same as effective: no pin needed
+
+
+def test_inheriting_role_follows_the_parent_cell_of_the_table(tmp_path):
+    kw = dict(env={}, table=str(GOLD / "table.json"), catalog=str(GOLD / "catalog.json"))
+    child = tr.resolve("reviewer-child", "claude", **kw)
+    assert (child["tier"], child["model"], child["inherited_from"]) == (4, "fake-claude-t4", "reviewer-base")
+    assert tr.resolve("reviewer-base", "codex", **kw)["tier"] == 4
+    # the child's own cell wins over the parent's; no cell anywhere falls back to the catalog default
+    own = _table_with(tmp_path, lambda t: t["roles"].update({"reviewer-child": {"tier": "3"}}))
+    assert tr.resolve("reviewer-child", "claude", env={}, table=own, catalog=kw["catalog"])["tier"] == 3
+    none = _table_with(tmp_path, lambda t: t["roles"].pop("reviewer-base"))
+    assert tr.resolve("reviewer-child", "claude", env={}, table=none, catalog=kw["catalog"])["tier"] == 3
+    # real catalog: raising tech-reviewer to 4 raises every role that inherits it
+    cat = tr.load_catalog(REPO / "tiers" / "role-catalog.json")
+    defaults = json.loads((REPO / "tiers" / "tiers.defaults.json").read_text(encoding="utf-8"))
+    defaults["roles"] = {"tech-reviewer": {"tier": "4"}}
+    heirs = [r for r, v in cat["roles"].items() if v.get("inherits") == "tech-reviewer"]
+    assert len(heirs) == 16
+    for r in heirs:
+        assert tr.resolve_role_turn(r, "claude", catalog=cat, table=defaults)["tier"] == 4, r

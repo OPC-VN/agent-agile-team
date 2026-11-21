@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "resolver_contract": 1,
+  "tier_scale": 2,
+  "human_only": [
+    5
+  ],
+  "legacy_alias": {
+    "T1": 4,
+    "T2": 3,
+    "T3": 2
+  },
+  "alias_scope": "records_only",
+  "roles": {
+    "researcher": {
+      "group": "executor",
+      "tier_default": 1,
+      "tier_range": [
+        1,
+        2
+      ]
+    },
+    "qa": {
+      "group": "executor",
+      "tier_default": 2,
+      "tier_range": [
+        1,
+        2
+      ]
+    },
+    "implementer": {
+      "group": "executor",
+      "tier_default": 2,
+      "tier_range": [
+        2,
+        3
+      ]
+    },
+    "analyst": {
+      "group": "executor",
+      "tier_default": 3,
+      "tier_range": [
+        3,
+        4
+      ]
+    },
+    "architect": {
+      "group": "executor",
+      "tier_default": 3,
+      "tier_range": [
+        3,
+        4
+      ]
+    },
+    "tech-reviewer": {
+      "group": "verifier",
+      "tier_default": 3,
+      "tier_range": [
+        3,
+        4
+      ]
+    },
+    "business-reviewer": {
+      "group": "verifier",
+      "tier_default": 4,
+      "tier_range": [
+        3,
+        4
+      ]
+    },
+    "gate-delegate": {
+      "group": "verifier",
+      "tier_default": 4,
+      "tier_range": [
+        3,
+        4
+      ]
+    },
+    "advisor": {
+      "group": "advisor",
+      "tier_default": 4,
+      "tier_range": [
+        3,
+        4
+      ]
+    },
+    "dual-review": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "backend-specialist": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "data-specialist": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "frontend-specialist": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "security-specialist": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "code-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "comment-analyzer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "test-analyzer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "silent-failure-hunter": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "python-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "typescript-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "react-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "fastapi-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "database-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "security-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "rag-pipeline-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
+    "build-fixer": {
+      "group": "executor",
+      "inherits": "implementer"
+    },
+    "code-explorer": {
+      "group": "executor",
+      "inherits": "analyst"
+    }
+  }
+}

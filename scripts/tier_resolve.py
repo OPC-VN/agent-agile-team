@@ -18,7 +18,10 @@ Two modes, one contract:
 
 Error order for one role turn (shared with Node; tests/fixtures/tier-golden/README.md):
     unknown_role -> legacy_alias_forbidden_in_role_turn -> unknown_tier -> tier_reserved_human_only
-    -> role_tier_mismatch, then the table errors (model_tier_unavailable, effort_*).
+    -> catalog_table_mismatch -> role_tier_mismatch, then the table errors (model_tier_unavailable, effort_*).
+The effective tier of a role is roles.<role>.tier of the table when present, else tier_default of the catalog. An
+effective tier outside the catalog range is catalog_table_mismatch. A turn tier different from the effective tier is
+valid only with a pin (model or effort); without one it is role_tier_mismatch.
 
 Exit codes: 0 ok, 2 error. Output carries model ids, codes and paths only; never secrets.
 """
@@ -43,6 +46,7 @@ ERROR_ORDER = (
     "legacy_alias_forbidden_in_role_turn",
     "unknown_tier",
     "tier_reserved_human_only",
+    "catalog_table_mismatch",
     "role_tier_mismatch",
 )
 _FULL_SCALE = {1: "low", 2: "medium", 3: "high", 4: "xhigh", 5: "max"}
@@ -175,6 +179,18 @@ def catalog_role(catalog: dict, role: str) -> dict | None:
     return out
 
 
+def effective_tier(entry: dict, table: dict, role: str) -> Any:
+    """roles.<role>.tier of the table (schema >= 2, digits only) when present, else the catalog tier_default."""
+    roles = table.get("roles") if table.get("schema", 1) >= 2 and isinstance(table.get("roles"), dict) else {}
+    # The role's own cell, then (inheriting role, one level) the parent's cell, then the catalog tier_default.
+    for rid in (role, entry.get("inherited_from")):
+        r = roles.get(rid) if rid else None
+        t = r.get("tier") if isinstance(r, dict) else None
+        if t is not None and re.fullmatch(r"\d+", str(t).strip()):
+            return int(str(t).strip())
+    return entry.get("tier_default")
+
+
 def load_table(path: str | os.PathLike) -> dict:
     if not Path(path).is_file():
         raise TierError("tiers_file_missing", f"tier table not found: {path}")
@@ -250,15 +266,21 @@ def resolve_role_turn(
         if not re.fullmatch(r"[0-9]+", raw) or str(int(raw)) not in tiers:
             raise TierError("unknown_tier", f"tier {raw} is not in the tier table.")
         n = int(raw)
-    else:
-        n = entry.get("tier_default")
+    eff = effective_tier(entry, table, role)
+    if not given:
+        n = eff
         if not isinstance(n, int):
             raise TierError("unknown_tier", f"role {role} has no default tier.")
     if n in (catalog.get("human_only") or []):
         raise TierError("tier_reserved_human_only", f"tier {n} is for the human decider; not assignable to a role.")
     rng = entry.get("tier_range")
-    if isinstance(rng, list) and len(rng) == 2 and not rng[0] <= n <= rng[1]:
+    has_range = isinstance(rng, list) and len(rng) == 2
+    if has_range and isinstance(eff, int) and not rng[0] <= eff <= rng[1]:
+        raise TierError("catalog_table_mismatch", f"role {role}: the table sets tier {eff}, outside the catalog range {rng[0]}-{rng[1]}.")
+    if has_range and not rng[0] <= n <= rng[1]:
         raise TierError("role_tier_mismatch", f"role {role} tier range {rng[0]}-{rng[1]}, not {n}.")
+    if given and n != eff and model is None and effort is None:
+        raise TierError("role_tier_mismatch", f"role {role}: effective tier {eff}, the turn passes tier {n} without a pin.")
     if vendor not in VENDORS:
         raise TierError("model_tier_unavailable", f"vendor {vendor!r} unknown; valid: {', '.join(VENDORS)}.")
     key = str(n)

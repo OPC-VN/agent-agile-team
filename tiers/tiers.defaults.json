@@ -1,0 +1,84 @@
+{
+  "schema": 3,
+  "tier_scale": 2,
+  "_comment": "gợi ý, người dùng sửa ở file riêng của máy (%LOCALAPPDATA%/agent-agile-team/tiers.json); tier_setup.py chỉ sao chép file này khi máy chưa có bảng",
+  "as_of": "2026-11-22",
+  "effort_scale": {
+    "claude": {
+      "1": "low",
+      "2": "medium",
+      "3": "high",
+      "4": "xhigh",
+      "5": "max"
+    },
+    "codex": {
+      "1": "low",
+      "2": "medium",
+      "3": "high",
+      "4": "xhigh",
+      "5": "max"
+    },
+    "antigravity": {
+      "1": "low",
+      "2": "medium",
+      "3": "high",
+      "4": null,
+      "5": null
+    }
+  },
+  "fallback": {
+    "antigravity": "clamp_to_max"
+  },
+  "tiers": {
+    "1": {
+      "purpose": "research-fast",
+      "models": {
+        "claude": "claude-haiku-5-5",
+        "codex": "gpt-6-luna",
+        "antigravity": "gemini-3.8-flash-medium"
+      },
+      "effort": {
+        "claude": 2,
+        "codex": 2,
+        "antigravity": 2
+      }
+    },
+    "2": {
+      "purpose": "execution",
+      "models": {
+        "claude": "claude-sonnet-5-5",
+        "codex": "gpt-6.1-terra",
+        "antigravity": "gemini-3.8-flash-medium"
+      },
+      "effort": {
+        "claude": 3,
+        "codex": 3,
+        "antigravity": 2
+      }
+    },
+    "3": {
+      "purpose": "design-and-review",
+      "models": {
+        "claude": "claude-opus-5-5",
+        "codex": "gpt-6.1-sol",
+        "antigravity": "gemini-3.8-flash-high"
+      },
+      "effort": 3
+    },
+    "4": {
+      "purpose": "arbiter-thinking",
+      "models": {
+        "claude": "claude-fable-5-2",
+        "codex": "gpt-6-astra",
+        "antigravity": "gemini-4-argon-high"
+      },
+      "effort": 3
+    },
+    "5": {
+      "purpose": "reserved-human-only",
+      "models": {},
+      "effort": null
+    }
+  },
+  "known": {}
+}

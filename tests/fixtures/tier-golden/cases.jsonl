@@ -13,4 +13,9 @@
 {"id":"c13","kind":"snapshot","snapshot":"stale"}
 {"id":"c14","kind":"snapshot","snapshot":"missing"}
 {"id":"c15","role":"implementer","vendor":"claude","tier":"03"}
-{"id":"c16","role":"tech-reviewer","vendor":"claude","tier":"04"}
+{"id":"c16","role":"advisor","vendor":"claude","tier":"04"}
+{"id":"c17","role":"qa","vendor":"claude"}
+{"id":"c18","role":"business-reviewer","vendor":"claude"}
+{"id":"c19","role":"implementer","vendor":"claude","tier":"03","effort":4}
+{"id":"c20","role":"reviewer-child","vendor":"claude"}
+{"id":"c21","role":"reviewer-base","vendor":"codex"}

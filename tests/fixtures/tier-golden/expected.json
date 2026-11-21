@@ -13,6 +13,11 @@
   "c12": {"status": "error", "code": "snapshot_unreadable"},
   "c13": {"status": "error", "code": "snapshot_stale", "note": "băm đầu vào không còn khớp"},
   "c14": {"status": "error", "code": "snapshot_missing"},
-  "c15": {"status": "ok", "tier": 3, "model": "fake-claude-t3", "effort": 3, "note": "tier \"03\" = 3 (Node: Number(raw), khóa là String(n))"},
-  "c16": {"status": "ok", "tier": 4, "model": "fake-claude-t4", "effort": 3}
+  "c15": {"status": "error", "code": "role_tier_mismatch", "note": "tier \"03\" = 3 trong dải [2,3] nhưng khác tier hiệu lực 2 và không có pin"},
+  "c16": {"status": "ok", "tier": 4, "model": "fake-claude-t4", "effort": 3, "note": "tier \"04\" = 4 (Node: Number(raw), khóa String(n)); bằng tier hiệu lực của advisor"},
+  "c17": {"status": "ok", "tier": 1, "model": "fake-claude-t1", "effort": 2, "note": "bảng đặt roles.qa.tier = 1 (trong dải [1,2], khác mặc định catalog 2) → tier hiệu lực 1"},
+  "c18": {"status": "error", "code": "catalog_table_mismatch", "note": "bảng đặt roles.business-reviewer.tier = 2, ngoài dải catalog [3,4]"},
+  "c19": {"status": "ok", "tier": 3, "model": "fake-claude-t3", "effort": 4, "note": "tier lượt 3 khác hiệu lực 2 nhưng có pin effort 4 → hợp lệ"},
+  "c20": {"status": "ok", "tier": 4, "model": "fake-claude-t4", "effort": 3, "inherited_from": "reviewer-base", "note": "vai con không có ô riêng: lấy roles.reviewer-base.tier = 4 của vai cha (mặc định catalog 3)"},
+  "c21": {"status": "ok", "tier": 4, "model": "fake-codex-t4", "effort": 3}
 }

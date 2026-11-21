@@ -9,5 +9,10 @@
     "5": {"purpose": "reserved-human-only", "effort": 3, "models": {}}
   },
   "fallback": {"antigravity": "clamp_to_max"},
+  "roles": {
+    "qa": {"tier": "1"},
+    "business-reviewer": {"tier": "2"},
+    "reviewer-base": {"tier": "4"}
+  },
   "known": {"claude": ["fake-claude-old"], "codex": [], "antigravity": []}
 }
