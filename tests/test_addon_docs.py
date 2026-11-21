@@ -59,8 +59,19 @@ def test_legacy_handoff_without_give_return_has_no_heading_missing(tmp_path):
 def test_addon_docs_not_in_doc_kinds():
     assert tuple(check.ADDON_DOCS) == ("handoff", "roadmap")
     assert set(check.ADDON_DOCS).isdisjoint(check.DOC_KINDS)
-    for table in (check.REQUIRED_KEYS, check.REQUIRED_HEADINGS, check.KNOWN_NAMES):
+    for table in (check.REQUIRED_KEYS, check.REQUIRED_HEADINGS):
         assert set(check.ADDON_DOCS).isdisjoint(table)
+    # KNOWN_NAMES maps file names to kinds: no standard file name may map to an add-on value
+    assert set(check.ADDON_DOCS).isdisjoint(check.KNOWN_NAMES.values())
+    assert set(check.ADDON_DOCS).isdisjoint(check.DOC_VALUE_BY_FILE.values())
+
+
+@pytest.mark.parametrize("name", ["SPRINT.md", "PLAN.md", "SPEC.md", "TASK.md"])
+@pytest.mark.parametrize("value", ["handoff", "roadmap"])
+def test_standard_file_name_with_addon_value_is_still_doc_unknown(tmp_path, name, value):
+    """The exemption is for add-on files only: a standard-named file carrying an add-on value keeps the Ghi chú."""
+    doc_file(tmp_path, name, value)
+    assert "doc-unknown" in rules_of(check.check_paths([tmp_path]))
 
 
 def test_doc_unknown_message_still_lists_doc_kinds(tmp_path):

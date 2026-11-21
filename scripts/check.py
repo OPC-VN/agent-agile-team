@@ -1089,7 +1089,7 @@ def load_doc(path: Path) -> Doc:
             doc.load_findings.append(Finding(path, 1, "frontmatter-key-missing",
                                              f"{path.name} là tài liệu chuẩn nhưng frontmatter thiếu khoá 'doc' "
                                              f"(doc: {DOC_VALUE_BY_FILE.get(path.name, KNOWN_NAMES[path.name])})"))
-        elif doc.fm is not None and "doc" in doc.data and kind not in ADDON_DOCS:
+        elif doc.fm is not None and "doc" in doc.data and (kind not in ADDON_DOCS or path.name in KNOWN_NAMES):
             doc.load_findings.append(Finding(path, doc.key_line("doc"), "doc-unknown", f"doc: {kind!r} không thuộc {', '.join(DOC_KINDS)}"))
     doc.defs = _definitions(doc)
     return doc
