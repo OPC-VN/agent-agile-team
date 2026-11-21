@@ -254,7 +254,10 @@ def test_addon_templates_exist():
 
 
 def test_addon_templates_pass_check(tmp_path):
-    """Each add-on template, alone in its folder, gives no Chặn and no Phải sửa (Ghi chú `doc-unknown` is allowed)."""
+    """Each add-on template, alone in its folder, gives no Chặn and no Phải sửa (Ghi chú `doc-unknown` is allowed).
+
+    ANALYSIS.md and CLAIMS.md carry no `doc:` key, so `check` reads no document kind from their frontmatter and applies
+    only the general rules on codes; their structure is pinned by test_addon_headings_follow_spec."""
     for name, path in ADDONS.items():
         root = tmp_path / name.replace(".", "_")
         root.mkdir()
@@ -281,6 +284,16 @@ def test_handoff_give_part_at_most_40_lines():
     assert len(section(addon("HANDOFF.md"), "Giao").strip("\n").split("\n")) <= 40
 
 
+FIXED_CHECK_BLOCK = [
+    "Bốn kết quả: Đạt · Không đạt · Chưa chạy · Không áp dụng (kèm lý do); hai kết quả cuối không bao giờ là Đạt.",
+    "Bằng chứng = lệnh + kết quả + commit + máy và giờ.",
+    "Viết test hỏng trước khi viết mã.",
+    "Chứng minh đang chạy đúng mã (đường thư mục và commit).",
+    "Chạy cả bộ test trước khi báo xong.",
+    "Gặp việc không đảo ngược, secret, ngoài phạm vi thư mục được ghi, hay giả định của kế hoạch sai: dừng, ghi lý do vào phần Trả, không đoán.",
+]
+
+
 def fixed_check_block(text: str) -> list:
     lines = text.split("\n")
     start = next(i for i, ln in enumerate(lines) if "Khối kiểm" in ln and ln.startswith("1") is False and "**" in ln)
@@ -297,10 +310,7 @@ def fixed_check_block(text: str) -> list:
 def test_handoff_check_block_at_most_10_lines():
     block = fixed_check_block(addon("HANDOFF.md"))
     assert 1 <= len(block) <= 10
-    joined = " ".join(block)
-    for phrase in ("Đạt · Không đạt · Chưa chạy · Không áp dụng", "Viết test hỏng trước khi viết mã",
-                   "Chạy cả bộ test trước khi báo xong", "không đoán"):
-        assert phrase in joined, phrase
+    assert [ln[1:].strip() for ln in block] == FIXED_CHECK_BLOCK
 
 
 def test_addon_templates_name_no_harness_tool():
@@ -314,8 +324,9 @@ def test_addon_headings_follow_spec():
     for word, heading in zip(("Kết luận", "nguồn", "an toàn", "Đánh giá", "tiên quyết", "khuyến nghị"), analysis):
         assert word.lower() in heading.lower(), (word, heading)
     claims = addon("CLAIMS.md")
-    assert table_header(claims, "Số") == ["Số", "Khẳng định", "Bằng chứng"] or "| Số | Khẳng định | Bằng chứng |" in claims
-    assert "Chưa kiểm" in claims
+    assert table_header(claims, "## Khẳng định đã kiểm") == ["Số", "Khẳng định", "Bằng chứng"]
+    assert "## Chưa kiểm" in claims.split(chr(10))
+    assert table_header(claims, "## Chưa kiểm")[0] == "Số"
     roadmap = addon("ROADMAP.md")
     assert re.search(r"^doc: roadmap$", roadmap, flags=re.M)
     assert len([ln for ln in roadmap.split("\n") if ln.startswith("## ")]) == 7
@@ -328,6 +339,8 @@ def test_init_does_not_scaffold_addons(tmp_path):
         extra = ["--title", "Goal"] if flags else []
         assert init.main([str(tmp_path), "--apply", "--date", "2026-11-21", *flags, *extra]) == 0
     names = {p.name for p in tmp_path.rglob("*") if p.is_file()}
+    assert {"REQUESTS.md", "SPRINTS.md", "SPECS.md", "TASK.md", "SPRINT.md", "SPEC.md", "PLAN.md", "PROGRESS.md",
+            "REPORT.md"} <= names  # the run really scaffolded files, so the disjoint check below is not vacuous
     assert names.isdisjoint(ADDONS), names & set(ADDONS)
 
 
@@ -347,14 +360,41 @@ def naming_rows() -> list:
     return rows
 
 
+def cells(row: str) -> list:
+    return [c.strip() for c in row.strip().strip("|").split("|")]
+
+
+OLD_NAMES = {
+    "gate_verdict": "`gate-<N>-verdict.md`",
+    "task_report": "`tk<n>-report.md`, `TK<n>-REPORT.md`",
+    "plan_review": "`<vai>-plan-review.md`, `plan-review.md`, `plan-review-<vai>.md`",
+    "research": "`research.md`, `research-<chủ-đề>.md`",
+    "analysis": "`analysis.md`",
+    "claims": "`claims.md`",
+}
+
+
 def test_naming_table_matches_evidence_names():
     import _common
     rows = naming_rows()
     for key in _common.EVIDENCE_NAMES:
         hit = [ln for ln in rows if f"`{key}`" in ln]
         assert len(hit) == 1, key
-        form = _common.EVIDENCE_NAME_FORMS[key]
-        assert form in hit[0], (key, form)
+        key_cell, new, old, where = cells(hit[0])
+        assert new == f"`{_common.EVIDENCE_NAME_FORMS[key]}`", key
+        assert old == OLD_NAMES[key], key
+        assert where == "`evidence/`", key
+
+
+def test_naming_table_handoff_and_roadmap_rows_are_separate():
+    rows = naming_rows()
+    handoff = [cells(ln) for ln in rows if ln.startswith("| (ngoài `EVIDENCE_NAMES`) | `HANDOFF.md`")]
+    roadmap = [cells(ln) for ln in rows if ln.startswith("| (ngoài `EVIDENCE_NAMES`) | `ROADMAP.md`")]
+    assert len(handoff) == 1 and len(roadmap) == 1
+    assert "HANDOFF-BRIEF.md" in handoff[0][2] and "chờ CQ7" in handoff[0][2] and "chưa từng có file" in handoff[0][2]
+    assert handoff[0][3] == "gốc thư mục sprint"
+    assert roadmap[0][2] == "Không có" and roadmap[0][3] == "gốc thư mục hồ sơ chương trình"
+    assert not any("`HANDOFF.md`, `ROADMAP.md`" in ln for ln in rows)
 
 
 def test_naming_table_distinguishes_brief_and_handoff():
@@ -362,6 +402,33 @@ def test_naming_table_distinguishes_brief_and_handoff():
     row = next(ln for ln in readme.split("\n") if ln.startswith("| `sprint/BRIEF.md`"))
     assert "HANDOFF.md" in row and "người" in row.lower()
     assert "core.md" in readme and "VERIFICATION" in readme and "HANDOFF" in readme
+
+
+MAPPING_ROWS = {
+    "PLAN": "`PLAN.md`",
+    "CHANGESET": "diff và commit Git của nhánh sprint; REPORT mục \"Cách dùng, đã đổi gì, cách hoàn tác\" tóm tắt",
+    "VERIFICATION": "PROGRESS (nhật ký kiểm) và REPORT mục \"Kết quả kiểm định\" (bảng `VR`); báo cáo việc `REPORT-TK<n>.md` làm nguồn",
+    "HANDOFF": "REPORT mục \"Cách dùng, đã đổi gì, cách hoàn tác\" khi không giao ra ngoài phiên; `HANDOFF.md` phần Trả khi giao cho phiên hoặc agent khác",
+}
+
+
+def test_core_mapping_table_rows_exact():
+    lines = templates_readme().split(chr(10))
+    start = next(i for i, ln in enumerate(lines) if ln.startswith("| Artifact của `core.md`"))
+    rows = {}
+    for ln in lines[start + 2:]:
+        if not ln.startswith("|"):
+            break
+        c = cells(ln)
+        rows[c[0]] = c[1]
+    assert rows == MAPPING_ROWS
+
+
+def test_mapping_outside_agile_and_banned_names():
+    """FR3.4: outside agile VERIFICATION.md and HANDOFF.md stay in use; SUMMARY.md, NOTES.md, BRIEF-<x>.md are not scaffolded."""
+    readme = templates_readme()
+    assert "KHI việc chạy ngoài agile THÌ `VERIFICATION.md` và `HANDOFF.md` vẫn được dùng" in readme
+    assert "tên `SUMMARY.md`, `NOTES.md`, `BRIEF-<x>.md` không dựng" in readme
 
 
 def test_ledger_template_names_task_md():

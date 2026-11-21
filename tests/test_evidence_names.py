@@ -275,6 +275,10 @@ def test_new_topic_part_is_not_restricted_in_case_or_charset(tmp_path, effective
 @pytest.mark.parametrize("key,name", [
     ("research", "research-api.md"), ("research", "Research-api.md"), ("research", "research.md"),
     ("plan_review", "plan-review-opus.md"), ("plan_review", "Plan-Review-1.md"), ("plan_review", "plan-review.md"),
+    # real names in the records store: `<role>-plan-review[-<suffix>].md` (NAMING 1.3) and `<id>-plan-review-<suffix>.md`
+    ("plan_review", "advisor-plan-review.md"), ("plan_review", "astra-plan-review-01.md"),
+    ("plan_review", "opus-plan-review-r1.md"), ("plan_review", "p1-plan-review-opus-2026-11-01.md"),
+    ("plan_review", "p12-plan-review-tech.md"), ("plan_review", "spr61-plan-review.md"),
 ])
 def test_legacy_prefix_case_still_flagged(tmp_path, effective, key, name):
     new, old = c.EVIDENCE_NAMES[key]

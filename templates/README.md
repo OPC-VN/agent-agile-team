@@ -34,11 +34,12 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 |---|---|---|---|
 | `gate_verdict` | `GATE-<N>-VERDICT.md` | `gate-<N>-verdict.md` | `evidence/` |
 | `task_report` | `REPORT-TK<n>.md` | `tk<n>-report.md`, `TK<n>-REPORT.md` | `evidence/` |
-| `plan_review` | `PLAN-REVIEW-<vai>.md` | `plan-review.md`, `plan-review-<vai>.md` | `evidence/` |
+| `plan_review` | `PLAN-REVIEW-<vai>.md` | `<vai>-plan-review.md`, `plan-review.md`, `plan-review-<vai>.md` | `evidence/` |
 | `research` | `RESEARCH-<chủ-đề>.md` | `research.md`, `research-<chủ-đề>.md` | `evidence/` |
 | `analysis` | `ANALYSIS.md` | `analysis.md` | `evidence/` |
 | `claims` | `CLAIMS.md` | `claims.md` | `evidence/` |
-| (ngoài `EVIDENCE_NAMES`) | `HANDOFF.md`, `ROADMAP.md` | `HANDOFF-BRIEF.md` | gốc thư mục sprint · gốc thư mục hồ sơ chương trình |
+| (ngoài `EVIDENCE_NAMES`) | `HANDOFF.md` | `HANDOFF-BRIEF.md` (tên dự kiến lúc chờ CQ7, chưa từng có file dùng) | gốc thư mục sprint |
+| (ngoài `EVIDENCE_NAMES`) | `ROADMAP.md` | Không có | gốc thư mục hồ sơ chương trình |
 
 **Ánh xạ với luật nền `core.md`** (mục *Workflow*: bốn artifact PLAN · CHANGESET · VERIFICATION · HANDOFF):
 
@@ -46,8 +47,10 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 |---|---|
 | PLAN | `PLAN.md` |
 | CHANGESET | diff và commit Git của nhánh sprint; REPORT mục "Cách dùng, đã đổi gì, cách hoàn tác" tóm tắt |
-| VERIFICATION | REPORT mục "Kết quả kiểm định" (bảng `VR`); báo cáo việc `REPORT-TK<n>.md` làm nguồn |
-| HANDOFF | REPORT mục "Cách dùng, đã đổi gì, cách hoàn tác" khi không giao ra ngoài phiên; `HANDOFF.md` khi giao cho phiên hoặc agent khác |
+| VERIFICATION | PROGRESS (nhật ký kiểm) và REPORT mục "Kết quả kiểm định" (bảng `VR`); báo cáo việc `REPORT-TK<n>.md` làm nguồn |
+| HANDOFF | REPORT mục "Cách dùng, đã đổi gì, cách hoàn tác" khi không giao ra ngoài phiên; `HANDOFF.md` phần Trả khi giao cho phiên hoặc agent khác |
+
+KHI việc chạy ngoài agile THÌ `VERIFICATION.md` và `HANDOFF.md` vẫn được dùng; tên `SUMMARY.md`, `NOTES.md`, `BRIEF-<x>.md` không dựng.
 
 **Giá trị trong mẫu là ví dụ hợp lệ**, không phải chỗ trống kiểu `<...>`: nhờ vậy `check` chạy được trên
 chính thư mục `templates/`. Phần thân ví dụ là để người viết thay. Dòng ví dụ của sổ gốc nằm trong comment

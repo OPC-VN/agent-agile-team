@@ -14,7 +14,7 @@ created: 2026-01-20
        Giao → làm → Trả
        Giao: bên giao điền, ≤40 dòng, đủ để bên nhận làm mà không hỏi lại
        Trả: bên nhận điền khi xong hoặc khi dừng (phần làm diễn ra ngoài file này)
-     Trước khi giao: việc tiên quyết của người còn mở mà chặn một SC Bắt buộc thì chưa giao việc đó, hoặc ghi sẵn
+     Trước khi giao: việc tiên quyết của người còn mở mà chặn một SC Bắt buộc (= tiêu chí thành công mức Bắt buộc) thì chưa giao việc đó, hoặc ghi sẵn
      "Chưa chạy — chờ người" cho SC ấy. Khác BRIEF.md: BRIEF là lời giao của người cho agent ở bước tiếp nhận;
      HANDOFF là bàn giao từ agent này sang agent khác. Không nhắc tên công cụ của một hãng cụ thể. -->
 
