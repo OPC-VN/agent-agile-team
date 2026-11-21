@@ -352,18 +352,28 @@ def _expand(text: str) -> tuple[str, bool]:
 
 
 def _under(path: str, directory: str) -> bool:
+    """`path` là `directory` hay nằm trong nó, so KHÔNG phân biệt hoa/thường trên mọi nền (`normcase` chỉ hạ chữ trên Windows; ổ mặc định của macOS
+    không phân biệt nên `../agile/STORE/repo-x.json` trúng `.../Agile/Store`). Chặn dư trên Linux có chủ đích."""
+    path, directory = path.lower(), directory.lower()
     return path == directory or path.startswith(directory.rstrip(os.sep) + os.sep)
 
 
+def _match_any_case(name: str, pattern: str) -> bool:
+    """`fnmatch` nguyên chữ HOẶC sau khi hạ chữ thường cả hai phía. Chỉ hạ chữ thì đổi nghĩa lớp ký tự (`[!A-Z]tore` thành `[!a-z]tore`, không còn khớp
+    `store`): giữ phép so nguyên chữ để kết quả luôn bao kết quả cũ, rồi cộng thêm phép so không phân biệt hoa/thường."""
+    return fnmatch.fnmatchcase(name, pattern) or fnmatch.fnmatchcase(name.lower(), pattern.lower())
+
+
 def _glob_covers(path: str, directory: str, ancestor: bool) -> bool:
-    """Mẫu `path` (đã `normcase`, có ký tự đại diện) có thể trỏ vào thư mục trạng thái `directory`, hay (khi `ancestor`) vào một thư mục BAO nó?
-    So từng thành phần bằng `fnmatch`: mẫu dài hơn hay bằng thư mục = ở trong hay chính nó; ngắn hơn = tổ tiên. `**` khớp phần còn lại."""
+    """Mẫu `path` (đường đã chuẩn hoá, giữ kiểu chữ, có ký tự đại diện) có thể trỏ vào thư mục trạng thái `directory`, hay (khi `ancestor`) vào một thư mục BAO nó?
+    So từng thành phần bằng `fnmatch`: mẫu dài hơn hay bằng thư mục = ở trong hay chính nó; ngắn hơn = tổ tiên. `**` khớp phần còn lại.
+    Không phân biệt hoa/thường trên MỌI nền (ổ mặc định của macOS không phân biệt): chặn dư an toàn hơn chặn thiếu."""
     pattern_parts = path.replace("\\", "/").split("/")
     dir_parts = directory.replace("\\", "/").rstrip("/").split("/")
     for pattern, name in zip(pattern_parts, dir_parts):
         if pattern == "**":
             return True
-        if not fnmatch.fnmatchcase(name, pattern):
+        if not _match_any_case(name, pattern):
             return False
     return len(pattern_parts) >= len(dir_parts) or ancestor
 
@@ -384,7 +394,8 @@ def _real(full: str, ctx: "Context") -> str:
 def _mentions_state(text: str, ctx: "Context") -> bool:
     """Chuỗi chứa đường của thư mục trạng thái hay dấu hiệu của nó (`agent-agile-team/state`, `state/agent-agile-team`)."""
     low = DOUBLE_SLASH.sub("/", text.replace("\\", "/").lower())  # `C:\\Users\\x` (gạch ngược kép trong chuỗi mã) cũng về `c:/users/x`
-    return any(d.replace("\\", "/") in low for d in ctx.state_dirs) or bool(STATE_SIGNATURE.search(low))
+    # Chữ thường CẢ HAI phía: `normcase` chỉ hạ chữ trên Windows; trên macOS/Linux thư mục trạng thái giữ chữ hoa (`/Users/...`) nên so với `low` luôn trượt.
+    return any(d.replace("\\", "/").lower() in low for d in ctx.state_dirs) or bool(STATE_SIGNATURE.search(low))
 
 
 def _state_ref(text: str, ctx: "Context", ancestor: bool = False) -> bool:
@@ -405,7 +416,7 @@ def _state_ref_uncached(text: str, ctx: "Context", ancestor: bool) -> bool:
     if _mentions_state(norm, ctx):
         return True
     if GLOB_CHARS & set(norm) and not unresolved and (os.path.isabs(norm) or not ctx.cwd_changed):  # TK6e RF2: ký tự đại diện ở BẤT KỲ thành phần nào (không chỉ cuối)
-        probe = os.path.normcase(os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm)))
+        probe = os.path.normpath(norm if os.path.isabs(norm) else os.path.join(ctx.cwd, norm))  # không `normcase`: giữ nghĩa lớp ký tự (`_match_any_case`)
         if any(_glob_covers(probe, d, ancestor) for d in ctx.state_dirs):
             return True
     if unresolved or ctx.cwd_changed:
@@ -428,7 +439,8 @@ def _reaches_state(norm: str, ctx: "Context", ancestor: bool, anywhere: bool) ->
     (xoá/chuyển/cd: đường là thư mục bao nó). Một thành phần trần không có ký tự đại diện (`state`, `data`) chỉ tính khi `ancestor` và đúng tên thư mục trạng thái
     (`mv state x`, `rm state`; `git commit -m state` không tính). `anywhere` (đường có biến chưa giải): đầu đường có thể bị bỏ. Chặn nhầm có chủ đích: sau
     `cd`, lệnh ghi dùng ký tự đại diện trần (`mv * x`) hay thư mục tên trùng thư mục trạng thái (`state/…`)."""
-    parts = [p for p in os.path.normcase(norm).replace("\\", "/").split("/") if p not in ("", ".", "..")]
+    # Giữ nguyên kiểu chữ của mẫu (không `normcase`): `_match_any_case` so cả nguyên chữ lẫn hạ chữ, nên `[!A-Z]tate` không đổi nghĩa, kể cả trên Windows.
+    parts = [p for p in norm.replace("\\", "/").split("/") if p not in ("", ".", "..")]
     if not parts:
         return False
     bare = len(parts) == 1 and not GLOB_CHARS & set(parts[0])
@@ -436,14 +448,14 @@ def _reaches_state(norm: str, ctx: "Context", ancestor: bool, anywhere: bool) ->
     for directory in ctx.state_dirs:
         dir_parts = [p for p in directory.replace("\\", "/").split("/") if p]
         if bare:
-            if ancestor and parts[0] == dir_parts[-1]:
+            if ancestor and parts[0].lower() == dir_parts[-1].lower():  # không phân biệt hoa/thường mọi nền (macOS)
                 return True
             continue
         for k in range(1, len(dir_parts)):
             rest = dir_parts[k:]
             for start in (range(len(parts)) if anywhere else (0,)):
                 sub = parts[start:]
-                if (len(sub) >= len(rest) or ancestor) and all(p == "**" or fnmatch.fnmatchcase(r, p) for p, r in zip(sub, rest)):
+                if (len(sub) >= len(rest) or ancestor) and all(p == "**" or _match_any_case(r, p) for p, r in zip(sub, rest)):
                     if globbed and len(sub) > len(rest) and not _could_name_state_file(sub[-1]):
                         continue  # TK6i SF1: mẫu `**/*.ts`, `*/config.yml` đi vào trong thư mục trạng thái nhưng đuôi không thể là `.json`
                     return True
@@ -453,7 +465,7 @@ def _reaches_state(norm: str, ctx: "Context", ancestor: bool, anywhere: bool) ->
 def _could_name_state_file(component: str) -> bool:
     """TK6i SF1: thành phần CUỐI của một mẫu đi vào bên trong thư mục trạng thái có thể khớp một file trạng thái (`session-*.json`, `repo-*.json`)?
     Chữ cố định sau ký tự đại diện cuối cùng (`.ts` của `*.ts`, cả `config.yml`) không thể là đuôi, hay một phần đuôi, của `.json` thì không khớp được."""
-    tail = re.split(r"[*?\[\]]", component)[-1]
+    tail = re.split(r"[*?\[\]]", component)[-1].lower()  # `*.JSON` khớp `repo-x.json` trên ổ không phân biệt hoa/thường (macOS, Windows)
     if any(ch in tail for ch in "{}$'\"\\`"):  # TK6k RF2: ngoặc nhọn, biến, nháy, gạch ngược: shell còn mở rộng đuôi thành `.json` (`*.{json,bak}`, `*.$EXT`, `*.$'json'`) → có thể
         return True
     return not tail or ".json".endswith(tail) or tail.endswith(".json")

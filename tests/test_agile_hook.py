@@ -293,7 +293,9 @@ def test_context_says_source_is_not_verified_when_on(repo, state):  # R1-M1
 
 def test_context_shows_state_dir_override(repo, state):  # RF2
     text = context(fire(start(repo), state))
-    assert "state_dir=" in text and str(state)[:40] in text
+    # Hook rút gọn đường dài bằng `safe_path` (giữ đuôi): so với đúng dạng hiển thị, cộng phần đuôi của đường thật (không phụ thuộc chính hàm rút gọn).
+    # Đầu đường (`str(state)[:40]`) bị cắt khi đường tạm dài (macOS `/private/var/folders/...`).
+    assert "state_dir=" + st.safe_path(Path(str(state))) in text and str(state)[-20:] in text
 
 
 def test_context_relative_override_is_ignored_and_reported(repo, tmp_path):  # RF2
