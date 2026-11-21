@@ -1,0 +1,10 @@
+{
+  "c01": {"status": "ok", "tier": 2, "model": "fake-claude-t2", "effort": 2},
+  "c02": {"status": "ok", "tier": 4, "model": "fake-codex-t4", "effort": 3},
+  "c03": {"status": "ok", "tier": 3, "model": "fake-agy-t3", "effort": 3, "inherited_from": "tech-reviewer"},
+  "c04": {"status": "error", "code": "role_tier_mismatch"},
+  "c05": {"status": "error", "code": "tier_reserved_human_only"},
+  "c06": {"status": "error", "code": "legacy_alias_forbidden_in_role_turn"},
+  "c07": {"status": "error", "code": "unknown_role"},
+  "c08": {"status": "error", "code": "unknown_tier"}
+}

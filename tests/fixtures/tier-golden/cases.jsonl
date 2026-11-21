@@ -1,0 +1,8 @@
+{"id":"c01","role":"implementer","vendor":"claude"}
+{"id":"c02","role":"advisor","vendor":"codex"}
+{"id":"c03","role":"python-reviewer","vendor":"antigravity"}
+{"id":"c04","role":"implementer","vendor":"claude","tier":4}
+{"id":"c05","role":"advisor","vendor":"claude","tier":5}
+{"id":"c06","role":"researcher","vendor":"claude","tier":"T1"}
+{"id":"c07","role":"unknown-role","vendor":"claude"}
+{"id":"c08","role":"advisor","vendor":"claude","tier":9}

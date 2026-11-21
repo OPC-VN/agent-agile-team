@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "resolver_contract": 1,
+  "tier_scale": 2,
+  "human_only": [5],
+  "legacy_alias": {"T1": 4, "T2": 3, "T3": 2},
+  "alias_scope": "records_only",
+  "roles": {
+    "researcher": {"group": "executor", "tier_default": 1, "tier_range": [1, 2]},
+    "implementer": {"group": "executor", "tier_default": 2, "tier_range": [2, 3]},
+    "tech-reviewer": {"group": "verifier", "tier_default": 3, "tier_range": [3, 4]},
+    "advisor": {"group": "advisor", "tier_default": 4, "tier_range": [3, 4]},
+    "python-reviewer": {"group": "verifier", "inherits": "tech-reviewer"}
+  }
+}

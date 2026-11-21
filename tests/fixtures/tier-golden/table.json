@@ -1,0 +1,12 @@
+{
+  "schema": 3,
+  "tier_scale": 2,
+  "tiers": {
+    "1": {"purpose": "research-fast", "effort": 2, "models": {"claude": "fake-claude-t1", "codex": "fake-codex-t1", "antigravity": "fake-agy-t1"}},
+    "2": {"purpose": "execution", "effort": 2, "models": {"claude": "fake-claude-t2", "codex": "fake-codex-t2", "antigravity": "fake-agy-t2"}},
+    "3": {"purpose": "design-and-review", "effort": 3, "models": {"claude": "fake-claude-t3", "codex": "fake-codex-t3", "antigravity": "fake-agy-t3"}},
+    "4": {"purpose": "arbiter-thinking", "effort": 3, "models": {"claude": "fake-claude-t4", "codex": "fake-codex-t4", "antigravity": "fake-agy-t4"}},
+    "5": {"purpose": "reserved-human-only", "effort": 3, "models": {}}
+  },
+  "known": {"claude": ["fake-claude-old"], "codex": [], "antigravity": []}
+}
