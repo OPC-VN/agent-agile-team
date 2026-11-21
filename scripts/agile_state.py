@@ -574,7 +574,7 @@ def open_sprints(project) -> dict:
         return out
     out["ledger"] = "present"
     for folder in folders:
-        state = next((folder / n for n in ("PROGRESS.md", "SPRINT.md") if (folder / n).is_file()), None)
+        state = next((folder / n for n in ("PROGRESS.md", "SPRINT.md", "TASK.md") if (folder / n).is_file()), None)
         if state is None:
             continue
         try:

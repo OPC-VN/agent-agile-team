@@ -14,7 +14,7 @@ khoá frontmatter, giá trị cho phép, tiêu đề bắt buộc, khuôn sổ g
 | `sprint/PROGRESS.md` | `<thư mục sprint>/PROGRESS.md` | Như trên — đang ở đâu, vướng gì |
 | `sprint/REPORT.md` | `<thư mục sprint>/REPORT.md` | Như trên — kết quả, bàn giao |
 | `sprint/SPRINT.md` | `<thư mục sprint>/SPRINT.md` | Cỡ nhỏ: bốn phần SPEC · PLAN · PROGRESS · REPORT gộp một file (`size: small`) |
-| `sprint/SPRINT-tiny.md` | `<thư mục sprint>/SPRINT.md` (đổi tên khi dựng) | Cỡ rất nhỏ: hai phần "Kế hoạch" / "Kết quả" (`size: tiny`) |
+| `sprint/TASK.md` | `<thư mục sprint>/TASK.md` | Cỡ rất nhỏ: hai phần "Kế hoạch" / "Kết quả" (`size: tiny`, `doc: task`); thay `SPRINT.md` hai phần của hồ sơ cũ |
 | `sprint/BRIEF.md` | không dựng — `init` không chép; người giao tự điền | Brief người giao 4 ô, điền trước khi giao việc |
 | `registry/REQUESTS.md` | `paths.requests` | Sổ yêu cầu theo timeline |
 | `registry/SPECS.md` | `paths.specs` | Mục lục tính năng |
@@ -33,7 +33,7 @@ Khi tạo file thật, `init` ghi lại frontmatter như sau (khoá không có t
 | Tạo gì | Khoá được ghi |
 |---|---|
 | Sổ gốc | `next_id` = mã đầu tiên theo `id_width`, `updated` = ngày chạy |
-| Sprint mới (4 file; hoặc một `SPRINT.md` khi `--tiny` / `--size tiny` / `--size small`) | `id` = `<sprint>-<doc>`, `sprint` = `next_id` của SPRINTS, `request`/`feature` theo tham số (không có thì `null`), `title`, `created`, `updated`; **đặt lại trạng thái**: `status` = `drafting` (PROGRESS, SPRINT) hoặc `draft` (SPEC, PLAN, REPORT), `review_round: 0`, `gate_1`/`verdict`/`gate_2` = `pending`, `*_at`/`*_quote` = `null`, mọi vai trong `roles` = `[tier, pending]`; `size`/`risk`/`risk_tags` theo tham số (mặc định `medium`/`normal`/`[]`, `--tiny` → `tiny`); mẫu theo cỡ: `tiny` → `sprint/SPRINT-tiny.md` (ghi ra `SPRINT.md`), `small` → `sprint/SPRINT.md`, `medium`/`large` → bốn file |
+| Sprint mới (4 file; hoặc một `TASK.md` khi `--tiny` / `--size tiny`; hoặc một `SPRINT.md` khi `--size small`) | `id` = `<sprint>-<doc>`, `sprint` = `next_id` của SPRINTS, `request`/`feature` theo tham số (không có thì `null`), `title`, `created`, `updated`; **đặt lại trạng thái**: `status` = `drafting` (PROGRESS, SPRINT, TASK) hoặc `draft` (SPEC, PLAN, REPORT), `review_round: 0`, `gate_1`/`verdict`/`gate_2` = `pending`, `*_at`/`*_quote` = `null`, mọi vai trong `roles` = `[tier, pending]`; `size`/`risk`/`risk_tags` theo tham số (mặc định `medium`/`normal`/`[]`, `--tiny` → `tiny`); mẫu theo cỡ: `tiny` → `sprint/TASK.md` (ghi ra `TASK.md`), `small` → `sprint/SPRINT.md`, `medium`/`large` → bốn file |
 | SPRINTS khi tạo sprint | thêm một dòng Timeline ở đầu bảng (Mã, Mở = ngày chạy, Mục tiêu = `title`; Đóng và Kết luận để trống) và tăng `next_id` |
 
 Tiêu đề cấp 1 thay cụm "Tên mục tiêu sprint" bằng `title`. Chạy lại cùng `slug` không đổi gì.
@@ -79,7 +79,7 @@ Giá trị là token tiếng Anh cho máy đọc; thân tài liệu dùng nhãn 
 | Khoá | Có ở | Giá trị |
 |---|---|---|
 | `id` | mọi file | sprint: `<sprint>-<doc>` (`SPR-01-spec`); spec sống: `FS-NNN`; sổ gốc: `REQUESTS` · `SPECS` · `SPRINTS` |
-| `doc` | mọi file | `spec` · `plan` · `progress` · `report` · `sprint` (gộp) · `feature` · `requests` · `specs` · `sprints` |
+| `doc` | mọi file | `spec` · `plan` · `progress` · `report` · `sprint` (gộp) · `task` (việc rất nhỏ, file `TASK.md`) · `feature` · `requests` · `specs` · `sprints` |
 | `title` | mọi file | chuỗi tự do |
 | `sprint` | tài liệu sprint | `SPR-NN` |
 | `request` | tài liệu sprint | `RQ-NNN`, hoặc danh sách inline khi sprint phục vụ nhiều yêu cầu |
@@ -106,9 +106,11 @@ Giá trị là token tiếng Anh cho máy đọc; thân tài liệu dùng nhãn 
 | Tài liệu | Giá trị |
 |---|---|
 | SPEC, PLAN | `draft` (nháp) · `in_review` (đang review) · `approved` (đã qua Cổng 1) · `superseded` (bị thay) |
-| PROGRESS, SPRINT — trạng thái sống của cả sprint | `drafting` (viết SPEC/PLAN) · `awaiting_gate_1` · `in_progress` (thực thi) · `verifying` (kiểm định) · `blocked` (có `BR` đang mở) · `awaiting_gate_2` · `done` · `dropped` |
+| PROGRESS, SPRINT, TASK — trạng thái sống của cả sprint | `drafting` (viết SPEC/PLAN) · `awaiting_gate_1` · `in_progress` (thực thi) · `verifying` (kiểm định) · `blocked` (có `BR` đang mở) · `awaiting_gate_2` · `done` · `dropped` |
 | REPORT | `draft` · `submitted` (đã trình Cổng 2) · `accepted` (Cổng 2 đã kết luận) |
 | spec sống | `proposed` (đề xuất) · `in_progress` (đang làm) · `live` (đang chạy) · `deprecated` (ngừng) · `dropped` (bỏ) |
+
+`TASK.md` (`doc: task`) mang đúng các khoá của SPRINT ở mọi dòng bảng trên; `id` của nó là `<sprint>-task`. `doc` phải khớp tên file: `TASK.md` mang `doc: task`, `SPRINT.md` mang `doc: sprint`, sai thì `frontmatter-value`.
 
 ### 3.1. Khoá vai và luật "người làm không tự chấm"
 
@@ -150,7 +152,7 @@ Mẫu SPEC và PLAN còn có mục `## Tóm tắt cho người không chuyên` (
 | PLAN | Mục tiêu · Kiến trúc · Ràng buộc chung · File luật và file sàn cứng sẽ chạm · Trọng tâm review · Việc · Rủi ro · Quyết định cần người · Ước lượng |
 | PROGRESS | Bảng trạng thái việc · Nhật ký · Vướng mắc · Vòng kiểm định hiện tại |
 | REPORT | Tóm tắt cho người không chuyên · Kết quả kiểm định · Phát hiện của reviewer · Rủi ro còn lại · Cách dùng, đã đổi gì, cách hoàn tác · Bài học · Việc để lại · Review & Retro · Bản tin agile (`check` đọc cả tên cũ `Bản tin autopilot` của hồ sơ cũ; nội dung là bản tin cuối khi agile bật) · Nhật ký quyết định (ai ký, model, bằng chứng, lệnh hoàn tác) · Cổng 2 (tiểu mục `### Review PLAN trước Cổng 1` dưới "Phát hiện của reviewer": nơi chuẩn của `RF` review PLAN, nên có từ cỡ vừa — `check` không bắt buộc) |
-| SPRINT (gộp) | theo cỡ — xem bảng hợp đồng `size × doc` dưới |
+| SPRINT (gộp), TASK | theo cỡ — xem bảng hợp đồng `size × doc` dưới |
 | spec sống | Hành vi hiện hành · Tiêu chí đang giữ · Giới hạn đã biết · Quyết định liên quan · Lịch sử sprint |
 | REQUESTS, SPRINTS | Đang mở · Timeline |
 | SPECS | Đang mở · Danh mục |
@@ -166,12 +168,14 @@ hình tài liệu; `check` đối chiếu hai thứ:
 
 | Cỡ (`size`) | Tài liệu | Tiêu đề cấp 2 bắt buộc | Mã tối thiểu | Luật áp |
 |---|---|---|---|---|
-| `tiny` (rất nhỏ) | một `SPRINT.md` hai phần | Kế hoạch · Kết quả | `SC`, `TK` trỏ `SC` (phần Kế hoạch); `VR` cho mỗi `SC` (phần Kết quả) | `task-without-trace`, `report-sc-without-vr`; `heading-missing` khi thiếu phần |
+| `tiny` (rất nhỏ) | một `TASK.md` hai phần | Kế hoạch · Kết quả | `SC`, `TK` trỏ `SC` (phần Kế hoạch); `VR` cho mỗi `SC` (phần Kết quả) | `task-without-trace`, `report-sc-without-vr`; `heading-missing` khi thiếu phần |
+| `tiny` (tương thích ngược) | một `SPRINT.md` hai phần (hồ sơ cũ) | Kế hoạch · Kết quả | như hàng `tiny` | như hàng `tiny` |
 | `tiny` (tương thích ngược) | một `SPRINT.md` bốn phần | SPEC · PLAN · PROGRESS · REPORT | như hàng `small` | như hàng `small` |
 | `small` (nhỏ) | một `SPRINT.md` bốn phần | SPEC · PLAN · PROGRESS · REPORT | `FR`, `SC`, `TK` trỏ `FR`/`SC`, `VR` cho mỗi `SC` | `task-without-trace`, `report-sc-without-vr`; thiếu phần → `heading-missing` |
 | `small` (sprint cũ) | bốn file | như từng tài liệu ở bảng trên | như cỡ vừa | như cỡ vừa — vẫn hợp lệ |
 | `medium` · `large` (vừa · lớn) | bốn file | như từng tài liệu ở bảng trên | `US`, `FR`, `SC`, `TK`, `VR` cho mỗi `FR` và `SC` | đủ luật; **`SPRINT.md` ở cỡ này → `sprint-size-mismatch`** (báo một lần) |
 | `tiny` mà dựng **bốn file** | — | — | — | `sprint-size-mismatch` (báo một lần cho cả thư mục) |
+| `TASK.md` ở cỡ khác `tiny`, có bốn phần, hoặc cạnh `SPRINT.md` / bốn file của **cùng sprint** | — | — | — | `sprint-size-mismatch` (báo một lần cho cả thư mục); hình bốn phần chỉ còn hợp lệ với `SPRINT.md` cũ |
 
 Thiếu khoá `size` do `frontmatter-key-missing` báo; `sprint-size-mismatch` không báo đúp.
 

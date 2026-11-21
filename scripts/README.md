@@ -61,7 +61,7 @@ Dòng sprint đầu tiên `init` ghi vào SPRINTS thay luôn comment dòng ví d
 
 **Quét thư mục không tính `evidence/`.** Khi `check.py` quét một **thư mục**, nó bỏ qua thư mục con tên `evidence`
 **nằm cạnh tài liệu sprint** — tức thư mục cha trực tiếp của `evidence/` có file `SPEC.md`, `PLAN.md`, `PROGRESS.md`,
-`REPORT.md` hoặc `SPRINT.md` (so đúng hoa/thường trên mọi hệ điều hành). Hồ sơ kèm (log, dossier, ghi chú) ở đó không phải tài liệu sprint, nên số phát hiện
+`REPORT.md`, `SPRINT.md` hoặc `TASK.md` (so đúng hoa/thường trên mọi hệ điều hành). Hồ sơ kèm (log, dossier, ghi chú) ở đó không phải tài liệu sprint, nên số phát hiện
 của một thư mục sprint bằng tổng số phát hiện của các file `.md` ngoài `evidence/`. Quy tắc áp cho cả `*.md` và `.agile.json` dưới `evidence/`.
 Thư mục `evidence` ở chỗ khác (cha không có tài liệu sprint) là tài liệu thật của dự án và vẫn được quét. Cờ
 `--include-evidence` quét lại cả `evidence/` cạnh tài liệu sprint (hành vi cũ). Đường file truyền đích danh, hoặc
@@ -134,7 +134,7 @@ dấu huyền. Mã bị bắt có dấu huyền sát bên thì phát hiện kèm
 | Mã luật | Mức | Bắt gì |
 |---|---|---|
 | `frontmatter-syntax` | Chặn | Frontmatter ngoài tập con YAML, kèm dòng — lỗi đầu vào, thoát 2 |
-| `frontmatter-missing` | Phải sửa | File tên chuẩn (`SPEC.md`, `PLAN.md`, `PROGRESS.md`, `REPORT.md`, `SPRINT.md`, ba sổ) không có frontmatter |
+| `frontmatter-missing` | Phải sửa | File tên chuẩn (`SPEC.md`, `PLAN.md`, `PROGRESS.md`, `REPORT.md`, `SPRINT.md`, `TASK.md`, ba sổ) không có frontmatter |
 | `frontmatter-key-missing` | Phải sửa | Thiếu khoá bắt buộc theo loại tài liệu (`templates/README.md` mục 3); file tên chuẩn có frontmatter mà thiếu `doc` |
 | `frontmatter-key-unknown` | Ghi chú | Khoá ngoài bảng khoá của hợp đồng |
 | `locale-invalid` | Phải sửa | Khoá `locale` khai giá trị không thuộc các ngôn ngữ đã phát hành (`vi`, `en`); chỉ xét tài liệu có khoá `locale` |
@@ -142,8 +142,8 @@ dấu huyền. Mã bị bắt có dấu huyền sát bên thì phát hiện kèm
 | `locale-label-mixed` | Ghi chú | Tài liệu khai `locale` có nhãn máy đọc (tiêu đề, đầu cột, nhãn in đậm) chỉ thuộc ngôn ngữ kia; nhãn giống nhau ở hai ngôn ngữ không tính; chỉ xét tài liệu có khoá `locale` |
 | `frontmatter-value` | Phải sửa | Giá trị sai miền (`status`, `size`, `risk`, ngày, mã `RQ-`/`FS-`/`SPR-` kể cả độ rộng theo `id_width` của `.agile.json` gần nhất, `id`, `next_id`, `links`, `review_round`) hoặc mâu thuẫn (`risk: high` mà không `large`, `risk_tags` khác rỗng mà không `high`) |
 | `doc-unknown` | Ghi chú | Có khoá `doc` nhưng không thuộc loại đã biết — chỉ áp luật chung |
-| `heading-missing` | Phải sửa | Thiếu tiêu đề cấp 2 bắt buộc theo loại tài liệu (SPEC cỡ vừa trở lên thiếu "Truy vết" cũng báo); `SPRINT.md` cỡ rất nhỏ (hoặc chưa rõ cỡ) nhận hai phần "Kế hoạch" · "Kết quả" hoặc bốn phần cũ — bốn phần chỉ được suy ra khi có tiêu đề **bắt đầu** bằng SPEC, PLAN hay PROGRESS (sau số thứ tự); cỡ nhỏ trở lên luôn cần bốn phần |
-| `sprint-size-mismatch` | Phải sửa | Tài liệu không khớp bậc việc: `SPRINT.md` ở cỡ vừa/lớn (dùng bốn file); hoặc cỡ rất nhỏ mà dựng bốn file SPEC · PLAN · PROGRESS · REPORT (báo một lần cho mỗi thư mục). Thiếu khoá `size` thì do `frontmatter-key-missing` báo, không báo đúp ([`method/sizing.md`](../method/sizing.md)) |
+| `heading-missing` | Phải sửa | Thiếu tiêu đề cấp 2 bắt buộc theo loại tài liệu (SPEC cỡ vừa trở lên thiếu "Truy vết" cũng báo); `TASK.md` luôn hai phần "Kế hoạch" · "Kết quả"; `SPRINT.md` cỡ rất nhỏ (hoặc chưa rõ cỡ) nhận hai phần "Kế hoạch" · "Kết quả" hoặc bốn phần cũ — bốn phần chỉ được suy ra khi có tiêu đề **bắt đầu** bằng SPEC, PLAN hay PROGRESS (sau số thứ tự); cỡ nhỏ trở lên luôn cần bốn phần |
+| `sprint-size-mismatch` | Phải sửa | Tài liệu không khớp bậc việc: `SPRINT.md` ở cỡ vừa/lớn (dùng bốn file); cỡ rất nhỏ mà dựng bốn file SPEC · PLAN · PROGRESS · REPORT; `TASK.md` ở cỡ khác rất nhỏ, có bốn phần, hoặc đứng cạnh `SPRINT.md` / bốn file của cùng sprint (báo một lần cho mỗi thư mục). Thiếu khoá `size` thì do `frontmatter-key-missing` báo, không báo đúp ([`method/sizing.md`](../method/sizing.md)) |
 | `conclusion-missing` | Phải sửa | Tài liệu sprint hoặc spec sống thiếu dòng `> **Kết luận:**` trước tiêu đề cấp 2 đầu tiên |
 | `id-bare-single-letter` | Phải sửa | Mã một chữ cái + số (`P1`, `D3`) ngoài dấu code; trừ tier `T1`/`T2`/`T3` |
 | `id-unknown-prefix` | Phải sửa | Mục được định nghĩa bằng tiền tố hai chữ cái ngoài bảng mã (`YC2`); không áp cho `skills/*/tests/` |
@@ -168,7 +168,7 @@ dấu huyền. Mã bị bắt có dấu huyền sát bên thì phát hiện kèm
 | `config-syntax` | Chặn | `.agile.json` không phải JSON — lỗi đầu vào, thoát 2 |
 | `config-invalid` | Phải sửa | `.agile.json` sai hình (gồm `paths.*` tuyệt đối hoặc chứa `..`, `sprint_dir` dùng placeholder ngoài `{date}`/`{slug}`, `id_width` không phải số nguyên ≥ 1), hoặc ngưỡng coverage khác 80 mà `coverage.reason` rỗng; `init`/`index` dùng chung bộ kiểm này (`_common.config_problems`). Khi `check` báo mã này, các luật `ledger-*` không chạy (cấu hình sai hình nên không đối chiếu sổ tập trung) |
 | `config-public-root` | Chặn | `visibility: public` mà `artifact_root` (đường tuyệt đối) nằm trong gốc dự án |
-| `ledger-missing-row` | Phải sửa | Chỉ khi dự án khai `ledger.project`: sprint (thư mục khớp `paths.sprint_dir`, hồ sơ `PROGRESS.md` hoặc `SPRINT.md`) có `status` khác `done`/`dropped` mà file sổ tập trung không có dòng mang mã sprint đó. Báo ở dòng `status` của hồ sơ sprint |
+| `ledger-missing-row` | Phải sửa | Chỉ khi dự án khai `ledger.project`: sprint (thư mục khớp `paths.sprint_dir`, hồ sơ `PROGRESS.md`, `SPRINT.md` hoặc `TASK.md`) có `status` khác `done`/`dropped` mà file sổ tập trung không có dòng mang mã sprint đó. Báo ở dòng `status` của hồ sơ sprint |
 | `ledger-stale` | Phải sửa | Dòng sổ lệch hồ sơ: trạng thái khác `status`, ngày không phải `YYYY-MM-DD` hoặc cũ hơn `updated`. So ngày theo ngày — hai lần đổi trong cùng một ngày chỉ bắt được qua trạng thái ([`method/process.md`](../method/process.md) mục 11) |
 | `ledger-unreadable` | Phải sửa | Chỉ khi dự án khai: file sổ (theo `AGENT_AGILE_LEDGER` với `{project}` đã thay) không tồn tại, không phải UTF-8, hoặc không có bảng cột đầu "Sprint"; chỉ đọc bảng ấy, nội dung khác của file sổ bị bỏ qua |
 | `ledger-unconfigured` | Ghi chú | Dự án khai `ledger.project` mà máy chưa đặt `AGENT_AGILE_LEDGER` — chưa đối chiếu được; không làm đỏ. Dự án không khai khoá thì không có phát hiện nào về sổ, kể cả khi máy đặt biến. Mẫu đường thiếu `{project}` báo `config-invalid` |

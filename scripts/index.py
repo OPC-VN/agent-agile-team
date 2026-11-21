@@ -8,7 +8,7 @@ Cách chạy:
 Nguồn (hợp đồng `templates/README.md` mục 6):
 - REQUESTS: dòng Timeline có trạng thái `mới` hoặc `đang làm`.
 - SPECS: frontmatter spec sống trong `paths.feature_specs_dir` có `status` `proposed` hoặc `in_progress`.
-- SPRINTS: frontmatter `PROGRESS.md` (hoặc `SPRINT.md`) của từng thư mục sprint, `status` khác `done`/`dropped`.
+- SPRINTS: frontmatter `PROGRESS.md` (hoặc `SPRINT.md` / `TASK.md`) của từng thư mục sprint, `status` khác `done`/`dropped`.
 Sắp theo mã giảm dần (mới nhất ở trên). Cùng đầu vào cho cùng đầu ra, từng byte.
 
 Mã thoát: 0 = xong / đã cập nhật · 1 = `--check` thấy sổ cũ · 2 = lỗi đầu vào (gồm file không phải UTF-8).
@@ -176,7 +176,7 @@ def sprints_block(ledger: Path, base: Path, pattern: str) -> list:
     timeline = {cell(r, "column.code"): r for r in table_under(text, "heading.timeline")}
     rows = []
     for folder in sorted(p for p in base.glob(pattern.replace("{date}", "*").replace("{slug}", "*")) if p.is_dir()):
-        state = next((folder / n for n in ("PROGRESS.md", "SPRINT.md") if (folder / n).is_file()), None)
+        state = next((folder / n for n in c.STATE_DOC_NAMES if (folder / n).is_file()), None)
         if state is None:
             continue
         data = _frontmatter(state)

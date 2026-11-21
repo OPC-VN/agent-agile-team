@@ -1,8 +1,8 @@
 ---
-id: SPR-02-sprint
-doc: sprint
+id: SPR-03-task
+doc: task
 title: Sprint goal title
-sprint: SPR-02
+sprint: SPR-03
 request: RQ-002
 feature: FS-001
 status: in_progress
@@ -25,7 +25,7 @@ created: 2026-01-20
 updated: 2026-01-20
 ---
 
-# Tên mục tiêu sprint — Sprint gộp (SPRINT)
+# Tên mục tiêu sprint — Việc đơn lẻ (TASK)
 
 <!-- CHỈ dùng cho cỡ RẤT NHỎ: đổi chữ hoặc một chỗ, không đổi hành vi hay quyền, lời giao đã nêu rõ kết quả,
      không cần người quyết gì. "Có kế hoạch rồi làm cho hoàn thiện": hai phần — Kế hoạch (mục tiêu, tiêu chí xong

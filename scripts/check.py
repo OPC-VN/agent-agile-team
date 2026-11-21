@@ -112,9 +112,12 @@ REGISTRY_DOCS = ("requests", "specs", "sprints")
 DOC_KINDS = SPRINT_DOCS + ("feature",) + REGISTRY_DOCS
 KNOWN_NAMES = {
     "SPEC.md": "spec", "PLAN.md": "plan", "PROGRESS.md": "progress", "REPORT.md": "report",
-    "SPRINT.md": "sprint", "REQUESTS.md": "requests", "SPECS.md": "specs", "SPRINTS.md": "sprints",
+    "SPRINT.md": "sprint", "TASK.md": "sprint", "REQUESTS.md": "requests", "SPECS.md": "specs", "SPRINTS.md": "sprints",
 }
 
+# `doc: task` là bí danh của loại `sprint` ở cỡ rất nhỏ (FR4): các nhánh luật `kind == "sprint"` giữ nguyên; giá trị `doc` gốc nằm ở `Doc.doc_name`.
+DOC_ALIASES = {"task": "sprint"}
+DOC_VALUE_BY_FILE = {"SPRINT.md": "sprint", "TASK.md": "task"}  # tên file → giá trị `doc` bắt buộc
 _SPRINT_KEYS = ("id", "doc", "title", "sprint", "request", "feature", "status", "size", "risk", "roles", "created", "updated")
 _GATE1 = ("gate_1", "gate_1_at", "gate_1_quote")
 _GATE2 = ("verdict", "gate_2", "gate_2_at", "gate_2_quote")
@@ -354,7 +357,7 @@ AGENTS_MAX_BYTES = 10 * 1024
 SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", ".tmp"}
 # Thư mục `evidence` cạnh tài liệu sprint là hồ sơ kèm, không phải tài liệu sprint: quét thư mục thì bỏ qua (FR4.1).
 EVIDENCE_DIR = "evidence"
-SPRINT_DOC_NAMES = ("SPEC.md", "PLAN.md", "PROGRESS.md", "REPORT.md", "SPRINT.md")
+SPRINT_DOC_NAMES = ("SPEC.md", "PLAN.md", "REPORT.md") + c.STATE_DOC_NAMES
 OPEN_START, OPEN_END = "<!-- agile:open:start -->", "<!-- agile:open:end -->"  # khối do `index` sinh
 SPAN_HINT = (" — có dấu huyền kề bên: mã nằm trong code span lồng nhau hoặc ngắt dòng? Code span chứa dấu huyền"
              " thì bọc ngoài bằng hai dấu huyền")
@@ -1007,6 +1010,7 @@ class Doc:
     start: int  # số dòng của phần tử đầu tiên trong `raw`
     fm: c.Frontmatter | None = None
     kind: str | None = None
+    doc_name: str | None = None  # giá trị `doc` gốc của frontmatter (`task` khác `kind == "sprint"`)
     defs: list = field(default_factory=list)
     load_findings: list = field(default_factory=list)
 
@@ -1071,11 +1075,15 @@ def load_doc(path: Path) -> Doc:
         if doc.fm is None and not doc.load_findings:
             doc.load_findings.append(Finding(path, 1, "frontmatter-missing", f"{path.name} là tài liệu chuẩn nhưng không có frontmatter"))
         kind = doc.data.get("doc")
+        if isinstance(kind, str):
+            doc.doc_name = kind
+            kind = DOC_ALIASES.get(kind, kind)
         if kind in DOC_KINDS:
             doc.kind = kind
         elif doc.fm is not None and "doc" not in doc.data and path.name in KNOWN_NAMES:
             doc.load_findings.append(Finding(path, 1, "frontmatter-key-missing",
-                                             f"{path.name} là tài liệu chuẩn nhưng frontmatter thiếu khoá 'doc' (doc: {KNOWN_NAMES[path.name]})"))
+                                             f"{path.name} là tài liệu chuẩn nhưng frontmatter thiếu khoá 'doc' "
+                                             f"(doc: {DOC_VALUE_BY_FILE.get(path.name, KNOWN_NAMES[path.name])})"))
         elif doc.fm is not None and "doc" in doc.data:
             doc.load_findings.append(Finding(path, doc.key_line("doc"), "doc-unknown", f"doc: {kind!r} không thuộc {', '.join(DOC_KINDS)}"))
     doc.defs = _definitions(doc)
@@ -1331,7 +1339,7 @@ class Engine:
 
     def locale_folder_rules(self) -> None:
         """Documents of one sprint folder with an explicit `locale` must agree: the folder majority is the reference and
-        the others are flagged. A tie goes to the locale of SPRINT.md, then SPEC.md, then the first file by name."""
+        the others are flagged. A tie goes to the locale of SPRINT.md, then TASK.md, then SPEC.md, then the first file by name."""
         for folder in sorted(self.locales):
             items = sorted(self.locales[folder], key=lambda item: c.display(item[0]))
             counts: dict = {}
@@ -1343,7 +1351,7 @@ class Engine:
                 ref = next(iter(leaders))
             else:
                 by_name = {item[0].name: item[1] for item in items}
-                ref = next((by_name[n] for n in ("SPRINT.md", "SPEC.md") if by_name.get(n) in leaders),
+                ref = next((by_name[n] for n in ("SPRINT.md", "TASK.md", "SPEC.md") if by_name.get(n) in leaders),
                            next(value for _, value, _ in items if value in leaders))
             for path, value, line in items:
                 if value != ref:
@@ -1455,7 +1463,7 @@ class Engine:
         data, kind, path = doc.data, doc.kind, doc.path
         for key in REQUIRED_KEYS[kind]:
             if key not in data:
-                self.add(path, 1, "frontmatter-key-missing", f"doc: {kind} thiếu khoá '{key}'")
+                self.add(path, 1, "frontmatter-key-missing", f"doc: {doc.doc_name or kind} thiếu khoá '{key}'")
         for key in data:
             if key not in KNOWN_KEYS:
                 self.add(path, doc.key_line(key), "frontmatter-key-unknown", f"khoá '{key}' ngoài bảng khoá (templates/README.md mục 3)")
@@ -1501,8 +1509,12 @@ class Engine:
             check_ids("request", "RQ", allow_null=True, allow_list=True)
             check_ids("feature", "FS", allow_null=True, allow_list=True)
             sprint = data.get("sprint")
-            if isinstance(sprint, str) and c.parse_id(sprint) and data.get("id") != f"{sprint}-{kind}":
-                bad("id", f"id: {data.get('id')!r} phải là '{sprint}-{kind}'")
+            doc_value = doc.doc_name or kind
+            if isinstance(sprint, str) and c.parse_id(sprint) and data.get("id") != f"{sprint}-{doc_value}":
+                bad("id", f"id: {data.get('id')!r} phải là '{sprint}-{doc_value}'")
+            expected = DOC_VALUE_BY_FILE.get(path.name)
+            if expected and doc_value != expected:
+                bad("doc", f"doc: {doc_value!r} không khớp tên file {path.name} (phải là doc: {expected})")
             tags = data.get("risk_tags", [])
             if not isinstance(tags, list) or not set(tags) <= RISK_TAGS:
                 bad("risk_tags", f"risk_tags: {tags!r} phải là danh sách con của {sorted(RISK_TAGS)}")
@@ -1875,7 +1887,7 @@ class Engine:
             if not self._has_decision_log(doc, known_models(), unknown):
                 hint = f"; model không có trong bảng tier: {', '.join(sorted(set(unknown)))}" if unknown else ""
                 self.add(doc.path, doc.key_line("gate_2_mode"), "decision-log-missing",
-                         f"Cổng 2 duyệt thay mà {'REPORT' if doc.kind == 'report' else 'SPRINT.md'} không có mục 'Nhật ký quyết định' với dòng đủ ai ký "
+                         f"Cổng 2 duyệt thay mà {'REPORT' if doc.kind == 'report' else doc.path.name} không có mục 'Nhật ký quyết định' với dòng đủ ai ký "
                          f"(nhãn · vai · tier · model có trong bảng tier), bằng chứng và lệnh hoàn tác{hint}")
         elif gate == "gate_1" and doc.kind in ("plan", "sprint"):
             problem = self._session_cap_problem(doc, block)
@@ -1889,7 +1901,7 @@ class Engine:
         `delegation.sessions_cap` là số nguyên khớp N (null hay vắng không hợp lệ), N không vượt công thức theo `size`/`risk` — vượt thì
         Nhật ký quyết định (của file này hoặc tài liệu cùng sprint) phải có dòng 'nâng trần'."""
         cap = self._cap_line(doc)
-        where = "mục 'Ước lượng' của PLAN" if doc.kind == "plan" else "SPRINT.md"
+        where = "mục 'Ước lượng' của PLAN" if doc.kind == "plan" else doc.path.name
         if cap is None or cap < 1:
             return f"Cổng 1 duyệt thay mà {where} không có dòng 'Trần phiên: <số nguyên >= 1>'"
         held = block.get("sessions_cap")
@@ -2120,7 +2132,13 @@ class Engine:
         size = doc.data.get("size")
         if not isinstance(size, str):
             return
-        if doc.kind == "sprint" and size in ("medium", "large"):
+        if doc.kind == "sprint" and doc.path.name == "TASK.md":
+            reason = self._task_md_mismatch(doc, size)
+            folder = doc.path.resolve().parent
+            if reason and folder not in self.size_flagged:  # một lần cho cả thư mục, chung bộ nhớ với luật bốn file ở cỡ rất nhỏ
+                self.size_flagged.add(folder)
+                self.add(doc.path, doc.key_line("size"), "sprint-size-mismatch", reason)
+        elif doc.kind == "sprint" and size in ("medium", "large"):
             self.add(doc.path, doc.key_line("size"), "sprint-size-mismatch",
                      f"SPRINT.md ở cỡ {size} — cỡ vừa/lớn dùng bốn file SPEC · PLAN · PROGRESS · REPORT (method/sizing.md)")
         elif doc.kind in ("spec", "plan", "progress", "report") and size == "tiny":
@@ -2130,6 +2148,36 @@ class Engine:
                 self.add(doc.path, doc.key_line("size"), "sprint-size-mismatch",
                          "cỡ rất nhỏ dùng một file SPRINT.md, không dựng bốn file (method/sizing.md); nâng cỡ lên nhỏ nếu giữ bốn file")
 
+    def _four_part(self, doc: Doc, headings: list) -> bool:
+        """Có tiêu đề cấp 2 **bắt đầu** bằng SPEC/PLAN/PROGRESS (hình bốn phần của `SPRINT.md` cũ)?"""
+        four = tuple(zip(REQUIRED_HEADING_KEYS["sprint"], SPRINT_FOUR))
+        return any(_heading_starts(h, key) for key, _ in four[:3] for h in headings)
+
+    def _task_md_mismatch(self, doc: Doc, size: str) -> str | None:
+        """Lý do `TASK.md` sai hình (hình bốn phần chỉ còn hợp lệ với `SPRINT.md` cũ); `None` khi đúng: cỡ rất nhỏ, hai phần, không có
+        tài liệu sprint nào khác **của cùng sprint** trong thư mục (`templates/sprint/` chứa mẫu của nhiều sprint nên không bị báo)."""
+        try:
+            names = set(os.listdir(doc.path.resolve().parent))
+        except OSError:
+            names = set()
+        mine = doc.data.get("sprint")
+        beside = []
+        for name in ("SPEC.md", "PLAN.md", "PROGRESS.md", "REPORT.md", "SPRINT.md"):
+            if name not in names:
+                continue
+            other = self.doc(doc.path.resolve().parent / name)
+            theirs = other.data.get("sprint") if other is not None else None
+            if mine is None or theirs is None or theirs == mine:  # cùng sprint (hoặc không rõ): thư mục mẫu chứa nhiều sprint khác nhau thì không bị báo
+                beside.append(name)
+        if beside:
+            return f"TASK.md đứng cạnh {', '.join(beside)} — một thư mục sprint chỉ có một hình: TASK.md, hoặc SPRINT.md, hoặc bốn file (method/sizing.md)"
+        if size != "tiny":
+            return f"TASK.md ở cỡ {size} — chỉ cỡ rất nhỏ dùng TASK.md; cỡ nhỏ dùng SPRINT.md, cỡ vừa/lớn dùng bốn file (method/sizing.md)"
+        headings = [NUMBERING.sub("", doc.raw[i][3:].strip()).casefold() for i, line in enumerate(doc.masked) if line.startswith("## ")]
+        if self._four_part(doc, headings):
+            return "TASK.md có bốn phần SPEC · PLAN · PROGRESS · REPORT — TASK.md chỉ có hai phần Kế hoạch · Kết quả; việc bốn phần dùng SPRINT.md"
+        return None
+
     def required_headings(self, doc: Doc, headings: list) -> tuple:
         """Cặp (khoá nhãn, chữ tiếng Việt cho lời báo) của tiêu đề bắt buộc; `SPRINT.md` cỡ rất nhỏ (hoặc cỡ chưa rõ) nhận hai phần "Kế hoạch" · "Kết quả" hoặc bốn phần cũ
         (nhận ra bốn phần khi có tiêu đề **bắt đầu** bằng SPEC/PLAN/PROGRESS, không phải chỉ chứa chữ đó)."""
@@ -2137,9 +2185,9 @@ class Engine:
             return tuple(zip(REQUIRED_HEADING_KEYS[doc.kind], REQUIRED_HEADINGS[doc.kind]))
         four = tuple(zip(REQUIRED_HEADING_KEYS["sprint"], SPRINT_FOUR))
         size = doc.data.get("size")
-        if size in ("small", "medium", "large"):
+        if size in ("small", "medium", "large") and doc.path.name != "TASK.md":  # TASK.md luôn hai phần: cỡ sai đã có luật riêng
             return four
-        four_part = any(_heading_starts(h, key) for key, _ in four[:3] for h in headings)  # bắt đầu bằng SPEC/PLAN/PROGRESS (đã bỏ số thứ tự)
+        four_part = self._four_part(doc, headings)  # bắt đầu bằng SPEC/PLAN/PROGRESS (đã bỏ số thứ tự)
         return four if four_part else tuple(zip(SPRINT_TINY_KEYS, SPRINT_TINY_HEADINGS))
 
     # -- tiêu đề --
@@ -2515,7 +2563,7 @@ class Engine:
             return found
         pattern = cfg["paths"]["sprint_dir"].replace("{date}", "*").replace("{slug}", "*")
         for folder in sorted(p for p in base.glob(pattern) if p.is_dir()):
-            for name in ("PROGRESS.md", "SPRINT.md"):
+            for name in c.STATE_DOC_NAMES:
                 path = folder / name
                 if not path.is_file():
                     continue
@@ -2523,7 +2571,7 @@ class Engine:
                 sprint = doc.data.get("sprint") if doc is not None and doc.kind in ("progress", "sprint") else None
                 if isinstance(sprint, str) and (c.parse_id(sprint) or ("", 0))[0] == "SPR":
                     found.append((sprint, doc))
-                break  # như index.py: PROGRESS.md trước, không có thì SPRINT.md
+                break  # như index.py: PROGRESS.md trước, rồi SPRINT.md, rồi TASK.md
         return found
 
 

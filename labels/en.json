@@ -69,6 +69,7 @@
   "heading.h1_progress": "Progress (PROGRESS)",
   "heading.h1_report": "Report (REPORT)",
   "heading.h1_sprint": "Combined sprint (SPRINT)",
+  "heading.h1_task": "Single task (TASK)",
   "heading.h1_brief": "Requester brief",
   "heading.h1_requests": "Request ledger (REQUESTS)",
   "heading.h1_specs": "Feature index (SPECS)",

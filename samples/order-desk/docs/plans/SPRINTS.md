@@ -2,8 +2,8 @@
 id: SPRINTS
 doc: sprints
 title: Sprint ledger
-next_id: SPR-05
-updated: 2026-01-23
+next_id: SPR-06
+updated: 2026-01-24
 ---
 
 # Sổ sprint (SPRINTS)
@@ -30,6 +30,7 @@ Sổ SPRINTS ghi mỗi dòng một **sprint** (SPR), mới nhất ở trên:
 
 | Mã | Mở | Đóng | Mục tiêu | Kết luận | Thư mục |
 |---|---|---|---|---|---|
+| SPR-05 | 2026-01-24 | 2026-01-24 | Sửa chữ gợi ý ô mã đơn trống ở màn hình tra đơn | Đạt | [2026-01-24-fix-empty-order-hint](2026-01-24-fix-empty-order-hint/) |
 | SPR-04 | 2026-01-23 | 2026-01-23 | Đổi chữ nút Gửi thành Gửi đơn ở form tạo đơn | Đạt | [2026-01-23-rename-submit-button](2026-01-23-rename-submit-button/) |
 | SPR-03 | 2026-01-22 |  | Tra đơn bỏ khoảng trắng thừa quanh mã đơn |  | [2026-01-22-trim-order-code](2026-01-22-trim-order-code/) |
 | SPR-02 | 2026-01-20 |  | Sửa chính tả câu báo không tìm thấy |  | [2026-01-20-fix-not-found-text](2026-01-20-fix-not-found-text/) |

@@ -21,6 +21,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 TEMPLATES = REPO / "templates"
 CONFIG_NAME = ".agile.json"
+# Tên file trạng thái của một sprint (đọc theo thứ tự này): PROGRESS.md trước, rồi SPRINT.md (cũ / nhỏ), rồi TASK.md (rất nhỏ).
+# `scripts/agile_state.py` (file sàn cứng, nạp `_common` trễ) giữ bộ ba tên viết thẳng; `tests/test_task_doc.py` so nó với hằng này.
+STATE_DOC_NAMES: tuple = ("PROGRESS.md", "SPRINT.md", "TASK.md")
 
 DEFAULT_CONFIG: dict = {
     "schema": 1,

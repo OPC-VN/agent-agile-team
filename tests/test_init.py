@@ -96,9 +96,9 @@ def test_sprint_rerun_is_idempotent_and_next_sprint_gets_next_id(tmp_path):
     assert files_of(tmp_path) == before
     new_sprint(tmp_path, "export-csv", "--tiny")
     folder = tmp_path / "docs" / "plans" / f"{DATE}-export-csv"
-    assert [p.name for p in folder.iterdir()] == ["SPRINT.md"]
-    data = c.parse_frontmatter((folder / "SPRINT.md").read_text(encoding="utf-8")).data
-    assert data["id"] == "SPR-02-sprint" and data["size"] == "tiny" and data["status"] == "drafting"
+    assert [p.name for p in folder.iterdir()] == ["TASK.md"]
+    data = c.parse_frontmatter((folder / "TASK.md").read_text(encoding="utf-8")).data
+    assert data["id"] == "SPR-02-task" and data["size"] == "tiny" and data["status"] == "drafting"
     ledger = (tmp_path / "docs" / "plans" / "SPRINTS.md").read_text(encoding="utf-8")
     assert ledger.index("| SPR-02 |") < ledger.index("| SPR-01 |"), "mới nhất ở trên"
 
@@ -243,10 +243,10 @@ def h2_of(path: Path) -> list:
 def test_tiny_scaffold_is_the_two_part_template(tmp_path):
     assert new_sprint(tmp_path, "fix-typo", "--tiny") == 0
     folder = tmp_path / "docs" / "plans" / f"{DATE}-fix-typo"
-    assert [p.name for p in folder.iterdir()] == ["SPRINT.md"]
-    assert h2_of(folder / "SPRINT.md") == ["Kế hoạch", "Kết quả"]
-    data = c.parse_frontmatter((folder / "SPRINT.md").read_text(encoding="utf-8")).data
-    assert data["doc"] == "sprint" and data["size"] == "tiny" and data["status"] == "drafting"
+    assert [p.name for p in folder.iterdir()] == ["TASK.md"]
+    assert h2_of(folder / "TASK.md") == ["Kế hoạch", "Kết quả"]
+    data = c.parse_frontmatter((folder / "TASK.md").read_text(encoding="utf-8")).data
+    assert data["doc"] == "task" and data["size"] == "tiny" and data["status"] == "drafting"
     assert [f.render() for f in check.check_paths([tmp_path]).findings if f.level in ("Chặn", "Phải sửa")] == []
 
 
@@ -261,9 +261,9 @@ def test_size_small_scaffold_is_one_sprint_file_with_four_parts(tmp_path):
 
 
 def test_tiny_scaffold_has_decision_log_bullet_in_result_part(tmp_path):
-    """RQ-109: cỡ rất nhỏ cũng có thể được ký thay, nên mẫu `SPRINT-tiny.md` có sẵn mục Nhật ký quyết định (như `SPRINT.md`) ở phần Kết quả."""
+    """RQ-109: cỡ rất nhỏ cũng có thể được ký thay, nên mẫu `TASK.md` có sẵn mục Nhật ký quyết định (như `SPRINT.md`) ở phần Kết quả."""
     assert new_sprint(tmp_path, "fix-typo", "--tiny") == 0
-    lines = (tmp_path / "docs" / "plans" / f"{DATE}-fix-typo" / "SPRINT.md").read_text(encoding="utf-8").splitlines()
+    lines = (tmp_path / "docs" / "plans" / f"{DATE}-fix-typo" / "TASK.md").read_text(encoding="utf-8").splitlines()
     result_at = next(i for i, line in enumerate(lines) if line.startswith("## ") and "Kết quả" in line)
     log_at = [i for i, line in enumerate(lines) if line.startswith("- **Nhật ký quyết định:**")]
     assert len(log_at) == 1 and log_at[0] > result_at
@@ -273,7 +273,7 @@ def test_tiny_scaffold_has_decision_log_bullet_in_result_part(tmp_path):
 def test_size_tiny_alone_equals_tiny_flag(tmp_path):
     assert new_sprint(tmp_path, "fix-typo", "--size", "tiny") == 0
     folder = tmp_path / "docs" / "plans" / f"{DATE}-fix-typo"
-    assert [p.name for p in folder.iterdir()] == ["SPRINT.md"] and h2_of(folder / "SPRINT.md") == ["Kế hoạch", "Kết quả"]
+    assert [p.name for p in folder.iterdir()] == ["TASK.md"] and h2_of(folder / "TASK.md") == ["Kế hoạch", "Kết quả"]
 
 
 def test_tiny_with_another_size_is_input_error(tmp_path):
