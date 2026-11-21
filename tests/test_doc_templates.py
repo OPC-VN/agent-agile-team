@@ -214,6 +214,16 @@ def test_templates_roles_have_gate_delegate(name):
     assert re.search(r"^  gate-delegate: \[4, [\w-]+\]$", roles_block(read(name)), flags=re.M)
 
 
+def test_task_template_has_no_gate_delegate_by_decision():
+    """Decision 22/11 (Advisor, FR1.6 narrowed to 'from the small size up'): the tiny-size template TASK.md has only three
+    roles and NO gate-delegate. The tiny size has no gate of its own (Gate 1 is the user's instruction, Gate 2 merges with the
+    closing message), and a single file has no cross-file label check to feed. If this is ever reversed, add the key here too."""
+    roles = roles_block(read("TASK.md"))
+    keys = re.findall(r"^  ([\w-]+): \[", roles, flags=re.M)
+    assert keys == ["analyst", "implementer", "tech-reviewer"], keys
+    assert "gate-delegate" not in roles
+
+
 def test_new_label_keys_exist_in_vi_and_en():
     vi = json.loads((LABELS / "vi.json").read_text(encoding="utf-8"))
     en = json.loads((LABELS / "en.json").read_text(encoding="utf-8"))
