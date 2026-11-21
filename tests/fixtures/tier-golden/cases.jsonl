@@ -12,3 +12,5 @@
 {"id":"c12","kind":"snapshot","snapshot":"corrupt"}
 {"id":"c13","kind":"snapshot","snapshot":"stale"}
 {"id":"c14","kind":"snapshot","snapshot":"missing"}
+{"id":"c15","role":"implementer","vendor":"claude","tier":"03"}
+{"id":"c16","role":"tech-reviewer","vendor":"claude","tier":"04"}

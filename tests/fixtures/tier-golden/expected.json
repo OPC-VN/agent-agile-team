@@ -12,5 +12,7 @@
   "c11": {"status": "error", "code": "tier_reserved_human_only", "note": "tier 5 không truyền tier: tier mặc định của vai = 5"},
   "c12": {"status": "error", "code": "snapshot_unreadable"},
   "c13": {"status": "error", "code": "snapshot_stale", "note": "băm đầu vào không còn khớp"},
-  "c14": {"status": "error", "code": "snapshot_missing"}
+  "c14": {"status": "error", "code": "snapshot_missing"},
+  "c15": {"status": "ok", "tier": 3, "model": "fake-claude-t3", "effort": 3, "note": "tier \"03\" = 3 (Node: Number(raw), khóa là String(n))"},
+  "c16": {"status": "ok", "tier": 4, "model": "fake-claude-t4", "effort": 3}
 }
