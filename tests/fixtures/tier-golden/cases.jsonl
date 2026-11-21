@@ -6,3 +6,9 @@
 {"id":"c06","role":"researcher","vendor":"claude","tier":"T1"}
 {"id":"c07","role":"unknown-role","vendor":"claude"}
 {"id":"c08","role":"advisor","vendor":"claude","tier":9}
+{"id":"c09","role":"advisor","vendor":"antigravity","effort":5}
+{"id":"c10","role":"advisor","vendor":"claude","effort":5}
+{"id":"c11","role":"human-arbiter","vendor":"claude"}
+{"id":"c12","kind":"snapshot","snapshot":"corrupt"}
+{"id":"c13","kind":"snapshot","snapshot":"stale"}
+{"id":"c14","kind":"snapshot","snapshot":"missing"}

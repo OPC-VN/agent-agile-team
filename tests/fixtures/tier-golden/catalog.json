@@ -10,6 +10,7 @@
     "implementer": {"group": "executor", "tier_default": 2, "tier_range": [2, 3]},
     "tech-reviewer": {"group": "verifier", "tier_default": 3, "tier_range": [3, 4]},
     "advisor": {"group": "advisor", "tier_default": 4, "tier_range": [3, 4]},
+    "human-arbiter": {"group": "advisor", "tier_default": 5, "tier_range": [5, 5]},
     "python-reviewer": {"group": "verifier", "inherits": "tech-reviewer"}
   }
 }

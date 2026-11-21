@@ -8,5 +8,6 @@
     "4": {"purpose": "arbiter-thinking", "effort": 3, "models": {"claude": "fake-claude-t4", "codex": "fake-codex-t4", "antigravity": "fake-agy-t4"}},
     "5": {"purpose": "reserved-human-only", "effort": 3, "models": {}}
   },
+  "fallback": {"antigravity": "clamp_to_max"},
   "known": {"claude": ["fake-claude-old"], "codex": [], "antigravity": []}
 }
