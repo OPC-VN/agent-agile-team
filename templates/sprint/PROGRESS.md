@@ -18,6 +18,7 @@ roles:
   qa: [2, agent-f]
   business-reviewer: [4, agent-c]
   tech-reviewer: [3, agent-d]
+  gate-delegate: [4, agent-g]
 created: 2026-01-15
 updated: 2026-01-15
 links:
@@ -35,6 +36,18 @@ links:
 
 > **Kết luận:** <!-- MỘT câu bằng lời thường, viết lại mỗi lần cập nhật: xong bao nhiêu việc (số đếm đúng), vướng gì, vòng kiểm định thứ mấy; không dùng mã trần, mã nào nhắc thì kèm tên. -->
 > 1/2 việc Đạt; chưa có vướng mắc; chưa vào vòng kiểm định.
+
+## Tiếp nối
+
+<!-- Biển chỉ đường cho người hay agent mở sprint giữa chừng, kể cả khi phiên trước đứt. Mục tuỳ chọn, `check` không đòi.
+     Viết lại mỗi lần cập nhật Kết luận; nhật ký (mục 2) là lịch sử, khối này chỉ là hiện tại. -->
+
+- **Đọc theo thứ tự:** `SPEC.md` → `PLAN.md` → mục 1 và mục 3 dưới đây → `REPORT.md` nếu đã có.
+- **Nguồn sự thật:** SPEC thắng PLAN, PLAN thắng PROGRESS; sprint đã đóng thì REPORT thắng PROGRESS; đã đẩy hoặc đã gộp thì Git thắng mọi file.
+- **Đang ở:** nhánh `sprint/spr-01`, thư mục làm việc `<đường thư mục>`, commit `<hash7>`; TK1 Đạt, TK2 chưa chạy.
+- **Việc kế:** TK2 (màn hình tra cứu); lệnh đầu: `pytest tests/test_orders.py -q` để thấy nền còn xanh.
+- **Đừng làm lại:** TK1 đã Đạt và qua review; không viết lại hàm tra cứu.
+- **Bẫy môi trường mới gặp:** Không có.
 
 ## 1. Bảng trạng thái việc
 

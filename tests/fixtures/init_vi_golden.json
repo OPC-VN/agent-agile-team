@@ -1,20 +1,20 @@
 {
  "high": {
   ".agile.json": "60707140acb59cfecebe8488d019981e9e54a26598530eed37117b06ca5e2622",
-  "docs/plans/2026-03-02-order-lookup/PLAN.md": "fc7ac2579eb34ebc7f3993444ad753cf54d231ecd9903b2ff5045c0556fa8f09",
-  "docs/plans/2026-03-02-order-lookup/PROGRESS.md": "9cf1181425eb64493799cbf46ba4c9d154772bfc8286df9824a8beab9e7f9c99",
-  "docs/plans/2026-03-02-order-lookup/REPORT.md": "45b998abcb4814134c053a4faa85b603d79652637021c1295d488ca983dedd4e",
-  "docs/plans/2026-03-02-order-lookup/SPEC.md": "28bf571de9ce9b4172f892a7af6b5d5344c82525bb31782c632bf3872ac00d12",
+  "docs/plans/2026-03-02-order-lookup/PLAN.md": "5816a20d04d92e6d0cb8ab5edb62bda54589fed4bcbbfc034a5889300cafbc55",
+  "docs/plans/2026-03-02-order-lookup/PROGRESS.md": "7e0cca10d6d7b3118e0c6a5a7726e8457ec92d4370dd645eb6c2dd06ad28f05d",
+  "docs/plans/2026-03-02-order-lookup/REPORT.md": "d3ec29a010d4d323da708421a4521d6c7f86f214a58574ae89cd6c784f235fd6",
+  "docs/plans/2026-03-02-order-lookup/SPEC.md": "d0cac576cf602a938f46c80e10b9810cb3190675bdcb0b07061d6b0e00a45092",
   "docs/plans/REQUESTS.md": "32a4ea617e398bc47b26de3366fc6ecd50043a47bce20dd15875a88ccd199700",
   "docs/plans/SPRINTS.md": "354ec872c45a368433689f5d1c6d9be8a760c4c456b3edcf1b099fa3b0957daa",
   "docs/specs/SPECS.md": "ada5479d830b131f0eb00512d6efbb3edcf9a52e4f6e032bac506ac53633d6be"
  },
  "large": {
   ".agile.json": "60707140acb59cfecebe8488d019981e9e54a26598530eed37117b06ca5e2622",
-  "docs/plans/2026-03-02-order-lookup/PLAN.md": "a8b7c827e682ae9961b8b07f6294d6928f48d819bb0fe817a385a6ce1481a30e",
-  "docs/plans/2026-03-02-order-lookup/PROGRESS.md": "4429bc6a7c0fed8d223804a5b82a7f8ed76b3cb2879c5c6214d33cc2d9c84d1a",
-  "docs/plans/2026-03-02-order-lookup/REPORT.md": "78bf853df4e9f91a49e2a99806b226e714f310d93e94e943b00ec3b2ff5d5d8e",
-  "docs/plans/2026-03-02-order-lookup/SPEC.md": "2f9d40f34548b16affeb37657fcf7f0edc80ba48a5a854f18342277801f81217",
+  "docs/plans/2026-03-02-order-lookup/PLAN.md": "6d04bb25833320320f643ee5e26f97870df4db75021fef2fff4946954d770f12",
+  "docs/plans/2026-03-02-order-lookup/PROGRESS.md": "10f72dc9aa4e58548717970ceae4261cc719bdba3011f8a7eecdf942d79ee521",
+  "docs/plans/2026-03-02-order-lookup/REPORT.md": "bb1b54e49469a3621d2e469b20cd7b5866c2283add9d043e1eb598cd139b8e86",
+  "docs/plans/2026-03-02-order-lookup/SPEC.md": "353b171e8651a14bf2409119b918ce115d7b6ec7eaeba5a5b05f1e7555bb9aaf",
   "docs/plans/REQUESTS.md": "32a4ea617e398bc47b26de3366fc6ecd50043a47bce20dd15875a88ccd199700",
   "docs/plans/SPRINTS.md": "354ec872c45a368433689f5d1c6d9be8a760c4c456b3edcf1b099fa3b0957daa",
   "docs/specs/SPECS.md": "ada5479d830b131f0eb00512d6efbb3edcf9a52e4f6e032bac506ac53633d6be"
@@ -27,27 +27,27 @@
  },
  "medium": {
   ".agile.json": "60707140acb59cfecebe8488d019981e9e54a26598530eed37117b06ca5e2622",
-  "docs/plans/2026-03-02-order-lookup/PLAN.md": "de39d1a55631b44eabea194116a3ded705212041554a1973e6457c05ee126ce5",
-  "docs/plans/2026-03-02-order-lookup/PROGRESS.md": "d1ecbf049cbb79b8b25f8470db9aff1bdd897971a59d97060c2e55ffc0390aaa",
-  "docs/plans/2026-03-02-order-lookup/REPORT.md": "2780096204bba6bb0184aeadc82e465853f5a25725874c3090d2a5b2fc494a3e",
-  "docs/plans/2026-03-02-order-lookup/SPEC.md": "21e5578f89b0c95686a17a3d1ecff69844b21c0d863ddadd9d8d963de9ad72ba",
+  "docs/plans/2026-03-02-order-lookup/PLAN.md": "b076bf6376d04041c271183cb4b588a0809e0a171d5969c7e95215e95c98ef3f",
+  "docs/plans/2026-03-02-order-lookup/PROGRESS.md": "bb607ceabbc93a938bab0819d13b84d1e9e86e2af4e857c1e901920b2e9854fb",
+  "docs/plans/2026-03-02-order-lookup/REPORT.md": "0a7b2d231e99a0c1e5bbb6d5b5f40bfc173c233d8bbfbf51cf4795beda68e91a",
+  "docs/plans/2026-03-02-order-lookup/SPEC.md": "50f352a78240e5184fad3c807f39802d1d473cb46eab2ee09f1f2cfd489fbcd8",
   "docs/plans/REQUESTS.md": "32a4ea617e398bc47b26de3366fc6ecd50043a47bce20dd15875a88ccd199700",
   "docs/plans/SPRINTS.md": "354ec872c45a368433689f5d1c6d9be8a760c4c456b3edcf1b099fa3b0957daa",
   "docs/specs/SPECS.md": "ada5479d830b131f0eb00512d6efbb3edcf9a52e4f6e032bac506ac53633d6be"
  },
  "reqfeat": {
   ".agile.json": "60707140acb59cfecebe8488d019981e9e54a26598530eed37117b06ca5e2622",
-  "docs/plans/2026-03-02-order-lookup/PLAN.md": "9649221429d552c93e6587d413050cbb38b35bfa5c26c944f306575e6109753d",
-  "docs/plans/2026-03-02-order-lookup/PROGRESS.md": "bb5b2f32c390d4fd0d4166d7d6d28608cfa741ded05bf606ad30d78127d85e64",
-  "docs/plans/2026-03-02-order-lookup/REPORT.md": "c34d237ff1b3678454bc893669270755b51fb8cbf4de395d10e9f6eb6fc4534b",
-  "docs/plans/2026-03-02-order-lookup/SPEC.md": "46ad006467b90c9464eeba7b49c5531f532872e44c5d5ee045443284448f18db",
+  "docs/plans/2026-03-02-order-lookup/PLAN.md": "1521d2ff6a42e7e153bbdb7fefe64480462b38b216ed160383cfbda0af76843b",
+  "docs/plans/2026-03-02-order-lookup/PROGRESS.md": "475355c65204c47e839b915a05bcd9787b4fa580b57449155d3d3a09585ebe23",
+  "docs/plans/2026-03-02-order-lookup/REPORT.md": "7a9a98fb2385c5212638c47c91bef61007868782451006bc5619bfa2d0f7b26c",
+  "docs/plans/2026-03-02-order-lookup/SPEC.md": "b4903c61710fc8ffe7727326eea35171408a49b41dc6b1e00b2b01d5b35922d5",
   "docs/plans/REQUESTS.md": "32a4ea617e398bc47b26de3366fc6ecd50043a47bce20dd15875a88ccd199700",
   "docs/plans/SPRINTS.md": "354ec872c45a368433689f5d1c6d9be8a760c4c456b3edcf1b099fa3b0957daa",
   "docs/specs/SPECS.md": "ada5479d830b131f0eb00512d6efbb3edcf9a52e4f6e032bac506ac53633d6be"
  },
  "small": {
   ".agile.json": "60707140acb59cfecebe8488d019981e9e54a26598530eed37117b06ca5e2622",
-  "docs/plans/2026-03-02-order-lookup/SPRINT.md": "ee4b1ebf2efb7ba0182f302d4e3bd6a01a54c09ae308353b0998251f91596d04",
+  "docs/plans/2026-03-02-order-lookup/SPRINT.md": "63999ba19ad1e1b17efca7fc833322cb208c491605f101196e513c0bfa6be39a",
   "docs/plans/REQUESTS.md": "32a4ea617e398bc47b26de3366fc6ecd50043a47bce20dd15875a88ccd199700",
   "docs/plans/SPRINTS.md": "354ec872c45a368433689f5d1c6d9be8a760c4c456b3edcf1b099fa3b0957daa",
   "docs/specs/SPECS.md": "ada5479d830b131f0eb00512d6efbb3edcf9a52e4f6e032bac506ac53633d6be"

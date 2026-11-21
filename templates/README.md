@@ -162,6 +162,8 @@ Mẫu SPEC và PLAN còn có mục `## Tóm tắt cho người không chuyên` (
 
 Mục không có nội dung vẫn giữ tiêu đề và ghi "Không có." — không xoá tiêu đề.
 
+**Mục tuỳ chọn và cột thêm của mẫu sprint** (`check` không đòi mục tuỳ chọn; hồ sơ cũ thiếu chúng hoặc có bảng ít cột vẫn hợp lệ). Hai mục tuỳ chọn: `## Tiếp nối` ở PROGRESS, ngay dưới Kết luận, sáu ô *Đọc theo thứ tự* · *Nguồn sự thật* · *Đang ở* · *Việc kế* · *Đừng làm lại* · *Bẫy môi trường mới gặp* (cỡ nhỏ: `SPRINT.md` giữ ba dòng *Đang ở* · *Việc kế* · *Đừng làm lại* ở phần PROGRESS); `## Sau Cổng 2` ở PLAN, trước Rủi ro, chỉ khi có bước ghi thật sau Cổng 2 (không có dấu hiệu thì xoá mục). Ô và cột thêm: SPEC mục Bối cảnh có dòng `Kế thừa:` ("Không có." khi trống); bảng `SC` có sáu cột Mã · Tiêu chí · Cách đo · Ngưỡng · Môi trường đo · Khi không đo được; bảng `CQ` thêm cột Hệ quả cho thực thi (trước cột Người quyết); PLAN mục Ràng buộc chung có ô *Môi trường thực thi*; bảng `VR` của REPORT thêm ba cột Môi trường · Mốc · Thời điểm (đặt trước cột Bằng chứng, tiêu đề cột Kết quả giữ nguyên chữ vì luật `vr-result-not-pass` đọc cột đó theo tên); khối `roles` của mọi mẫu có khoá `gate-delegate`. Nhãn của các ô và cột này nằm ở `labels/vi.json` và `labels/en.json`.
+
 PLAN: mục `Mục tiêu` có ba dòng nhãn của mẫu (luật `plan-goal-block`, Ghi chú khi thiếu); số `TK` = thứ tự làm (luật `task-order`, `task-gap`).
 
 **Khi cổng là `delegated`:** PLAN (Cổng 1), REPORT (Cổng 2) hoặc `SPRINT.md` có thêm mục `## Bản ghi duyệt thay` với ba dòng nhãn `Phương án chọn:` · `Phương án bị loại:` (mỗi phương án một lý do) · `Nếu sai thì tốn gì:`, kèm đường tới lời cấp. SPEC không đòi mục này (bản ghi của Cổng 1 nằm ở PLAN). `check` kiểm bằng luật `gate-delegation-invalid`.

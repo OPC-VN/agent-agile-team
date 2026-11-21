@@ -16,6 +16,7 @@ gate_1_quote: null
 roles:
   analyst: [3, agent-a]
   business-reviewer: [4, agent-c]
+  gate-delegate: [4, agent-g]
 created: 2026-01-15
 updated: 2026-01-15
 links:
@@ -46,6 +47,7 @@ links:
 
 - Yêu cầu gốc: RQ-001 (tra trạng thái đơn hàng). Tính năng chạm tới: FS-001 (tra cứu đơn hàng).
 - Hiện trạng: <!-- điều đang sai hoặc đang thiếu, kèm số đo trước sprint + lệnh đo nếu có -->
+- **Kế thừa:** Không có. <!-- sprint trước cùng RQ/FS (trỏ REPORT của nó) · quyết định còn hiệu lực · bài học (LN) · nợ mang sang (RQ-NNN); không có thì ghi "Không có." -->
 
 ### 1.1 Ràng buộc và lưu ý do người giao
 
@@ -76,7 +78,9 @@ SPEC có 1 **user story** (US):
 <!-- Mỗi FR trỏ ít nhất một US. Một FR một hành vi: nhiều phản ứng khác nhau thì tách thành nhiều FR. Mỗi kịch bản
      là một FRx.y viết dạng KHI … THÌ …; kịch bản là thứ đem đi kiểm.
      Delta so với spec sống: FR đổi hành vi đang có ghi "(sửa FS-001/FR1.2)", FR bỏ hành vi đang có ghi
-     "(bỏ FS-001/FR1.2)" ở cuối dòng; FR không ghi gì là Thêm. Bước 5 gộp vào spec sống theo đúng delta này. -->
+     "(bỏ FS-001/FR1.2)" ở cuối dòng; FR không ghi gì là Thêm. Bước 5 gộp vào spec sống theo đúng delta này.
+     FR mức Nên có, hoặc phụ thuộc một CQ còn mở, có thêm một kịch bản KHI trượt THÌ giữ gì, ghi gì (ví dụ: KHI CQ1 chưa
+     có câu trả lời THÌ giữ hành vi hiện tại và ghi VR là Chưa chạy), để FR phụ không làm kẹt cả sprint. -->
 
 SPEC có 1 **functional requirement** (FR); mỗi kịch bản KHI … THÌ … là một mã con:
 
@@ -87,13 +91,15 @@ SPEC có 1 **functional requirement** (FR); mỗi kịch bản KHI … THÌ … 
 
 ## 4. Tiêu chí thành công
 
-<!-- Mỗi SC đo được: có lệnh/thao tác và ngưỡng. REPORT sẽ có đúng một hoặc nhiều VR cho mỗi SC. -->
+<!-- Mỗi SC đo được: cột Cách đo ghi lệnh hoặc thao tác chạy được; Ngưỡng là số hoặc điều kiện đạt; Môi trường đo là máy,
+     phiên bản, dữ liệu, quyền cần có; Khi không đo được ghi ai đo và khi nào, hoặc "Chưa chạy" kèm rủi ro RK
+     (không bao giờ ghi Đạt). REPORT sẽ có đúng một hoặc nhiều VR cho mỗi SC. -->
 
 SPEC có 1 **success criterion** (SC):
 
-| Mã | Tiêu chí | Cách đo |
-|---|---|---|
-| SC1 (tra nhanh) | 100% kịch bản FR1 chạy đúng | Bộ test tự động của FR1 xanh |
+| Mã | Tiêu chí | Cách đo | Ngưỡng | Môi trường đo | Khi không đo được |
+|---|---|---|---|---|---|
+| SC1 (tra nhanh) | 100% kịch bản FR1 chạy đúng | `pytest tests/test_orders.py -q` | 0 test hỏng, 0 bỏ qua | máy phát triển, Python 3.12, dữ liệu mẫu | Ghi "Chưa chạy" kèm RK; người có dữ liệu thật đo sau |
 
 ## 5. Ngoài phạm vi
 
@@ -108,9 +114,9 @@ SPEC có 1 **success criterion** (SC):
 
 SPEC có 1 **clarification question** (CQ) cần người dùng trả lời ở Cổng 1:
 
-| Mã | Câu hỏi | Đề xuất | Người quyết · trạng thái |
-|---|---|---|---|
-| CQ1 (phạm vi người xem) | Khách hàng có được tự tra không, hay chỉ nhân viên? | Chỉ nhân viên trong sprint này | người · mở |
+| Mã | Câu hỏi | Đề xuất | Hệ quả cho thực thi | Người quyết · trạng thái |
+|---|---|---|---|---|
+| CQ1 (phạm vi người xem) | Khách hàng có được tự tra không, hay chỉ nhân viên? | Chỉ nhân viên trong sprint này | Chưa có câu trả lời thì làm theo đề xuất; đổi sang khách tự tra thì thêm đăng nhập, ngoài sprint này | người · mở |
 
 - **ASSUMPTION — nguồn dữ liệu:** trạng thái đơn đọc từ hệ thống hiện có, không tạo kho mới.
 

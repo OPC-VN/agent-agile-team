@@ -22,6 +22,7 @@ roles:
   analyst: [3, agent-a]
   implementer: [2, agent-e]
   tech-reviewer: [3, agent-d]
+  gate-delegate: [4, agent-g]
 created: 2026-01-20
 updated: 2026-01-20
 ---
@@ -69,6 +70,9 @@ PLAN có 1 **task** (TK):
 | TK1 (cắt khoảng trắng mã đơn) | Implementer · Tier 2 · model-x · 3 | Đạt | `pytest tests/test_lookup.py` → 1 passed |
 
 - **2026-01-20 10:00 +07** — Implementer thêm bước cắt khoảng trắng; test xanh.
+- **Đang ở:** nhánh `sprint/spr-02`, commit `<hash7>`; TK1 Đạt. <!-- khối Tiếp nối rút gọn: viết lại mỗi lần cập nhật; nguồn sự thật SPEC > PLAN > PROGRESS, đã đóng thì mục 4, đã đẩy hoặc gộp thì Git -->
+- **Việc kế:** đóng sprint; lệnh đầu: `pytest tests/test_lookup.py -q`.
+- **Đừng làm lại:** TK1 đã Đạt; không viết lại hàm cắt khoảng trắng.
 - **Vướng mắc:** Không có.
 - **Sổ phiên con (tuỳ chọn):** Không áp dụng — không giao phiên con. <!-- giao thì điền bảng theo `method/agile.md` mục 6.2 -->
 
