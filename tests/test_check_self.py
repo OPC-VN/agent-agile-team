@@ -164,7 +164,7 @@ def test_author_urls_are_masked_in_any_file(tmp_path):
 def test_author_url_mask_is_narrow(tmp_path, text):
     root = make_repo(tmp_path)
     word = _author_word()
-    owner = check.AUTHOR_REPO_URL.split("/")[1]
+    owner = word + "221"  # tài khoản cá nhân cũ vẫn phải bị quét (repo đã chuyển sang org OPC-VN)
     line = text.format(owner=owner, word=word, site=check.AUTHOR_SITE)
     (root / "skills" / "demo" / "SKILL.md").write_text(f"# Demo\n\n{line}\n", encoding="utf-8")
     hits = [f for f in check.run_self(root, denylist(tmp_path, word)).findings if f.rule == "leak-denylist"]
