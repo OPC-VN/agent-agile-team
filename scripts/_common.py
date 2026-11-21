@@ -25,6 +25,31 @@ CONFIG_NAME = ".agile.json"
 # `scripts/agile_state.py` (file sàn cứng, nạp `_common` trễ) giữ bộ ba tên viết thẳng; `tests/test_task_doc.py` so nó với hằng này.
 STATE_DOC_NAMES: tuple = ("PROGRESS.md", "SPRINT.md", "TASK.md")
 
+# Tên file kèm trong `evidence/` (SPR-35 TK3; FR3): loại → (biểu thức tên MỚI viết hoa, biểu thức tên CŨ), so bằng `re.fullmatch`.
+# Biểu thức cũ có thể khớp cả tên mới (cờ `(?i)`): thứ là "kiểu cũ" khi khớp biểu thức cũ MÀ KHÔNG khớp biểu thức mới.
+# Dạng tên cũ của báo cáo việc là những dạng có thật trong kho (`tk6a-report.md`, `TK3B-report.md`, `TK2-REPORT.md`, `tkP-report.md`).
+EVIDENCE_NAMES: dict = {
+    "gate_verdict": (r"GATE-([12])-VERDICT\.md", r"gate-([12])-verdict\.md"),
+    "task_report": (r"REPORT-TK[0-9]+(?:\.[0-9]+)*[a-z]?\.md", r"(?i)tk[0-9a-z][0-9a-z.]*[-_].*report.*\.md"),
+    "plan_review": (r"PLAN-REVIEW-[a-z0-9]+(?:-[a-z0-9]+)*\.md", r"(?i)plan-review(?:-[0-9a-z]+)*\.md"),
+    "research": (r"RESEARCH-[a-z0-9]+(?:-[a-z0-9]+)*\.md", r"(?i)research(?:[-_].*)?\.md"),
+    "analysis": (r"ANALYSIS\.md", r"(?i)analysis(?:[-_].*)?\.md"),
+    "claims": (r"CLAIMS\.md", r"(?i)claims(?:[-_].*)?\.md"),
+}
+# Tên chuẩn gợi ý trong thông báo `evidence-name` (một mẫu mỗi loại; `<N>`/`<n>`/`<chủ-đề>`/`<vai>` là chỗ điền).
+EVIDENCE_NAME_FORMS: dict = {
+    "gate_verdict": "GATE-<N>-VERDICT.md",
+    "task_report": "REPORT-TK<n>.md",
+    "plan_review": "PLAN-REVIEW-<vai>.md",
+    "research": "RESEARCH-<chủ-đề>.md",
+    "analysis": "ANALYSIS.md",
+    "claims": "CLAIMS.md",
+}
+# Ngày hiệu lực của luật `evidence-name`: hồ sơ có `created` từ ngày này mới bị ghi chú tên kiểu cũ. Trong nhánh là hằng giữ chỗ
+# (không hồ sơ nào là mới); chốt thành ngày thật ở TK19 (SPEC câu hỏi CQ6).
+NAMING_DATE_PLACEHOLDER = "9999-12-31"
+NAMING_EFFECTIVE_DATE = NAMING_DATE_PLACEHOLDER
+
 DEFAULT_CONFIG: dict = {
     "schema": 1,
     "visibility": "private",

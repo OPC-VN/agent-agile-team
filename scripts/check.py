@@ -89,10 +89,11 @@ RULES: dict[str, tuple[str, str]] = {
     "root-junk": (PHAI, "`--self`: file hoặc thư mục ở gốc repo không được theo dõi và không bị ignore"),
     "agents-md-budget": (PHAI, "`--self`: `AGENTS.md` quá 120 dòng hoặc quá 10 KB"),
     "delegation-floor-file": (PHAI, "`delegation.files` nêu file thuộc sàn cứng (`FLOOR_FILES`): không duyệt thay được"),
-    "gate-signer-independence": (PHAI, "người ký cổng trùng nhãn phiên người làm ở tài liệu cùng sprint, tier người ký thấp hơn tier người làm, hoặc cổng đã kết luận thiếu `evidence/gate-<N>-verdict.md` / dòng đầu lệch quote (khối duyệt thay từ ngày hiệu lực)"),
+    "gate-signer-independence": (PHAI, "người ký cổng trùng nhãn phiên người làm ở tài liệu cùng sprint, tier người ký thấp hơn tier người làm, hoặc cổng đã kết luận thiếu `evidence/GATE-<N>-VERDICT.md` (hoặc tên cũ `gate-<N>-verdict.md`) / dòng đầu lệch quote (khối duyệt thay từ ngày hiệu lực)"),
     "decision-log-missing": (PHAI, "REPORT, SPRINT.md hoặc TASK.md có Cổng 2 duyệt thay mới mà thiếu mục 'Nhật ký quyết định' đủ ai ký · model · bằng chứng · lệnh hoàn tác"),
     "session-cap-missing": (PHAI, "PLAN, SPRINT.md hoặc TASK.md có Cổng 1 duyệt thay mới mà thiếu 'Trần phiên: <số>' hoặc sessions_cap không khớp (null/vắng không hợp lệ)"),
     "session-cap-over": (GHI, "chỉ báo (không chặn): 'Trần phiên' vượt công thức cỡ × rủi ro mà không có dòng 'nâng trần' ở Nhật ký quyết định"),
+    "evidence-name": (GHI, "hồ sơ tạo từ ngày hiệu lực của quy ước tên (`NAMING_EFFECTIVE_DATE`) mà `evidence/` còn file đặt tên kiểu cũ (`gate-<N>-verdict.md`, `tk<n>-report.md`, `analysis.md`…): chỉ báo, không đổi mã thoát"),
     "gate-route-floor": (PHAI, "cổng `delegated` (kể cả còn `pending`) mà bảng 'File luật và file sàn cứng sẽ chạm' khai file sàn cứng, hoặc `risk_tags` có `rules` mà `delegation.files` rỗng: chuyển cổng người, trình lời khuyến nghị"),
     "frontmatter-duplicate-key": (PHAI, "khoá `delegation` lặp trong frontmatter (chỉ một phiên điều phối ghi lời cấp)"),
     "decision-owner-missing": (NEN, "CQ/DN của sprint từ ngày chế độ mở mà bảng thiếu cột hoặc ô 'Người quyết'"),
@@ -1259,6 +1260,7 @@ class Engine:
         self.configs: dict = {}
         self.size_flagged: set = set()  # thư mục sprint bốn file đã báo `sprint-size-mismatch` (một lần mỗi thư mục)
         self.locales: dict = {}  # thư mục -> [(đường dẫn, locale hợp lệ, dòng khoá)] của tài liệu khai `locale` tường minh
+        self.evidence_name_flagged: set = set()  # (thư mục evidence, tên file) đã báo `evidence-name` (PROGRESS.md và SPRINT.md chung một thư mục)
         self.delegation_flagged: set = set()  # (tài liệu, khoá lạ) đã báo trong khối `delegation` (khối chung của hai cổng)
         self.report = Report()
         self.routing_records: list[tuple[dict, Path, int]] = []
@@ -1294,6 +1296,7 @@ class Engine:
         if doc.kind is None or doc.fm is None:
             return
         self.frontmatter_rules(doc)
+        self.evidence_name_rule(doc)
         self.locale_rules(doc)
         self.size_rules(doc)
         self.heading_rules(doc)
@@ -1311,6 +1314,33 @@ class Engine:
         if doc.kind in ("report", "sprint"):
             self.verification_rules(doc)
             self.stop_message_rules(doc)
+
+    def evidence_name_rule(self, doc: Doc) -> None:
+        """`evidence-name` (Ghi chú; FR3.3): từ tài liệu trạng thái của hồ sơ MỚI (`created` từ `NAMING_EFFECTIVE_DATE`), báo từng file trong
+        `evidence/` đặt tên kiểu cũ (khớp biểu thức cũ của một loại ở `EVIDENCE_NAMES` mà không khớp biểu thức mới). Đọc thẳng `os.listdir`
+        nên chạy cả khi không có `--include-evidence`. `created` thiếu hay sai định dạng → coi là hồ sơ cũ, không báo."""
+        if doc.path.name not in c.STATE_DOC_NAMES:
+            return
+        created = doc.data.get("created")
+        created = created.isoformat() if hasattr(created, "isoformat") else created
+        if not isinstance(created, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) or created < c.NAMING_EFFECTIVE_DATE:
+            return
+        folder = doc.path.resolve().parent / EVIDENCE_DIR
+        try:
+            names = sorted(os.listdir(folder))
+        except OSError:
+            return
+        for name in names:
+            if not (folder / name).is_file():
+                continue
+            for kind, (new, old) in c.EVIDENCE_NAMES.items():
+                if re.fullmatch(old, name) and not re.fullmatch(new, name):
+                    key = (folder, name)
+                    if key not in self.evidence_name_flagged:
+                        self.evidence_name_flagged.add(key)
+                        self.add(doc.path, doc.key_line("created"), "evidence-name",
+                                 f"evidence/{name} đặt tên kiểu cũ — tên chuẩn {c.EVIDENCE_NAME_FORMS[kind]} (hồ sơ tạo từ {c.NAMING_EFFECTIVE_DATE})")
+                    break
 
     def locale_rules(self, doc: Doc) -> None:
         """Rules for an explicit `locale` key (GC4): a document without the key is never touched by them."""
@@ -1856,15 +1886,16 @@ class Engine:
 
     @staticmethod
     def _verdict_file(doc: Doc, gate: str, once) -> None:
-        """Cổng `delegated` đã kết luận: `evidence/gate-<N>-verdict.md` (cạnh tài liệu) tồn tại và dòng đầu của nó bằng `gate_<N>_quote`
-        (`method/agile.md` mục 6.3). Thiếu hay lệch → một phát hiện ở dòng `gate_<N>_mode`."""
+        """Cổng `delegated` đã kết luận: `evidence/GATE-<N>-VERDICT.md` (hoặc tên cũ `gate-<N>-verdict.md`; cạnh tài liệu) tồn tại và dòng
+        đầu của nó bằng `gate_<N>_quote` (`method/agile.md` mục 6.3). Thiếu hay lệch → một phát hiện ở dòng `gate_<N>_mode`."""
         number = gate[-1]
-        name = f"gate-{number}-verdict.md"
-        verdict = doc.path.resolve().parent / "evidence" / name
+        verdict = _find_verdict(doc.path.resolve().parent / "evidence", int(number))
         line = doc.key_line(f"{gate}_mode")
-        if not verdict.is_file():
-            once(line, f"Cổng {number} duyệt thay mà thiếu evidence/{name} (kết luận của Gate Delegate)")
+        if verdict is None:
+            once(line, f"Cổng {number} duyệt thay mà thiếu evidence/GATE-{number}-VERDICT.md "
+                       f"(hoặc tên cũ evidence/gate-{number}-verdict.md; kết luận của Gate Delegate)")
             return
+        name = verdict.name
         try:
             first = verdict.read_text(encoding="utf-8-sig", errors="replace").split("\n", 1)[0].strip()
         except OSError:
@@ -2573,6 +2604,22 @@ class Engine:
 
 
 # --- Quét đường dẫn ------------------------------------------------------------------------------------
+
+
+def _find_verdict(evidence_dir: Path, number: int) -> Path | None:
+    """Biên bản cổng `number` trong `evidence_dir`: tên mới `GATE-<N>-VERDICT.md` trước, tên cũ `gate-<N>-verdict.md` sau, `None` nếu
+    không có. So tên bằng `os.listdir` (đúng kiểu chữ như trên Linux) chứ không dùng `Path.exists` với tên khác kiểu chữ: ở hệ file
+    không phân biệt hoa thường `exists` coi hai tên là một, kết quả khác CI Linux (FR3.2)."""
+    try:
+        names = os.listdir(evidence_dir)
+    except OSError:
+        return None
+    for pattern in c.EVIDENCE_NAMES["gate_verdict"]:
+        for name in sorted(names):
+            m = re.fullmatch(pattern, name)
+            if m and m.group(1) == str(number) and (evidence_dir / name).is_file():
+                return evidence_dir / name
+    return None
 
 
 def _has_sprint_document(folder: Path) -> bool:
