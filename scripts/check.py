@@ -2670,7 +2670,7 @@ LEAK_EXEMPTION_KINDS = frozenset({"file", "credit-line", "old-skill-id", "model-
                                   "author-field", "author-section", "author-url"})
 # Hai URL của tác giả — chỉ đúng hai chuỗi này được che; `owner/repo` viết tắt, repo khác của cùng tài khoản, tên
 # miền khác có cùng tiền tố, email đều vẫn bị quét.
-AUTHOR_REPO_URL = "github.com/ducnguyen221/agent-agile-team"
+AUTHOR_REPO_URL = "github.com/OPC-VN/agent-agile-team"
 AUTHOR_SITE = "ducnguyen.vn"
 _AUTHOR_URL = re.compile(
     r"(?i)(?<![A-Za-z0-9-])(?:" + re.escape(AUTHOR_REPO_URL) + r"(?![A-Za-z0-9_-])|"

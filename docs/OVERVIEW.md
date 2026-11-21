@@ -288,7 +288,7 @@ thái cổng kèm **câu duyệt nguyên văn** của bạn (hoặc câu `duyệ
 
 Cần **Git** và **Python 3.9+**; ba script không cần cài gói nào (chỉ `pytest` khi muốn chạy bộ test của repo).
 
-**Repo công khai (MIT).** Clone được từ `https://github.com/ducnguyen221/agent-agile-team` mà không cần quyền đặc biệt.
+**Repo công khai (MIT).** Clone được từ `https://github.com/OPC-VN/agent-agile-team` mà không cần quyền đặc biệt.
 
 ### 6.1 Cách nhanh nhất: để agent cài
 
@@ -299,11 +299,11 @@ chép nguyên dòng cuối của `check.py --self` cho bạn.
 ### 6.2 Tự làm — bước chung
 
 ```bash
-git clone https://github.com/ducnguyen221/agent-agile-team ~/agent-agile-team        # macOS, bash
+git clone https://github.com/OPC-VN/agent-agile-team ~/agent-agile-team        # macOS, bash
 ```
 
 ```powershell
-git clone https://github.com/ducnguyen221/agent-agile-team "$HOME\agent-agile-team"  # Windows PowerShell
+git clone https://github.com/OPC-VN/agent-agile-team "$HOME\agent-agile-team"  # Windows PowerShell
 ```
 
 Windows PowerShell 5.1 không mở `~` cho `git`, `python`, `claude` — dùng `"$HOME\agent-agile-team"`. Trên macOS

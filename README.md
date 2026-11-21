@@ -38,13 +38,13 @@ Paste the prompt at the end of [docs/INSTALL.md](docs/INSTALL.md) into your agen
 before touching anything. Manual steps per harness: [`hosts/`](hosts/README.md). Claude Code in short:
 
 ```bash
-git clone https://github.com/ducnguyen221/agent-agile-team ~/agent-agile-team            # macOS, bash
+git clone https://github.com/OPC-VN/agent-agile-team ~/agent-agile-team            # macOS, bash
 claude plugin marketplace add ~/agent-agile-team
 claude plugin install agent-agile-team@agent-agile-team
 ```
 
 ```powershell
-git clone https://github.com/ducnguyen221/agent-agile-team "$HOME\agent-agile-team"      # Windows PowerShell
+git clone https://github.com/OPC-VN/agent-agile-team "$HOME\agent-agile-team"      # Windows PowerShell
 claude plugin marketplace add "$HOME\agent-agile-team"
 claude plugin install agent-agile-team@agent-agile-team
 ```
@@ -88,4 +88,4 @@ licence.
 
 Website: https://ducnguyen.vn · GitHub: [@ducnguyen221](https://github.com/ducnguyen221) · Contact: ducnguyen.ams@gmail.com
 
-Repository: <https://github.com/ducnguyen221/agent-agile-team>.
+Repository: <https://github.com/OPC-VN/agent-agile-team>.

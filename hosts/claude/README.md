@@ -35,7 +35,7 @@ claude plugin marketplace add "$HOME\agent-agile-team"    # Windows PowerShell �
 claude plugin install agent-agile-team@agent-agile-team
 ```
 
-Đã có quyền đọc repo trên GitHub thì thay dòng đầu bằng `claude plugin marketplace add https://github.com/ducnguyen221/agent-agile-team.git`.
+Đã có quyền đọc repo trên GitHub thì thay dòng đầu bằng `claude plugin marketplace add https://github.com/OPC-VN/agent-agile-team.git`.
 Skill hiện với tên có tiền tố `agent-agile-team:` (ví dụ `agent-agile-team:intake`), nên không đè skill cùng tên của plugin khác.
 Claude Code có skill dựng sẵn tên trần `code-review` và `security-review`; gọi tên trần sẽ ra bản dựng sẵn. Skill và
 luật của repo trỏ nhau bằng tên trần (không phụ thuộc harness — `writing-skills` mục 6), nên trên Claude, khi một skill

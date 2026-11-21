@@ -34,13 +34,13 @@ Dán prompt ở cuối [docs/INSTALL.md](docs/INSTALL.md) cho agent; agent làm 
 Tự làm theo từng harness: [`hosts/`](hosts/README.md). Claude Code tóm tắt:
 
 ```bash
-git clone https://github.com/ducnguyen221/agent-agile-team ~/agent-agile-team            # macOS, bash
+git clone https://github.com/OPC-VN/agent-agile-team ~/agent-agile-team            # macOS, bash
 claude plugin marketplace add ~/agent-agile-team
 claude plugin install agent-agile-team@agent-agile-team
 ```
 
 ```powershell
-git clone https://github.com/ducnguyen221/agent-agile-team "$HOME\agent-agile-team"      # Windows PowerShell
+git clone https://github.com/OPC-VN/agent-agile-team "$HOME\agent-agile-team"      # Windows PowerShell
 claude plugin marketplace add "$HOME\agent-agile-team"
 claude plugin install agent-agile-team@agent-agile-team
 ```
@@ -81,4 +81,4 @@ MIT — xem [LICENSE](LICENSE). Nội dung bên thứ ba giữ giấy phép gố
 
 Website: https://ducnguyen.vn · GitHub: [@ducnguyen221](https://github.com/ducnguyen221) · Liên hệ: ducnguyen.ams@gmail.com
 
-Repo: <https://github.com/ducnguyen221/agent-agile-team>.
+Repo: <https://github.com/OPC-VN/agent-agile-team>.
