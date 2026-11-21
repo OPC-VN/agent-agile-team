@@ -268,3 +268,21 @@ def test_agile_state_names_match_common():
                 if isinstance(node, ast.Tuple) and node.elts and all(isinstance(e, ast.Constant) and isinstance(e.value, str) for e in node.elts)
                 and "PROGRESS.md" in {e.value for e in node.elts}]
     assert literals and all(lit == c.STATE_DOC_NAMES for lit in literals), literals
+
+
+def test_task_md_without_frontmatter_is_frontmatter_missing(tmp_path):
+    """A `TASK.md` of an unrelated project is a standard document now: no frontmatter gives Phải sửa, exit 1 (chosen, see CHANGELOG)."""
+    write_lf(tmp_path / "TASK.md", "# Todo\n\nbuy milk\n")
+    report = check.check_paths([tmp_path])
+    found = [f for f in report.findings if f.rule == "frontmatter-missing"]
+    assert [f.level for f in found] == [check.PHAI]
+    assert check.main([str(tmp_path)]) == 1
+
+
+def test_task_md_with_foreign_frontmatter_is_frontmatter_syntax(tmp_path):
+    """Frontmatter outside the supported YAML subset gives Chặn, exit 2 (chosen, see CHANGELOG)."""
+    write_lf(tmp_path / "TASK.md", "---\ntitle: [a, {b: c}]\n---\n\n# T\n")
+    report = check.check_paths([tmp_path])
+    found = [f for f in report.findings if f.rule == "frontmatter-syntax"]
+    assert [f.level for f in found] == [check.CHAN]
+    assert check.main([str(tmp_path)]) == 2

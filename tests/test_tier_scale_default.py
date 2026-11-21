@@ -121,8 +121,9 @@ def test_legacy_doc_without_tier_scale_unchanged(tmp_path, monkeypatch):
     assert _rules(task.parent) == set()
 
 
-def test_tier_label_legacy_note_on_scale2_doc(tmp_path, monkeypatch):
-    task = _legacy_doc(tmp_path, monkeypatch)
+@pytest.mark.parametrize("label", ["T1", "T2", "T3"])
+def test_tier_label_legacy_note_on_scale2_doc(tmp_path, monkeypatch, label):
+    task = _legacy_doc(tmp_path, monkeypatch, label_line=f"Việc này do Implementer {label} làm.")
     assert _rules(task.parent) == {"tier-label-legacy"}
     finding = next(f for f in check.check_paths([task.parent]).findings if f.rule == "tier-label-legacy")
     assert finding.level == check.GHI

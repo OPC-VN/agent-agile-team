@@ -322,7 +322,7 @@ _INPUT_FIELD_LINE = re.compile(r"^(\s*)(?:[-*+]|[0-9]+\.)\s+\*\*" + lab.alternat
 _OUTPUT_FIELD_MARK = re.compile(r"\*\*" + lab.alternation("field.output") + r":\*\*")
 PARALLEL_MARK = "chạy cùng được với"
 
-SPRINT_TINY_HEADINGS = ("Kế hoạch", "Kết quả")  # `SPRINT.md` cỡ rất nhỏ: hai phần; bốn phần cũ vẫn hợp lệ
+SPRINT_TINY_HEADINGS = ("Kế hoạch", "Kết quả")  # cỡ rất nhỏ (`TASK.md`, hay `SPRINT.md` của hồ sơ cũ): hai phần; bốn phần cũ vẫn hợp lệ
 SPRINT_FOUR = REQUIRED_HEADINGS["sprint"]
 
 CODE = re.compile(r"(?<![\w/\-])([A-Z]{2})([0-9]+(?:\.[0-9]+)*)(?![\w\-])")
@@ -1197,6 +1197,13 @@ def _tier_scale(doc: Doc) -> int:
     return 2 if doc.data.get("tier_scale") == 2 else 1
 
 
+def _created_from_effective_date(doc: Doc) -> bool:
+    """`created` đúng định dạng `YYYY-MM-DD` và không trước `NAMING_EFFECTIVE_DATE` (hồ sơ MỚI); thiếu hay sai định dạng → False (hồ sơ cũ)."""
+    created = doc.data.get("created")
+    created = created.isoformat() if hasattr(created, "isoformat") else created
+    return isinstance(created, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) is not None and created >= c.NAMING_EFFECTIVE_DATE
+
+
 def _norm_tier(val: object, scale: int) -> str | None:
     """Chuẩn hoá giá trị tier theo `tier_scale` (1: T1–T3, 2: '1'..'5')."""
     if scale == 2:
@@ -1326,9 +1333,7 @@ class Engine:
         `created` thiếu/sai định dạng/trước ngày hiệu lực → không báo."""
         if _tier_scale(doc) != 2:
             return
-        created = doc.data.get("created")
-        created = created.isoformat() if hasattr(created, "isoformat") else created
-        if not isinstance(created, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) or created < c.NAMING_EFFECTIVE_DATE:
+        if not _created_from_effective_date(doc):
             return
         for idx, line in enumerate(doc.masked):
             match = LEGACY_TIER_LABEL.search(line)
@@ -1342,9 +1347,7 @@ class Engine:
         nên chạy cả khi không có `--include-evidence`. `created` thiếu hay sai định dạng → coi là hồ sơ cũ, không báo."""
         if doc.path.name not in c.STATE_DOC_NAMES:
             return
-        created = doc.data.get("created")
-        created = created.isoformat() if hasattr(created, "isoformat") else created
-        if not isinstance(created, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) or created < c.NAMING_EFFECTIVE_DATE:
+        if not _created_from_effective_date(doc):
             return
         folder = doc.path.resolve().parent / EVIDENCE_DIR
         try:
