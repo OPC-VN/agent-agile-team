@@ -91,7 +91,7 @@ def reset_roles(text: str) -> str:
         if not lines[i].startswith(" "):
             in_roles = lines[i].rstrip() == "roles:"
             continue
-        m = re.match(r"  ([a-z][a-z0-9-]*): \[(T[123]),", lines[i])
+        m = re.match(r'  ([a-z][a-z0-9-]*): \["?([1-5]|T[123])"?,', lines[i])
         if in_roles and m:
             lines[i] = f"  {m.group(1)}: [{m.group(2)}, pending]"
     return "\n".join(lines)

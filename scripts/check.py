@@ -119,7 +119,7 @@ REQUIRED_KEYS = {
 }
 KNOWN_KEYS = set(_SPRINT_KEYS) | set(_GATE1) | set(_GATE2) | {
     "risk_tags", "review_round", "requests", "sprints", "next_id", "links",
-    "gate_1_mode", "gate_2_mode", "delegation"}
+    "gate_1_mode", "gate_2_mode", "delegation", "tier_scale"}
 
 STATUS = {
     "spec": {"draft", "in_review", "approved", "superseded"},
@@ -1038,6 +1038,52 @@ def _model_words(text: str) -> tuple[str, ...]:
     return tuple(w for w in re.split(r"[^0-9a-z]+", text.casefold()) if w)
 
 
+def _tier_scale(doc: Doc) -> int:
+    """Thang tier của tài liệu: 1 (mặc định T1–T3) hoặc 2 (Tier 1–5)."""
+    return 2 if doc.data.get("tier_scale") == 2 else 1
+
+
+def _norm_tier(val: object, scale: int) -> str | None:
+    """Chuẩn hoá giá trị tier theo `tier_scale` (1: T1–T3, 2: '1'..'5')."""
+    if scale == 2:
+        if isinstance(val, bool):
+            return None
+        if isinstance(val, (int, str)):
+            s = str(val).strip()
+            if s in c.TIERS_V2:
+                return s
+        return None
+    return val if isinstance(val, str) and val in c.TIERS else None
+
+
+def _load_dynamic_specialists(env=None) -> tuple[set[str], set[str]]:
+    """Đọc vai `agile_specialist` từ `AGENT_AGILE_TIERS` và tách thành `(executors, verifiers)` theo `group`.
+    Vai `custom` được bỏ qua khỏi kiểm chuẩn sprint."""
+    src = os.environ if env is None else env
+    path = src.get("AGENT_AGILE_TIERS", "")
+    if not path:
+        return set(), set()
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return set(), set()
+    roles = data.get("roles") if isinstance(data, dict) else None
+    if not isinstance(roles, dict):
+        return set(), set()
+    dyn_exec: set[str] = set()
+    dyn_verif: set[str] = set()
+    for rid, rdef in roles.items():
+        if not isinstance(rid, str) or not isinstance(rdef, dict):
+            continue
+        if rdef.get("category") != "agile_specialist":
+            continue
+        if rdef.get("group") == "executor":
+            dyn_exec.add(rid)
+        else:
+            dyn_verif.add(rid)
+    return dyn_exec, dyn_verif
+
+
 EFFORT_WORDS = ("low", "medium", "high", "xhigh", "max")
 
 
@@ -1312,25 +1358,38 @@ class Engine:
         if not isinstance(roles, dict) or not roles:
             self.add(doc.path, line, "roles-invalid", "roles phải là khối lồng: vai → [tier, agent] hoặc [tier, agent, \"note\"]")
             return
+        scale = _tier_scale(doc)
+        dyn_exec, dyn_verif = _load_dynamic_specialists(self.env)
+        valid_executors = EXECUTORS | dyn_exec
+        valid_verifiers = VERIFIERS | DELEGATION_SPECIALISTS | dyn_verif
+        allowed_roles = valid_executors | valid_verifiers | ADVISORS
         holders: dict = {}
         for role, value in roles.items():
             rline = doc.key_line(f"roles.{role}")
-            if role not in EXECUTORS | VERIFIERS | ADVISORS | DELEGATION_SPECIALISTS:
+            if role not in allowed_roles:
                 self.add(doc.path, rline, "roles-invalid", f"vai '{role}' không có trong danh sách vai")
                 continue
-            if (not isinstance(value, list) or len(value) not in (2, 3) or value[0] not in c.TIERS
+            tier_val = _norm_tier(value[0], scale) if isinstance(value, list) and len(value) in (2, 3) else None
+            if (not isinstance(value, list) or len(value) not in (2, 3) or tier_val is None
                     or not isinstance(value[1], str) or not value[1]
                     or (len(value) == 3 and not isinstance(value[2], str))):
-                self.add(doc.path, rline, "roles-invalid", f"{role}: {value!r} phải là [T1|T2|T3, nhãn-agent] hoặc thêm \"note\"")
+                expected = "1..5" if scale == 2 else "T1|T2|T3"
+                self.add(doc.path, rline, "roles-invalid", f"{role}: {value!r} phải là [{expected}, nhãn-agent] hoặc thêm \"note\"")
                 continue
-            if role in T1_ONLY_ROLES and value[0] != "T1":
-                self.add(doc.path, rline, "roles-invalid", f"{role}: tier {value[0]} phải là T1")  # không `continue`: nhãn vẫn vào holders để self-review dò được
+            if scale == 2:
+                if tier_val == "5":
+                    self.add(doc.path, rline, "roles-invalid", f"{role}: tier 5 là bậc dự phòng chỉ người, không gán tự động cho agent")
+                elif role in T1_ONLY_ROLES and tier_val not in c.VERIFIER_TIERS_V2:
+                    self.add(doc.path, rline, "roles-invalid", f"{role}: tier {tier_val} phải thuộc {c.VERIFIER_TIERS_V2}")
+            else:
+                if role in T1_ONLY_ROLES and tier_val != "T1":
+                    self.add(doc.path, rline, "roles-invalid", f"{role}: tier {tier_val} phải là T1")  # không `continue`: nhãn vẫn vào holders để self-review dò được
             holders.setdefault(value[1], set()).add(role)
         for agent, held in holders.items():
             if agent == "pending":
                 continue
-            executes = held & EXECUTORS
-            verifies = held & (VERIFIERS | DELEGATION_SPECIALISTS)
+            executes = held & valid_executors
+            verifies = held & valid_verifiers
             if executes and verifies:
                 self.add(doc.path, line, "self-review",
                          f"agent '{agent}' vừa thực thi ({', '.join(sorted(executes))}) vừa kiểm định ({', '.join(sorted(verifies))})")
@@ -1349,7 +1408,8 @@ class Engine:
         day = moment[0].isoformat() if moment else str(doc.data.get("created", ""))
         if not (DATE.fullmatch(day) and day >= rules.MODE_OPEN_EFFECTIVE_DATE):
             return
-        targets = {"advisor": ADVISOR_CONFLICTS, "gate-delegate": EXECUTORS}
+        dyn_exec, _ = _load_dynamic_specialists(self.env)
+        targets = {"advisor": ADVISOR_CONFLICTS, "gate-delegate": EXECUTORS | dyn_exec}
         mine = {r: roles[r][1] for r in targets if isinstance(roles.get(r), list) and len(roles[r]) >= 2 and isinstance(roles[r][1], str)}
         mine = {r: lab for r, lab in mine.items() if lab != "pending"}
         if not mine:
@@ -1469,20 +1529,27 @@ class Engine:
         if isinstance(signer, str) and signer.strip() and signer != "pending":  # trước kiểm T1 để tier thấp hơn người làm cũng được gọi tên
             self._signer_independence(doc, block, signer, gate)
         self._agile_records(doc, gate, block)
+        scale = _tier_scale(doc)
+        dyn_exec, dyn_verif = _load_dynamic_specialists(self.env)
+        valid_executors = EXECUTORS | dyn_exec
+        valid_verifiers = VERIFIERS | DELEGATION_SPECIALISTS | dyn_verif
+        required_verifier_tiers = c.VERIFIER_TIERS_V2 if scale == 2 else ("T1",)
         if grant_at[0].isoformat() >= rules.MODE_OPEN_EFFECTIVE_DATE and isinstance(data.get("roles"), dict):  # RQ-059: cổng đã kết luận thì vai thực thi không còn `pending`
-            for role in sorted(({"analyst", "architect"} if gate == "gate_1" else EXECUTORS) & set(data["roles"])):
+            for role in sorted(({"analyst", "architect"} if gate == "gate_1" else valid_executors) & set(data["roles"])):
                 value = data["roles"][role]
                 if isinstance(value, list) and len(value) >= 2 and value[1] == "pending":
                     bad(f"roles.{role}", f"vai thực thi {role} còn nhãn pending mà {gate} đã kết luận")
-        if block.get("tier") != "T1":
-            return bad("delegation.tier" if "tier" in block else "delegation", f"người duyệt thay phải là T1, đang là {block.get('tier')!r}")
+        signer_tier = _norm_tier(block.get("tier"), scale)
+        if signer_tier not in required_verifier_tiers:
+            tier_desc = f"thuộc {required_verifier_tiers}" if scale == 2 else "là T1"
+            return bad("delegation.tier" if "tier" in block else "delegation", f"người duyệt thay phải {tier_desc}, đang là {block.get('tier')!r}")
         by = block.get("by")
         if not isinstance(by, str) or not by.strip() or by == "pending":
             return bad("delegation.by" if "by" in block else "delegation", "delegation.by phải là nhãn agent đã giao (khác rỗng, khác pending)")
         roles = data.get("roles")
         def labelled(v):
             return isinstance(v, list) and len(v) >= 2 and v[1] == by
-        held = sorted(r for r, v in roles.items() if r in EXECUTORS and labelled(v)) if isinstance(roles, dict) else []
+        held = sorted(r for r, v in roles.items() if r in valid_executors and labelled(v)) if isinstance(roles, dict) else []
         # Advisor không ký duyệt thay qua nhãn khác; advisor + gate-delegate cùng nhãn thì _roles đã báo, không báo kép
         if isinstance(roles, dict) and labelled(roles.get("advisor")) and not labelled(roles.get("gate-delegate")):
             held = sorted(held + ["advisor"])
@@ -1495,13 +1562,14 @@ class Engine:
             mine = {r: v for r, v in roles.items() if isinstance(v, list) and len(v) >= 2 and v[1] == by}
             if not mine:
                 return bad("delegation.by", f"người duyệt thay '{by}' không giữ vai nào trong roles của tài liệu")
-            tiers = [v[0] for r, v in mine.items() if r in VERIFIERS or r in DELEGATION_SPECIALISTS]
-            unlisted = sorted(r for r in mine if r.endswith("-specialist") and r not in DELEGATION_SPECIALISTS)
+            tiers = [_norm_tier(v[0], scale) for r, v in mine.items() if r in valid_verifiers]
+            unlisted = sorted(r for r in mine if r.endswith("-specialist") and r not in valid_verifiers)
             hint = f" (chuyên đề ngoài danh sách: {', '.join(unlisted)})" if unlisted else ""
-            if "T1" not in tiers:
+            if not any(t in required_verifier_tiers for t in tiers):
                 if not tiers:
                     return bad("delegation.by", f"người duyệt thay '{by}' không giữ vai kiểm định nào trong roles của tài liệu{hint}")
-                return bad("delegation.by", f"người duyệt thay '{by}' giữ vai kiểm định nhưng tier là {', '.join(map(str, tiers))}, phải là T1{hint}")
+                tier_desc = f"thuộc {required_verifier_tiers}" if scale == 2 else "là T1"
+                return bad("delegation.by", f"người duyệt thay '{by}' giữ vai kiểm định nhưng tier là {', '.join(map(str, tiers))}, phải {tier_desc}{hint}")
         files = block.get("files", [])
         if not isinstance(files, list):
             return bad("delegation.files", f"delegation.files: {files!r} phải là danh sách")
@@ -1548,6 +1616,9 @@ class Engine:
                 self.add(doc.path, line, "gate-signer-independence", message)
 
         self._verdict_file(doc, gate, once)
+        scale = _tier_scale(doc)
+        dyn_exec, _ = _load_dynamic_specialists(self.env)
+        valid_executors = EXECUTORS | dyn_exec
         same_label: list[str] = []
         worker_tiers: list[tuple[str, str]] = []
         for path in sorted(doc.path.resolve().parent.glob("*.md")):
@@ -1557,19 +1628,25 @@ class Engine:
             roles = sibling.data.get("roles")
             if not isinstance(roles, dict):
                 continue
+            sib_scale = _tier_scale(sibling)
             for role, value in roles.items():
-                if role not in EXECUTORS or not (isinstance(value, list) and len(value) >= 2):
+                if role not in valid_executors or not (isinstance(value, list) and len(value) >= 2):
                     continue
-                if value[0] in c.TIERS:
-                    worker_tiers.append((role, value[0]))
+                t_norm = _norm_tier(value[0], sib_scale if sib_scale == scale else scale)
+                if t_norm is not None:
+                    worker_tiers.append((role, t_norm))
                 if value[1] == by and path != doc.path.resolve():
                     same_label.append(f"{role} ở {path.name}")
         line = doc.key_line("delegation.by")
         if same_label:
             once(line, f"người ký '{by}' trùng nhãn người làm cùng sprint ({', '.join(sorted(set(same_label)))}): phiên ký cổng phải là phiên khác")
-        signer = block.get("tier")
-        if signer in c.TIERS:
-            below = sorted({f"{role} {tier}" for role, tier in worker_tiers if tier < signer})  # "T1" < "T2" < "T3": tier thấp hơn = số lớn hơn
+        signer = _norm_tier(block.get("tier"), scale)
+        if signer is not None:
+            if scale == 2:
+                # Thang Tier 1-5: số lớn hơn = tier mạnh hơn (1 yếu nhất, 4-5 mạnh nhất)
+                below = sorted({f"{role} {tier}" for role, tier in worker_tiers if int(tier) > int(signer)})
+            else:
+                below = sorted({f"{role} {tier}" for role, tier in worker_tiers if tier < signer})  # "T1" < "T2" < "T3": tier thấp hơn = số lớn hơn
             if below:
                 once(doc.key_line("delegation.tier"), f"tier người ký {signer} thấp hơn tier người làm ({', '.join(below)})")
 

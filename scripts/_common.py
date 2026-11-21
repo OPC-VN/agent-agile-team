@@ -49,6 +49,8 @@ OWNER = {
     "VR": "report", "RF": "report", "LN": "report", "CO": "report",
 }
 TIERS = ("T1", "T2", "T3")
+TIERS_V2 = ("1", "2", "3", "4", "5")
+VERIFIER_TIERS_V2 = ("3", "4")
 
 
 class SubsetError(Exception):
