@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -37,6 +38,19 @@ SPRINT_LABEL = {"drafting": "đang viết SPEC/PLAN", "awaiting_gate_1": "chờ 
 
 class InputError(Exception):
     pass
+
+
+_EOL = re.compile(r"\r+\n|\r")
+
+
+def _plain(text: str) -> str:
+    """Mọi cuối dòng (LF, CRLF, CR-CR-LF) về LF, không nhân đôi dòng."""
+    return _EOL.sub("\n", text)
+
+
+def _read(path: Path) -> str:
+    """Đọc UTF-8 để phân tích: bỏ BOM, cuối dòng về LF."""
+    return _plain(Path(path).read_bytes().decode("utf-8").lstrip(chr(0xFEFF)))
 
 
 def table_under(text: str, heading: str) -> list[dict]:
@@ -70,7 +84,7 @@ def _id_key(record: str) -> int:
 
 def _frontmatter(path: Path) -> dict:
     try:
-        fm = c.parse_frontmatter(c.read_text(path))
+        fm = c.parse_frontmatter(_read(path))
     except c.SubsetError as exc:
         raise InputError(f"{c.display(path)}:{exc.line}: {exc.message}") from exc
     return fm.data if fm else {}
@@ -86,14 +100,14 @@ def _link(target: Path, ledger: Path, folder: bool = False) -> str:
 
 
 def requests_block(ledger: Path) -> list:
-    rows = [r for r in table_under(c.read_text(ledger), "Timeline") if r.get("Trạng thái") in OPEN_REQUEST and c.parse_id(r.get("Mã"))]
+    rows = [r for r in table_under(_read(ledger), "Timeline") if r.get("Trạng thái") in OPEN_REQUEST and c.parse_id(r.get("Mã"))]
     rows.sort(key=lambda r: _id_key(r["Mã"]), reverse=True)
     cols = ("Mã", "Ngày", "Tóm tắt", "Trạng thái", "Sprint")
     return _table(list(cols), [[r.get(col, "") for col in cols] for r in rows]) if rows else [EMPTY["requests"]]
 
 
 def specs_block(ledger: Path, feature_dir: Path) -> list:
-    names = {r.get("Mã"): r.get("Tính năng", "") for r in table_under(c.read_text(ledger), "Danh mục")}
+    names = {r.get("Mã"): r.get("Tính năng", "") for r in table_under(_read(ledger), "Danh mục")}
     rows = []
     for path in sorted(feature_dir.glob("*.md")) if feature_dir.is_dir() else []:
         if path.resolve() == ledger.resolve():
@@ -108,7 +122,7 @@ def specs_block(ledger: Path, feature_dir: Path) -> list:
 
 
 def sprints_block(ledger: Path, base: Path, pattern: str) -> list:
-    timeline = {r.get("Mã"): r for r in table_under(c.read_text(ledger), "Timeline")}
+    timeline = {r.get("Mã"): r for r in table_under(_read(ledger), "Timeline")}
     rows = []
     for folder in sorted(p for p in base.glob(pattern.replace("{date}", "*").replace("{slug}", "*")) if p.is_dir()):
         state = next((folder / n for n in ("PROGRESS.md", "SPRINT.md") if (folder / n).is_file()), None)
@@ -125,13 +139,18 @@ def sprints_block(ledger: Path, base: Path, pattern: str) -> list:
     return _table(["Mã", "Mở", "Mục tiêu", "Trạng thái", "Vòng", "Thư mục"], rows) if rows else [EMPTY["sprints"]]
 
 
-def rewrite(text: str, block: list, path: Path) -> str:
-    lines = text.split("\n")
+def rewrite(raw: str, block: list, path: Path) -> str:
+    """Thay khối giữa hai dấu mốc trên văn bản THÔ: dòng ngoài khối giữ nguyên từng byte; dòng trong khối
+    dùng đúng đuôi cuối dòng của dòng dấu mốc đầu (LF, CRLF hay CR-CR-LF)."""
+    lines = raw.split("\n")  # mỗi đoạn có thể còn đuôi CR
     starts = [i for i, line in enumerate(lines) if line.strip() == START]
     ends = [i for i, line in enumerate(lines) if line.strip() == END]
     if len(starts) != 1 or len(ends) != 1 or starts[0] > ends[0]:
         raise InputError(f"{c.display(path)}: cần đúng một cặp dấu mốc {START} … {END}")
-    return "\n".join(lines[:starts[0] + 1] + [NOTICE] + block + lines[ends[0]:])
+    marker = lines[starts[0]]
+    tail = "\r" * (len(marker) - len(marker.rstrip("\r")))
+    inner = [line + tail for line in [NOTICE] + block]
+    return "\n".join(lines[:starts[0] + 1] + inner + lines[ends[0]:])
 
 
 def build(root: Path) -> list:
@@ -155,8 +174,8 @@ def build(root: Path) -> list:
     }
     out = []
     for key, path in ledgers.items():
-        old, style = c.read_text_style(path)
-        out.append((path, old, rewrite(old, blocks[key], path), style))
+        old = path.read_bytes().decode("utf-8")  # thô: giữ BOM và cuối dòng
+        out.append((path, old, rewrite(old, blocks[key], path)))
     return out
 
 
@@ -175,15 +194,15 @@ def main(argv=None) -> int:
         print(f"lỗi đầu vào: {exc}")
         return 2
     stale = False
-    for path, old, new, style in results:
-        if old == new:
+    for path, old, new in results:
+        if _plain(old) == _plain(new):  # so nội dung, không so cuối dòng
             print(f"= không đổi {c.display(path)}")
             continue
         stale = True
         if args.check:
             print(f"! chưa cập nhật {c.display(path)}")
         else:
-            c.write_text_style(path, new, style)  # giữ BOM và kiểu xuống dòng của file gốc
+            path.write_bytes(new.encode("utf-8"))  # giữ BOM và cuối dòng của file gốc
             print(f"~ đã ghi {c.display(path)}")
     return 1 if (args.check and stale) else 0
 

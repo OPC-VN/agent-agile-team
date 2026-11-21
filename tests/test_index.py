@@ -167,3 +167,48 @@ def test_small_sprint_file_shows_in_open_block(tmp_path):
     assert index.main([str(root)]) == 0
     got = block(root / "docs" / "plans" / "SPRINTS.md")
     assert f"| SPR-01 | {DATE} | Chỉnh luồng | đang viết SPEC/PLAN | 0 | [{DATE}-tweak-flow]({DATE}-tweak-flow/) |" in got
+
+
+def _with_eol(path: Path, eol: str) -> bytes:
+    """Đổi mọi cuối dòng của sổ sang `eol` (ví dụ `\r\n`, `\r\r\n`), thêm một dòng đang mở để khối có dữ liệu."""
+    text = path.read_bytes().decode("utf-8").replace("\r", "")
+    raw = text.replace("\n", eol).encode("utf-8")
+    path.write_bytes(raw)
+    return raw
+
+
+def _outside_block(raw: bytes) -> tuple:
+    text = raw.decode("utf-8")
+    return text[:text.index(index.START)], text[text.index(index.END):]
+
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize("eol", ["\r\n", "\r\r\n"])
+def test_keeps_line_endings_outside_and_inside_block(tmp_path, eol):
+    root = project(tmp_path)
+    ledger = root / "docs" / "plans" / "REQUESTS.md"
+    add_rows(ledger, "## Timeline", ["| RQ-012 | 2026-03-02 | Xuất CSV | mới | — | — |"])
+    raw = _with_eol(ledger, eol)
+    assert index.main([str(root)]) == 0
+    after = ledger.read_bytes()
+    assert _outside_block(after) == _outside_block(raw)  # byte ngoài khối không đổi
+    new_block = after.decode("utf-8")
+    new_block = new_block[new_block.index(index.START):new_block.index(index.END)]
+    assert "RQ-012" in new_block
+    assert new_block.replace(eol, "").count("\n") == 0  # mọi cuối dòng trong khối đều đúng kiểu `eol`
+    assert "\r" not in new_block.replace(eol, "")
+    assert index.main([str(root), "--check"]) == 0
+
+
+@pytest.mark.parametrize("eol", ["\r\n", "\r\r\n"])
+def test_check_ignores_line_endings_when_block_is_right(tmp_path, eol, capsys):
+    root = project(tmp_path)
+    ledger = root / "docs" / "plans" / "REQUESTS.md"
+    add_rows(ledger, "## Timeline", ["| RQ-012 | 2026-03-02 | Xuất CSV | mới | — | — |"])
+    index.main([str(root)])
+    for sub in ("plans/REQUESTS.md", "specs/SPECS.md", "plans/SPRINTS.md"):
+        _with_eol(root / "docs" / sub, eol)
+    capsys.readouterr()
+    assert index.main([str(root), "--check"]) == 0
