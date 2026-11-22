@@ -73,8 +73,10 @@ PLUGIN_PREFIX = "agent-agile-team:"
 RECEIPT_NAME = "tier-receipts.jsonl"
 HOOK_NAMES = ("Agent", "Task")
 # Role-card path (CO16): a delegation through a generic subagent type must say its role in the first `[AAT role=<role>]` tag of the prompt.
-GENERIC_TYPES = ("general-purpose", "claude", "Plan", "Explore")
-ROLE_TAG_RE = re.compile(r"\[AAT role=([a-z0-9-]+)\]")
+# The tag counts only on the FIRST non-empty line of the prompt (anchored); case-insensitive, extra spaces allowed; the role is lower-cased.
+GENERIC_TYPES = ("general-purpose", "claude", "plan", "explore")
+ROLE_TAG_RE = re.compile(r"\[AAT\s+role\s*=\s*([A-Za-z0-9-]+)\s*\]", re.IGNORECASE)
+TAG_START_RE = re.compile(r"\[AAT(?![A-Za-z0-9])", re.IGNORECASE)
 NOT_TAGGABLE = ("human-arbiter",)
 _VERSION_RE = re.compile(r"^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$")
 
@@ -124,9 +126,23 @@ def agile_state_for(payload: dict):
 def agent_name(subagent_type):
     """The subagent name with the prefix of THIS plugin dropped; another plugin's prefix stays (so it is outside the catalog)."""
     name = _text(subagent_type)
+    name = name.strip().lower() if name else None
     if not name:
         return None
     return name[len(PLUGIN_PREFIX):] if name.startswith(PLUGIN_PREFIX) else name
+
+
+def first_line_tag(prompt):
+    """(role, malformed). Only the first non-empty line of the prompt is read; role is lower-cased."""
+    for line in (prompt or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        found = ROLE_TAG_RE.match(line)
+        if found:
+            return found.group(1).lower(), False
+        return None, bool(TAG_START_RE.match(line))
+    return None, False
 
 
 def role_of(subagent_type, catalog: dict):
@@ -152,6 +168,8 @@ def exit_hint(code: str, env=None) -> str:
             return ("Fix: correct or unset AGENT_AGILE_TIERS (the right path is %OPCOS_ROOT%/system/workshop/records/agent-agile-team/tiers.json) "
                     f"or set AGENT_AGILE_TIER_SNAPSHOT, then RESTART the app/session; or {stop}.")
         return f"Fix: run scripts/tier_setup.py (standalone install), then open a new session; or {stop}."
+    if code == "role_tag_malformed":
+        return f"Fix: write the first line as [AAT role=<role>], or [AAT role=direct]; or {stop}."
     if code.startswith("catalog_"):
         return f"Fix: restore tiers/role-catalog.json or point AGENT_AGILE_ROLE_CATALOG at it; or {stop}."
     if code == "model_unmappable":
@@ -242,24 +260,28 @@ def decide(payload: dict, env=None) -> dict | None:
     name = agent_name(tool_input.get("subagent_type"))
     tag = None
     if name is None or name in GENERIC_TYPES:
-        found = ROLE_TAG_RE.search(_text(tool_input.get("prompt")) or "")
-        if not found:
+        tag, malformed = first_line_tag(_text(tool_input.get("prompt")))
+        if malformed:
+            return _deny(rec, "role_tag_malformed", "thẻ sai định dạng, dạng đúng: [AAT role=<vai>]", warnings, env)
+        if tag is None:
             return _deny(rec, "role_tag_required", "a generic subagent needs a role: start the brief with `[AAT role=<role>]` "
                          "(valid roles are the names in tiers/role-catalog.json, e.g. researcher, implementer, qa, tech-reviewer), "
                          "or `[AAT role=direct]` for direct work with no sprint role", warnings, env)
-        tag = found.group(1)
         if tag == "direct":
             rec.update(decision="pass_direct", role_source="tag")
             return {"output": None, "receipt": rec, "mandatory": True, "write": True, "warnings": warnings}
     try:
         catalog = tr.load_catalog(tr.catalog_path(env))
     except tr.TierError as exc:
-        pick = tag if tag is not None else name
-        if pick in CORE_ROLES:
-            rec.update(role=pick, role_source="tag" if tag else "agent")
+        if tag is not None:
+            # every tag other than `direct` is denied: the tag cannot be checked without the catalog
+            rec.update(role=tag if tag in CORE_ROLES else None, role_source="tag")
+            return _deny(rec, exc.code, f"{exc.message}; the role tag {tag!r} cannot be checked. Use `[AAT role=direct]` for direct work", warnings, env)
+        if name in CORE_ROLES:
+            rec.update(role=name, role_source="agent")
             return _deny(rec, exc.code, exc.message, warnings, env)
         rec["error_code"] = exc.code
-        warnings.append(f"tier hook: role catalog unusable ({exc.code}); subagent model not enforced for {pick or 'this agent'}")
+        warnings.append(f"tier hook: role catalog unusable ({exc.code}); subagent model not enforced for {name or 'this agent'}")
         return {"output": None, "receipt": rec, "mandatory": True, "write": True, "warnings": warnings}
     if tag is not None:
         if tag in NOT_TAGGABLE or tag not in catalog["roles"]:

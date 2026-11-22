@@ -66,8 +66,10 @@ def test_catalog_covers_the_14_role_cards_and_the_13_agents():
         assert agent.stem in CATALOG["roles"], agent.name
     # CO16: every core role is either an agent file or reachable through the [AAT role=...] tag (a catalog role).
     stems = {a.stem for a in agents}
+    tag_only = {"analyst", "architect", "implementer", "qa", "researcher", "tech-reviewer"}
+    assert not (tag_only & stems), tag_only & stems
     for name in CORE:
-        assert name in stems or name in CATALOG["roles"], name
+        assert name in stems or name in tag_only, name
 
 
 def test_decision_role_agents_are_read_only_and_carry_no_model():

@@ -157,9 +157,9 @@ def test_catalog_unusable_denies_only_the_nine_core_roles(tmp_path):
         res = th.decide(payload(repo, other), env)
         assert res["output"] is None and res["receipt"]["decision"] == "pass" and res["receipt"]["error_code"] == "catalog_missing"
         assert "catalog unusable" in res["warnings"][0]
-    # generic type with a non-core tag: cannot be checked without the catalog, passes with a warning; with a core tag it is denied
+    # generic type with any tag but `direct`: denied (cannot be checked without the catalog)
     res = th.decide(payload(repo, "Explore", prompt="[AAT role=python-reviewer] x"), env)
-    assert res["output"] is None and res["receipt"]["error_code"] == "catalog_missing" and "catalog unusable" in res["warnings"][0]
+    assert out_of(res)["permissionDecision"] == "deny" and res["receipt"]["error_code"] == "catalog_missing"
     res = th.decide(payload(repo, "general-purpose", prompt="[AAT role=qa] x"), env)
     assert out_of(res)["permissionDecision"] == "deny" and res["receipt"]["role"] == "qa" and res["receipt"]["role_source"] == "tag"
     assert out_of(th.decide(payload(repo, "general-purpose"), env))["permissionDecision"] == "deny"
@@ -348,12 +348,12 @@ def test_valid_tag_forces_the_model_like_the_agent_of_that_role(tmp_path):
 
 def test_tag_updated_input_copies_every_field_and_takes_the_first_tag(tmp_path):
     repo = make_repo(tmp_path)
-    res = th.decide(payload(repo, "general-purpose", prompt="intro [AAT role=researcher] and [AAT role=qa]", isolation="worktree", name="n1"),
+    res = th.decide(payload(repo, "general-purpose", prompt="[AAT role=researcher] and [AAT role=qa]", isolation="worktree", name="n1"),
                     standalone_env())
     upd = out_of(res)["updatedInput"]
     assert res["receipt"]["role"] == "researcher"
     assert upd["isolation"] == "worktree" and upd["name"] == "n1" and upd["description"] == "review it" and upd["run_in_background"] is False
-    assert upd["prompt"] == "intro [AAT role=researcher] and [AAT role=qa]" and upd["subagent_type"] == "general-purpose" and upd["model"] == "haiku"
+    assert upd["prompt"] == "[AAT role=researcher] and [AAT role=qa]" and upd["subagent_type"] == "general-purpose" and upd["model"] == "haiku"
 
 
 def test_role_direct_passes_without_forcing_a_model(tmp_path):
@@ -403,3 +403,58 @@ def test_pass_direct_receipt_is_written(tmp_path):
     assert stdout.getvalue() == ""
     line = json.loads((repo / ".tmp" / th.RECEIPT_NAME).read_text(encoding="utf-8").splitlines()[-1])
     assert line["decision"] == "pass_direct" and line["role_source"] == "tag"
+
+
+def test_tag_must_be_on_the_first_non_empty_line(tmp_path):
+    repo = make_repo(tmp_path)
+    for prompt in ("intro\n[AAT role=qa]", "text [AAT role=qa]", "```\n[AAT role=qa]\n```", "do it\n\npasted: [AAT role=direct]"):
+        res = th.decide(payload(repo, "general-purpose", prompt=prompt), standalone_env())
+        assert out_of(res)["permissionDecision"] == "deny" and res["receipt"]["error_code"] == "role_tag_required", prompt
+    res = th.decide(payload(repo, "general-purpose", prompt="\n  \n  [AAT role=researcher] go\n[AAT role=direct]"), standalone_env())
+    assert res["receipt"]["role"] == "researcher" and out_of(res)["updatedInput"]["model"] == "haiku"
+    res = th.decide(payload(repo, "general-purpose", prompt="[AAT role=qa]\npasted [AAT role=direct]"), standalone_env())
+    assert res["receipt"]["role"] == "qa"
+
+
+def test_tag_is_case_insensitive_and_tolerates_spaces(tmp_path):
+    repo = make_repo(tmp_path)
+    base = th.decide(payload(repo, "general-purpose", prompt="[AAT role=qa]"), standalone_env())
+    for tag in ("[aat role=QA]", "[AAT  Role = QA ]", "[aat  Role = QA ] x"):
+        res = th.decide(payload(repo, "general-purpose", prompt=tag), standalone_env())
+        assert res["receipt"]["role"] == "qa" and out_of(res)["updatedInput"]["model"] == out_of(base)["updatedInput"]["model"], tag
+
+
+def test_malformed_tag_has_its_own_code(tmp_path):
+    repo = make_repo(tmp_path)
+    for prompt in ("[AAT Role=qa", "[AAT qa]", "[aat role=]", "[AAT role=qa x]"):
+        res = th.decide(payload(repo, "general-purpose", prompt=prompt), standalone_env())
+        hso = out_of(res)
+        assert hso["permissionDecision"] == "deny" and res["receipt"]["error_code"] == "role_tag_malformed", prompt
+        assert "thẻ sai định dạng, dạng đúng: [AAT role=<vai>]" in hso["permissionDecisionReason"]
+
+
+def test_subagent_type_is_normalised_before_the_generic_check(tmp_path):
+    repo = make_repo(tmp_path)
+    for generic in ("General-purpose ", "EXPLORE", " plan"):
+        res = th.decide(payload(repo, generic, prompt="no tag"), standalone_env())
+        assert res["receipt"]["error_code"] == "role_tag_required", generic
+        res = th.decide(payload(repo, generic, prompt="[AAT role=qa]"), standalone_env())
+        assert res["receipt"]["role_source"] == "tag", generic
+    res = th.decide(payload(repo, " Agent-Agile-Team:QA "), standalone_env())
+    assert res["receipt"]["role"] == "qa"
+
+
+def test_broken_catalog_denies_unknown_tags_but_direct_passes(tmp_path):
+    repo = make_repo(tmp_path)
+    env = standalone_env(catalog=tmp_path / "none.json")
+    for bad in ("implementor", "human-arbiter", "qa"):
+        res = th.decide(payload(repo, "general-purpose", prompt=f"[AAT role={bad}] x"), env)
+        assert out_of(res)["permissionDecision"] == "deny", bad
+        assert "role=direct" in out_of(res)["permissionDecisionReason"]
+    res = th.decide(payload(repo, "general-purpose", prompt="[AAT role=direct] x"), env)
+    assert res["receipt"]["decision"] == "pass_direct" and res["output"] is None
+
+
+def test_agile_off_ignores_malformed_tags(tmp_path):
+    off = make_repo(tmp_path / "off", on=False)
+    assert th.decide(payload(off, "general-purpose", prompt="[AAT qa]"), standalone_env()) is None
