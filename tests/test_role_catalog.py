@@ -61,9 +61,25 @@ def test_catalog_covers_the_14_role_cards_and_the_13_agents():
         assert name in CATALOG["roles"], f"{card.name}: {name} missing from the catalog"
         assert CATALOG["roles"][name]["group"] == group, name
     agents = list((REPO / "agents").glob("*.md"))
-    assert len(agents) == 13
+    assert len(agents) == 16
     for agent in agents:
         assert agent.stem in CATALOG["roles"], agent.name
+    # CO16: every core role is either an agent file or reachable through the [AAT role=...] tag (a catalog role).
+    stems = {a.stem for a in agents}
+    for name in CORE:
+        assert name in stems or name in CATALOG["roles"], name
+
+
+def test_decision_role_agents_are_read_only_and_carry_no_model():
+    for name in ("business-reviewer", "gate-delegate", "advisor"):
+        text = (REPO / "agents" / f"{name}.md").read_text(encoding="utf-8")
+        head = text.split("---")[1]
+        assert re.search(rf"^name:\s*{name}$", head, re.M)
+        assert not re.search(r"^model\s*:", head, re.M), name
+        tools = re.search(r"^tools:\s*(.+)$", head, re.M).group(1)
+        assert "Write" not in tools and "Edit" not in tools, name
+        assert re.search(r"^description: Sprint role \(agile ON only\)", head, re.M), name
+        assert not re.search(r"\bT[123]\b", text), name
 
 
 def test_defaults_table_resolves_every_catalog_role_per_vendor():

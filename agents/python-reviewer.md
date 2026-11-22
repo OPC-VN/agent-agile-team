@@ -1,6 +1,6 @@
 ---
 name: python-reviewer
-description: Use when Python code changed and needs an independent review for security, error handling, type hints, idioms, concurrency and code quality - pulled by the Tech Reviewer for backend work; read-only, never edits code.
+description: Use when Python code changed and needs an independent review for security, error handling, type hints, idioms, concurrency and code quality - pulled by the Tech Reviewer for backend work; read-only, never edits code. Not for the FastAPI HTTP layer (fastapi-reviewer).
 tools: [Read, Grep, Glob, Bash]
 ---
 

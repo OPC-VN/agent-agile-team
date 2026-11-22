@@ -1,6 +1,6 @@
 ---
 name: build-fixer
-description: Use when a build, compile, import or type-check is red and the smallest edit that turns it green is wanted - Implementer role, T2; edits only what the error needs. Never suppresses errors, skips or deletes tests, or loosens config; stops after 3 failed fixes or when an API change is needed. Not for refactors, new features or failing tests.
+description: Use when a build, compile, import or type-check is red and the smallest edit that turns it green is wanted. Use only when the build is red; edits only what the error needs. Never suppresses errors, skips or deletes tests, or loosens config; stops after 3 failed fixes or when an API change is needed. Not for refactors, new features or failing tests.
 tools: [Read, Grep, Glob, Bash, Edit]
 ---
 

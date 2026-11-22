@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Use for an independent general-purpose review of a diff before merge - security, correctness, quality, tests - filtered by certainty, 0 findings allowed; read-only. Not the process skill code-review (who reviews, in what order), and not for language or topic depth (python-, typescript-, react-, database-reviewer, security-reviewer).
+description: Use for an independent general-purpose review of a diff before merge - security, correctness, quality, tests - filtered by certainty, 0 findings allowed; read-only. Not the process skill code-review (who reviews, in what order), and not for language or topic depth (python-, typescript-, react-, database-reviewer, security-reviewer). Reviews ONE diff; for a PLAN or a whole branch against SPEC/PLAN use the tech-reviewer role card instead.
 tools: [Read, Grep, Glob, Bash]
 ---
 

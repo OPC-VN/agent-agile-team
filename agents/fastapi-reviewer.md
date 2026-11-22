@@ -1,6 +1,6 @@
 ---
 name: fastapi-reviewer
-description: Use when a FastAPI application changed - routes, middleware, Pydantic schemas, dependencies, async database or HTTP calls, auth, CORS, OpenAPI docs or test overrides - and needs an independent production-readiness review; read-only, never edits code.
+description: Use when a FastAPI application changed - routes, middleware, Pydantic schemas, dependencies, async database or HTTP calls, auth, CORS, OpenAPI docs or test overrides - and needs an independent production-readiness review; read-only, never edits code. Run first on FastAPI diffs; pull python-reviewer only for logic outside routes.
 tools: [Read, Grep, Glob, Bash]
 ---
 

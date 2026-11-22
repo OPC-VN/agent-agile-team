@@ -93,9 +93,11 @@ def test_other_tools_are_ignored(tmp_path):
 
 def test_agent_outside_the_catalog_passes_untouched(tmp_path):
     repo = make_repo(tmp_path)
-    res = th.decide(payload(repo, "general-purpose"), standalone_env())
-    assert res["output"] is None and res["receipt"]["decision"] == "pass" and res["receipt"]["role"] is None
-    assert th.decide(payload(repo, None), standalone_env())["output"] is None
+    for other in ("agent-other-plugin:reviewer", "other:python-reviewer", "my-agent"):
+        res = th.decide(payload(repo, other), standalone_env())
+        assert res["output"] is None and res["receipt"]["decision"] == "pass" and res["receipt"]["role"] is None
+    off = make_repo(tmp_path / "off", on=False)
+    assert th.decide(payload(off, "general-purpose"), standalone_env()) is None
 
 
 def test_tier_4_fable_is_mapped_and_other_unmeasured_ids_are_denied_not_guessed(tmp_path):
@@ -151,10 +153,16 @@ def test_catalog_unusable_denies_only_the_nine_core_roles(tmp_path):
     for name in th.CORE_ROLES:
         assert out_of(th.decide(payload(repo, name), env))["permissionDecision"] == "deny", name
         assert out_of(th.decide(payload(repo, "agent-agile-team:" + name), env))["permissionDecision"] == "deny", name
-    for other in ("general-purpose", "Explore", "python-reviewer", None):
+    for other in ("python-reviewer", "other-plugin:agent"):
         res = th.decide(payload(repo, other), env)
         assert res["output"] is None and res["receipt"]["decision"] == "pass" and res["receipt"]["error_code"] == "catalog_missing"
         assert "catalog unusable" in res["warnings"][0]
+    # generic type with a non-core tag: cannot be checked without the catalog, passes with a warning; with a core tag it is denied
+    res = th.decide(payload(repo, "Explore", prompt="[AAT role=python-reviewer] x"), env)
+    assert res["output"] is None and res["receipt"]["error_code"] == "catalog_missing" and "catalog unusable" in res["warnings"][0]
+    res = th.decide(payload(repo, "general-purpose", prompt="[AAT role=qa] x"), env)
+    assert out_of(res)["permissionDecision"] == "deny" and res["receipt"]["role"] == "qa" and res["receipt"]["role_source"] == "tag"
+    assert out_of(th.decide(payload(repo, "general-purpose"), env))["permissionDecision"] == "deny"
 
 
 def test_catalog_unusable_pass_reaches_the_user_as_a_warning(tmp_path, monkeypatch):
@@ -162,7 +170,7 @@ def test_catalog_unusable_pass_reaches_the_user_as_a_warning(tmp_path, monkeypat
     for k, v in standalone_env(catalog=tmp_path / "none.json").items():
         monkeypatch.setenv(k, v)
     out = io.StringIO()
-    assert th.main(io.StringIO(json.dumps(payload(repo, "Explore"))), out) == 0
+    assert th.main(io.StringIO(json.dumps(payload(repo, "python-reviewer"))), out) == 0
     assert "catalog unusable" in json.loads(out.getvalue())["systemMessage"]
 
 
@@ -314,7 +322,84 @@ def test_receipt_warning_is_once_per_session_and_never_for_pass(tmp_path, monkey
     assert "receipt not written" in first["systemMessage"] and "systemMessage" not in second
     other = json.loads(run_main({**payload(repo, "python-reviewer"), "session_id": "another"}, standalone_env(), monkeypatch))
     assert "receipt not written" in other["systemMessage"]
-    for sid in ("s-pass-1", "s-pass-2"):  # a pass (agent outside the catalog) never warns
-        text = run_main({**payload(repo, "general-purpose"), "session_id": sid}, standalone_env(), monkeypatch)
+    for sid in ("s-pass-1", "s-pass-2"):  # a pass (agent outside the catalog, or role=direct) never warns
+        text = run_main({**payload(repo, "other-plugin:agent"), "session_id": sid}, standalone_env(), monkeypatch)
         assert text == ""
 
+
+
+# ---- CO16: role card `[AAT role=<role>]` for generic subagent types ----
+GENERIC = ("general-purpose", "claude", "Plan", "Explore", None, "")
+
+
+def test_valid_tag_forces_the_model_like_the_agent_of_that_role(tmp_path):
+    repo = make_repo(tmp_path)
+    for generic in GENERIC:
+        res = th.decide(payload(repo, generic, prompt="[AAT role=gate-delegate] decide"), standalone_env())
+        hso = out_of(res)
+        assert hso["permissionDecision"] == "allow" and hso["updatedInput"]["model"] == "fable", generic
+        assert res["receipt"]["role"] == "gate-delegate" and res["receipt"]["role_source"] == "tag" and res["receipt"]["decision"] == "allow"
+    by_agent = th.decide(payload(repo, "gate-delegate"), standalone_env())
+    assert by_agent["receipt"]["role_source"] == "agent"
+    by_tag = th.decide(payload(repo, "general-purpose", prompt="[AAT role=gate-delegate]"), standalone_env())
+    assert out_of(by_agent)["updatedInput"]["model"] == out_of(by_tag)["updatedInput"]["model"]
+    assert by_agent["receipt"]["tier"] == by_tag["receipt"]["tier"]
+
+
+def test_tag_updated_input_copies_every_field_and_takes_the_first_tag(tmp_path):
+    repo = make_repo(tmp_path)
+    res = th.decide(payload(repo, "general-purpose", prompt="intro [AAT role=researcher] and [AAT role=qa]", isolation="worktree", name="n1"),
+                    standalone_env())
+    upd = out_of(res)["updatedInput"]
+    assert res["receipt"]["role"] == "researcher"
+    assert upd["isolation"] == "worktree" and upd["name"] == "n1" and upd["description"] == "review it" and upd["run_in_background"] is False
+    assert upd["prompt"] == "intro [AAT role=researcher] and [AAT role=qa]" and upd["subagent_type"] == "general-purpose" and upd["model"] == "haiku"
+
+
+def test_role_direct_passes_without_forcing_a_model(tmp_path):
+    repo = make_repo(tmp_path)
+    res = th.decide(payload(repo, "general-purpose", prompt="[AAT role=direct] quick fix"), standalone_env())
+    assert res["output"] is None and res["receipt"]["decision"] == "pass_direct" and res["receipt"]["role_source"] == "tag"
+    assert res["mandatory"] is True and res["receipt"]["role"] is None
+
+
+def test_unknown_tag_is_denied_with_a_way_out(tmp_path):
+    repo = make_repo(tmp_path)
+    for bad in ("nonsense", "human-arbiter"):
+        res = th.decide(payload(repo, "Plan", prompt=f"[AAT role={bad}] x"), standalone_env())
+        hso = out_of(res)
+        assert hso["permissionDecision"] == "deny" and res["receipt"]["error_code"] == "unknown_role"
+        reason = hso["permissionDecisionReason"]
+        assert "role=direct" in reason and "/agent-agile-team:agile stop" in reason and "researcher" in reason
+
+
+def test_missing_tag_is_denied_for_every_generic_type(tmp_path):
+    repo = make_repo(tmp_path)
+    for generic in GENERIC:
+        res = th.decide(payload(repo, generic, prompt="no tag here AAT role=qa"), standalone_env())
+        hso = out_of(res)
+        assert hso["permissionDecision"] == "deny" and res["receipt"]["error_code"] == "role_tag_required", generic
+        reason = hso["permissionDecisionReason"]
+        assert "[AAT role=<role>]" in reason and "role=direct" in reason and "/agent-agile-team:agile stop" in reason
+    no_prompt = payload(repo, "general-purpose")
+    del no_prompt["tool_input"]["prompt"]
+    assert out_of(th.decide(no_prompt, standalone_env()))["permissionDecision"] == "deny"
+
+
+def test_tag_is_ignored_for_other_agents_and_agile_off(tmp_path):
+    repo = make_repo(tmp_path)
+    res = th.decide(payload(repo, "other-plugin:agent", prompt="[AAT role=qa]"), standalone_env())
+    assert res["output"] is None and res["receipt"]["decision"] == "pass" and res["receipt"]["role"] is None
+    res = th.decide(payload(repo, "python-reviewer", prompt="[AAT role=qa]"), standalone_env())  # the agent name wins over a tag
+    assert res["receipt"]["role"] == "python-reviewer" and res["receipt"]["role_source"] == "agent"
+    off = make_repo(tmp_path / "off", on=False)
+    assert th.decide(payload(off, "general-purpose", prompt="no tag"), standalone_env()) is None
+
+
+def test_pass_direct_receipt_is_written(tmp_path):
+    repo = make_repo(tmp_path, git=True)
+    stdout = io.StringIO()
+    assert th.main(io.StringIO(json.dumps(payload(repo, "general-purpose", prompt="[AAT role=direct]"))), stdout) == 0
+    assert stdout.getvalue() == ""
+    line = json.loads((repo / ".tmp" / th.RECEIPT_NAME).read_text(encoding="utf-8").splitlines()[-1])
+    assert line["decision"] == "pass_direct" and line["role_source"] == "tag"

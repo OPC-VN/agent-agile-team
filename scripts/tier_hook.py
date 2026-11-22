@@ -18,6 +18,10 @@ Flow when agile is ON:
      (BUILTIN_ALIASES, extended by the JSON object in `AGENT_AGILE_MODEL_ALIASES`; keys must look like model ids and values must be one
      of ALIAS_VALUES, a bad entry is ignored with a warning). An id outside it is `model_unmappable` and is denied, never guessed.
      `updatedInput` carries EVERY key of the old `tool_input` plus `model` (it replaces the whole input).
+  3b. Role card (CO16): when the type is general-purpose, claude, Plan, Explore or empty, the role comes from the first `[AAT role=<role>]`
+     tag in `tool_input.prompt` (receipt `role_source` = `tag`; an agent file gives `agent`). A known role goes through steps 2-3 exactly like
+     the agent of that role; `role=direct` passes with decision `pass_direct` (no model forced); an unknown role is denied `unknown_role`; no tag
+     is denied `role_tag_required`. With an unusable catalog the tag is checked against CORE_ROLES only.
   4. Any resolution error is a `deny`; the reason names the code and a way out (`/agent-agile-team:agile stop`, or fix the cause).
 
 Receipt: one JSONL line per run, append, no prompt text and no secret. Place: `tier-receipts.jsonl` in the folder of the newest open
@@ -25,7 +29,7 @@ sprint (`agile_state.open_sprints`); without an open sprint `<repo root or cwd>/
 (3 s timeout) confirms the file is ignored; an error or doubt means no write and a warning.
 Fields: schema, ts, session_id, sprint, role, tier, requested_model, actual_model (always null: the hook does not see the real model),
 model_identity_status (always `unverified`; the real model of Claude comes from modelUsage, OUTSIDE v1), enforcement `hook`, resolver,
-snapshot_revision, decision allow|deny|pass, error_code, claude_code_version (from `claude_code_version` of the event or the env
+snapshot_revision, role_source agent|tag|null, decision allow|deny|pass|pass_direct, error_code, claude_code_version (from `claude_code_version` of the event or the env
 `CLAUDE_CODE_VERSION` when it looks like a version, else null; never guessed), alias_table_source (`default` or `env`).
 A write failure never breaks the turn; on a mandatory turn it adds a warning (`systemMessage`) for an allow or deny decision, once per
 session_id (marker file in the temp folder, or `AGENT_AGILE_TIER_WARN_DIR`); never for a `pass`.
@@ -68,6 +72,10 @@ CORE_ROLES = ("researcher", "qa", "implementer", "analyst", "architect", "tech-r
 PLUGIN_PREFIX = "agent-agile-team:"
 RECEIPT_NAME = "tier-receipts.jsonl"
 HOOK_NAMES = ("Agent", "Task")
+# Role-card path (CO16): a delegation through a generic subagent type must say its role in the first `[AAT role=<role>]` tag of the prompt.
+GENERIC_TYPES = ("general-purpose", "claude", "Plan", "Explore")
+ROLE_TAG_RE = re.compile(r"\[AAT role=([a-z0-9-]+)\]")
+NOT_TAGGABLE = ("human-arbiter",)
 _VERSION_RE = re.compile(r"^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$")
 
 
@@ -223,7 +231,7 @@ def decide(payload: dict, env=None) -> dict | None:
            "sprint": None, "role": None, "tier": None, "requested_model": _text(tool_input.get("model")), "actual_model": None,
            "model_identity_status": "unverified", "enforcement": "hook", "resolver": None, "snapshot_revision": None,
            "decision": "pass", "error_code": None, "claude_code_version": claude_code_version(payload, env),
-           "alias_table_source": "default"}
+           "alias_table_source": "default", "role_source": None}
     if problem is not None:
         rec["error_code"] = "agile_state_unreadable"
         warn = f"tier hook: agile state unreadable ({problem}); subagent model not enforced"
@@ -232,19 +240,38 @@ def decide(payload: dict, env=None) -> dict | None:
         return None
     aliases, env_keys, warnings = model_aliases(env)
     name = agent_name(tool_input.get("subagent_type"))
+    tag = None
+    if name is None or name in GENERIC_TYPES:
+        found = ROLE_TAG_RE.search(_text(tool_input.get("prompt")) or "")
+        if not found:
+            return _deny(rec, "role_tag_required", "a generic subagent needs a role: start the brief with `[AAT role=<role>]` "
+                         "(valid roles are the names in tiers/role-catalog.json, e.g. researcher, implementer, qa, tech-reviewer), "
+                         "or `[AAT role=direct]` for direct work with no sprint role", warnings, env)
+        tag = found.group(1)
+        if tag == "direct":
+            rec.update(decision="pass_direct", role_source="tag")
+            return {"output": None, "receipt": rec, "mandatory": True, "write": True, "warnings": warnings}
     try:
         catalog = tr.load_catalog(tr.catalog_path(env))
     except tr.TierError as exc:
-        if name in CORE_ROLES:
-            rec["role"] = name
+        pick = tag if tag is not None else name
+        if pick in CORE_ROLES:
+            rec.update(role=pick, role_source="tag" if tag else "agent")
             return _deny(rec, exc.code, exc.message, warnings, env)
         rec["error_code"] = exc.code
-        warnings.append(f"tier hook: role catalog unusable ({exc.code}); subagent model not enforced for {name or 'this agent'}")
+        warnings.append(f"tier hook: role catalog unusable ({exc.code}); subagent model not enforced for {pick or 'this agent'}")
         return {"output": None, "receipt": rec, "mandatory": True, "write": True, "warnings": warnings}
-    role = role_of(tool_input.get("subagent_type"), catalog)
+    if tag is not None:
+        if tag in NOT_TAGGABLE or tag not in catalog["roles"]:
+            valid = ", ".join(sorted(r for r in catalog["roles"] if r not in NOT_TAGGABLE))
+            return _deny(rec, "unknown_role", f"role {tag!r} in the [AAT role=...] tag is not a known role; valid roles: {valid}; "
+                         "use `[AAT role=direct]` for direct work with no sprint role", warnings, env)
+        role = tag
+    else:
+        role = role_of(tool_input.get("subagent_type"), catalog)
     if role is None:
         return {"output": None, "receipt": rec, "mandatory": True, "write": True, "warnings": warnings}
-    rec["role"] = role
+    rec.update(role=role, role_source="tag" if tag else "agent")
     res = tr.resolve(role, "claude", env=env)
     if res["status"] != "ok":
         return _deny(rec, res["code"], res.get("message", res["code"]), warnings, env)
@@ -295,7 +322,7 @@ def main(stdin=None, stdout=None) -> int:
             err = "no open sprint and .tmp is not confirmed git-ignored"
         else:
             err = write_receipt(path, result["receipt"])
-        if err and result["mandatory"] and result["receipt"]["decision"] != "pass" and _first_warning(result["receipt"]["session_id"]):
+        if err and result["mandatory"] and result["receipt"]["decision"] not in ("pass", "pass_direct") and _first_warning(result["receipt"]["session_id"]):
             notes.append(f"tier hook: receipt not written ({err})")
     output = result["output"]
     if notes:

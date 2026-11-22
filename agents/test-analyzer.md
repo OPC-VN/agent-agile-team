@@ -1,6 +1,6 @@
 ---
 name: test-analyzer
-description: Use when a change adds or edits behavior and an independent check is needed that its tests really cover it - untested branches and error paths, assertions that catch no regression, flaky patterns; read-only, does not write tests. Not for browser or UI testing (web-qa), writing tests first (tdd), or running the sprint test plan (QA role).
+description: Use when a change adds or edits behavior and an independent check is needed that its tests really cover it - untested branches and error paths, assertions that catch no regression, flaky patterns; read-only, reads and grades tests, does not write them and does not run the sprint test plan (qa role). Not for browser or UI testing (web-qa) or writing tests first (tdd).
 tools: [Read, Grep, Glob, Bash]
 ---
 
