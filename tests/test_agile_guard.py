@@ -786,8 +786,9 @@ def test_hooks_json_registers_guard():
     for event in ("SessionStart", "UserPromptExpansion"):
         assert config["hooks"][event] == [{"hooks": [{"type": "command", "command": "python", "args": hook_script, "timeout": 10}]}], event
     entries = config["hooks"]["PreToolUse"]
-    assert [e["matcher"] for e in entries] == ["Bash|PowerShell", "Write|Edit|MultiEdit|NotebookEdit"]
-    for entry in entries:
+    assert [e["matcher"] for e in entries] == ["Bash|PowerShell", "Write|Edit|MultiEdit|NotebookEdit", "Agent|Task"]  # RQ-435 L2a: tier_hook added, guard blocks unchanged
+    assert entries[2]["hooks"] == [{"type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/tier_hook.py"], "timeout": 10}]
+    for entry in entries[:2]:
         assert entry["hooks"] == [{"type": "command", "command": "python", "args": guard_script, "timeout": 10}]
         assert "onFailure" not in entry["hooks"][0]  # SPR-32 TK6e M3: đo 2026-11-16, thiếu `python` + `onFailure: block` chặn MỌI Bash/PowerShell của người chưa bật agile; để hook lỗi mở
     text = (REPO / "hooks" / "hooks.json").read_text(encoding="utf-8")

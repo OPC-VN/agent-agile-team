@@ -15,6 +15,7 @@ def read(rel):
 def test_hooks_json_has_four_command_entries_and_the_docs_say_four():
     config = json.loads(read("hooks/hooks.json"))
     entries = [hook for group in config["hooks"].values() for entry in group for hook in entry["hooks"] if hook.get("type") == "command"]
+    entries = [h for h in entries if "tier_hook.py" not in " ".join(h.get("args", []))]  # RQ-435 L2a: the tier hook is separate from the four agile hooks the law counts
     assert len(entries) == 4
     law = read("method/agile.md")
     assert "Năm hook" not in law and "cả năm hook" not in law and "Bốn hook" in law and "cả bốn hook" in law

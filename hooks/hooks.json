@@ -26,6 +26,12 @@
         "hooks": [
           { "type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/agile_guard.py", "--format", "claude"], "timeout": 10 }
         ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          { "type": "command", "command": "python", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/tier_hook.py"], "timeout": 10 }
+        ]
       }
     ]
   }
