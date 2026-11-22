@@ -85,6 +85,8 @@ claude plugin install agent-agile-team@agent-agile-team
 
 Rồi (sau khi người dùng đồng ý) thêm dòng `@~/agent-agile-team/AGENTS.md` vào `~/.claude/CLAUDE.md`.
 
+**Hook ép model theo vai (từ bản sau 0.12.0).** Plugin đăng ký thêm hook `PreToolUse` cho công cụ `Agent`/`Task` (`scripts/tier_hook.py`). Agile **tắt** (mặc định) thì hook không làm gì. Khi người dùng bật agile trên máy **không có OpcOS**, lượt giao việc cho vai lõi bị chặn `tiers_file_missing` cho tới khi tạo bảng tier của máy bằng một lệnh: `python scripts/tier_setup.py` (chạy từ thư mục plugin; lý do chặn in sẵn đường tuyệt đối). Lệnh chỉ tạo bảng khi chưa có, không ghi đè bảng đã sửa. Cần lệnh tên `python` trên PATH (macOS/Linux chỉ có `python3`: chưa đo, hook sẽ không khởi động nhưng không chặn việc thường). Thoát luôn có: `/agent-agile-team:agile stop`. Chi tiết: [`hosts/claude/README.md`](../hosts/claude/README.md).
+
 ### 4b. Codex
 
 Cài plugin từ `.codex-plugin/plugin.json` theo `codex plugin --help`, hoặc chỉ mở thẳng thư mục repo. Luật lõi

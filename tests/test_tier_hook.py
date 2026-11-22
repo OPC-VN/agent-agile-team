@@ -426,7 +426,7 @@ def test_tag_is_case_insensitive_and_tolerates_spaces(tmp_path):
 
 def test_tag_survives_bom_and_zero_width_prefix(tmp_path):
     repo = make_repo(tmp_path)
-    for prefix in ("﻿", "​", "﻿​ "):
+    for prefix in ("\ufeff", "\u200b", "\ufeff\u200b "):
         res = th.decide(payload(repo, "general-purpose", prompt=prefix + "[AAT role=qa]\nbrief"), standalone_env())
         assert res["receipt"]["role"] == "qa" and out_of(res)["permissionDecision"] != "deny", repr(prefix)
 

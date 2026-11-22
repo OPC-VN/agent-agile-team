@@ -136,7 +136,7 @@ def agent_name(subagent_type):
 def first_line_tag(prompt):
     """(role, malformed). Only the first non-empty line of the prompt is read; role is lower-cased."""
     for line in (prompt or "").splitlines():
-        line = line.strip().strip("﻿​").strip()
+        line = line.strip().strip("\ufeff\u200b").strip()
         if not line:
             continue
         found = ROLE_TAG_RE.match(line)
@@ -168,7 +168,9 @@ def exit_hint(code: str, env=None) -> str:
         if env.get("AGENT_AGILE_TIERS") or env.get("AGENT_AGILE_TIER_SNAPSHOT"):
             return ("Fix: correct or unset AGENT_AGILE_TIERS (the right path is %OPCOS_ROOT%/system/workshop/records/agent-agile-team/tiers.json) "
                     f"or set AGENT_AGILE_TIER_SNAPSHOT, then RESTART the app/session; or {stop}.")
-        return f"Fix: run scripts/tier_setup.py (standalone install), then open a new session; or {stop}."
+        # Absolute path: the plugin lives in the host's cache, so a path relative to the project would not exist for the user.
+        return (f'Fix: run `"{sys.executable}" "{HERE / "tier_setup.py"}"` (standalone install; creates your tier table once), '
+                f"then open a new session; or {stop}.")
     if code == "role_tag_malformed":
         return f"Fix: write the first line as [AAT role=<role>], or [AAT role=direct]; or {stop}."
     if code.startswith("catalog_"):
