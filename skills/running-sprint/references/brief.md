@@ -16,6 +16,10 @@
 | 4 | Giải mơ hồ | điểm mơ hồ Analyst đã thấy trong brief và cách Analyst quyết (một dòng mỗi điểm) |
 | 5 | Hợp đồng | thư mục làm việc · file báo cáo (`TKn-report.md` trong thư mục hồ sơ sprint `paths.sprint_dir`, không phải `.tmp/`) · khối hợp đồng ở mục 3 · khối văn phong rút gọn (skill `response-style` mục 8) |
 
+**Dòng đầu của brief (agile BẬT, giao bằng subagent chung `general-purpose`, `Explore`, `Plan`):** một dòng thẻ vai, ví dụ
+`[AAT role=implementer]` (vai là tên trong `tiers/role-catalog.json`; việc không thuộc vai nào: `[AAT role=direct]`). Thiếu thẻ thì hook
+`tier_hook` chặn lượt với `role_tag_required` (xem `docs/agents.md`). Giao bằng tên agent có sẵn (`code-reviewer`, `security-reviewer`…) thì không cần thẻ.
+
 Giá trị chính xác (số, chuỗi, chữ ký, test) **chỉ** xuất hiện ở mục `TKn` của PLAN — brief trỏ, không
 chép, để không có hai nguồn lệch nhau.
 

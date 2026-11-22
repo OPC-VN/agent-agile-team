@@ -91,7 +91,8 @@ chạy chế độ một agent và nói rõ.
   giờ** `HEAD~1` (bỏ sót mọi commit trừ commit cuối của việc nhiều commit).
 - Soạn brief theo [references/brief.md](references/brief.md): mục tiêu một câu · đường dẫn PLAN + mục
   `TKn` (brief là nguồn yêu cầu duy nhất; giá trị chính xác chỉ ở đó) · giao diện và phán quyết từ `TK`
-  trước mà brief không biết · điều cấm · hợp đồng báo cáo. **Không dán lịch sử phiên, không dán cả
+  trước mà brief không biết · điều cấm · hợp đồng báo cáo. Giao bằng subagent chung thì **dòng đầu
+  brief là thẻ vai** `[AAT role=implementer]` (brief.md mục 1), không thì hook chặn `role_tag_required`. **Không dán lịch sử phiên, không dán cả
   PLAN.** Có phát hiện gác lại ở vùng `TK` này chạm → trỏ dòng PROGRESS đó.
 - Ghi dòng bắt đầu: `**<giờ>** — giao TKn (<tên>) cho Implementer · T2 · <model>; brief <đường dẫn>;
   BASE <sha7>`; nhãn agent vào `roles`. Thiếu model là Phải sửa khi kiểm PROGRESS.
