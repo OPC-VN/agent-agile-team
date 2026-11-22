@@ -424,6 +424,13 @@ def test_tag_is_case_insensitive_and_tolerates_spaces(tmp_path):
         assert res["receipt"]["role"] == "qa" and out_of(res)["updatedInput"]["model"] == out_of(base)["updatedInput"]["model"], tag
 
 
+def test_tag_survives_bom_and_zero_width_prefix(tmp_path):
+    repo = make_repo(tmp_path)
+    for prefix in ("﻿", "​", "﻿​ "):
+        res = th.decide(payload(repo, "general-purpose", prompt=prefix + "[AAT role=qa]\nbrief"), standalone_env())
+        assert res["receipt"]["role"] == "qa" and out_of(res)["permissionDecision"] != "deny", repr(prefix)
+
+
 def test_malformed_tag_has_its_own_code(tmp_path):
     repo = make_repo(tmp_path)
     for prompt in ("[AAT Role=qa", "[AAT qa]", "[aat role=]", "[AAT role=qa x]"):

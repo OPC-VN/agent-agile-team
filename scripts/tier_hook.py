@@ -18,10 +18,11 @@ Flow when agile is ON:
      (BUILTIN_ALIASES, extended by the JSON object in `AGENT_AGILE_MODEL_ALIASES`; keys must look like model ids and values must be one
      of ALIAS_VALUES, a bad entry is ignored with a warning). An id outside it is `model_unmappable` and is denied, never guessed.
      `updatedInput` carries EVERY key of the old `tool_input` plus `model` (it replaces the whole input).
-  3b. Role card (CO16): when the type is general-purpose, claude, Plan, Explore or empty, the role comes from the first `[AAT role=<role>]`
-     tag in `tool_input.prompt` (receipt `role_source` = `tag`; an agent file gives `agent`). A known role goes through steps 2-3 exactly like
-     the agent of that role; `role=direct` passes with decision `pass_direct` (no model forced); an unknown role is denied `unknown_role`; no tag
-     is denied `role_tag_required`. With an unusable catalog the tag is checked against CORE_ROLES only.
+  3b. Role card (CO16): when the type is general-purpose, claude, Plan, Explore or empty, the role comes from the `[AAT role=<role>]`
+     tag on the FIRST NON-EMPTY LINE of `tool_input.prompt` (case-insensitive; a tag elsewhere does not count; receipt `role_source` = `tag`;
+     an agent file gives `agent`). A known role goes through steps 2-3 exactly like the agent of that role; `role=direct` passes with decision
+     `pass_direct` (no model forced); an unknown role is denied `unknown_role`; no tag is denied `role_tag_required`; a first line that starts
+     like a tag but is malformed is denied `role_tag_malformed`. With an unusable catalog every tag other than `role=direct` is denied.
   4. Any resolution error is a `deny`; the reason names the code and a way out (`/agent-agile-team:agile stop`, or fix the cause).
 
 Receipt: one JSONL line per run, append, no prompt text and no secret. Place: `tier-receipts.jsonl` in the folder of the newest open
@@ -135,7 +136,7 @@ def agent_name(subagent_type):
 def first_line_tag(prompt):
     """(role, malformed). Only the first non-empty line of the prompt is read; role is lower-cased."""
     for line in (prompt or "").splitlines():
-        line = line.strip()
+        line = line.strip().strip("﻿​").strip()
         if not line:
             continue
         found = ROLE_TAG_RE.match(line)
