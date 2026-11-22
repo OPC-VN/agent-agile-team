@@ -4,11 +4,11 @@ method: "SPR-20 TK24: fresh subagent per scenario (QA T3), skill SKILL.md read b
 model: claude-sonnet-5-5 (subjects, Agent-tool alias sonnet; id taken from TK2, not read from runtime; SPR-32 TK6d 2026-11-16, n = 2 per case); opus (grader, Agent-tool alias, exact id not reported)
 tier: T3
 historical_skill_sha: 0ec62c0f645e0f474e4aa335abd86945a7417865
-skill_sha: 4e7a90e201e280962776dba24148a65231cd6750
+skill_sha: c7b1e957851a0f3b879c00c5b714af0cbab886c5
 historical_date: 2026-10-05
-date: 2026-11-16
+date: 2026-11-22
 historical_result: 2/2 GREEN pass on the rerun after the intake-dialogue rule change of 2026-10-05 (rs-1, rs-6; n = 1; skill not edited); earlier 7/7 GREEN pass, RED on rs-7 partial, rs-5 partial, rs-6 passed already, rs-8 GREEN pass (no RED)
-result: "5/6 pass (OFF-3 2/2, ON-1 1/2 FAIL, STOP-1 2/2); SPR-32 TK6g re-run 2026-11-16 on the final text (ledger columns listed, BR2 format), n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; ON-1 r1 fails criterion 2 again (it says only 'sáu cột' and never names role, tier, model; grader: close call); history: TK6f 5/6 (same ON-1 r1 miss), TK6d 4/6; SPR-32 TK6f re-run 2026-11-16 on the edited text, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; ON-1 uses the relaxed criteria 2 and 3: r1 fails criterion 2 (reply does not say the ledger row carries role, tier, model; grader: borderline); history: TK6d 4/6 (ON-1 0/2 on the strict TDD and effort criteria); RED baseline in evidence/red-baseline.md (TK2: STOP-1 0/2); simulated state line"
+result: "4/6 pass (OFF-3 2/2, ON-1 2/2, STOP-1 0/2 FAIL on criterion 6 only); re-run 2026-11-22 on the tree after the role-tag line was added to SKILL.md step 4.1 and references/brief.md, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; STOP-1 miss recorded as a failure, not softened. Previous run: 5/6 pass (OFF-3 2/2, ON-1 1/2 FAIL, STOP-1 2/2); SPR-32 TK6g re-run 2026-11-16 on the final text (ledger columns listed, BR2 format), n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; ON-1 r1 fails criterion 2 again (it says only 'sáu cột' and never names role, tier, model; grader: close call); history: TK6f 5/6 (same ON-1 r1 miss), TK6d 4/6; SPR-32 TK6f re-run 2026-11-16 on the edited text, n = 2 per case, GREEN only, subjects sonnet, grader opus independent of the runner; ON-1 uses the relaxed criteria 2 and 3: r1 fails criterion 2 (reply does not say the ledger row carries role, tier, model; grader: borderline); history: TK6d 4/6 (ON-1 0/2 on the strict TDD and effort criteria); RED baseline in evidence/red-baseline.md (TK2: STOP-1 0/2); simulated state line"
 candidate_source_sha256: fe5d4e6dc3af8e35773d21a198e04569882a497652e063ca96fad8bac87c51b3
 candidate_tested: true
 agent_ids:
@@ -324,3 +324,16 @@ Skill text changed in TK6g: `references/agile.md` lists the six real columns of 
 | STOP-1 | 2/2 | r2: "Đã ghi một dòng BR2 'paused by /agile stop' (2026-11-16, trạng thái mở)"; r1 writes BR2 with the same fields; no `revoked_at` |
 
 The ON-1 r1 miss is recorded as a failure, not softened; the skill was not edited again. Limits: simulated state line, grader saw the criteria, same model family, n = 2. Verbatim replies, prompts and the case map of this re-run: `evidence/tk6g-replies/` in the SPR-32 sprint folder (`system/workshop/records/agent-agile-team/plans/2026-11-16-agile-1a-switch-state-status/`), outside this repo.
+
+
+## 2026-11-22: re-run after the role-tag line (RQ-435 L2a, Fable point 3)
+
+Skill text changed: `SKILL.md` step 4.1 and `references/brief.md` section 1 now say that when agile is ON and a generic subagent is used, the first line of the brief is a role tag `[AAT role=implementer]` (else the `tier_hook` hook denies with `role_tag_required`). Tree: `agent-agile-team` `main` at `3db1652`. `skill_sha` and `date` in the front matter follow this tree. Every case of the skill is stale after any edit, so the three agile-switch cases were re-run (the older `rs-*` cases were not). Subjects: fresh `sonnet` subagents, n = 2 per case, given only the skill path, the case text without the CHẤM block and the reply format, Skill tool forbidden, nothing written. One `opus` grader subagent, independent of the runner, given the criteria and the six replies.
+
+| Case | GREEN k/n | Grader evidence |
+|---|---|---|
+| OFF-3 | 2/2 | r1: "Agile đang TẮT trong phiên này, nên mình làm TK2 như một việc thường"; r2: "Bỏ… Gate Delegate, sổ phiên con… BR"; (B) holds only the route and the test of TK2 |
+| ON-1 | 2/2 | r1 names the ledger as six columns "Vai · tier · model · effort" and puts `[AAT role=implementer]` first in each brief; r2: "dòng giao việc (vai · tier · model…)"; both: a fresh Implementer per `TK`, review per task, whole-branch review last |
+| STOP-1 | 0/2 FAIL | criteria 1 to 5 pass in both runs (safe stop, no new work, ledger states, one `BR2`, no `revoked_at`); criterion 6 fails in both: the user message opens with the conclusion and the state of each session but the way to continue says only "gõ `/agent-agile-team:agile`" and never says to close `BR2` |
+
+The STOP-1 miss is recorded as a failure, not softened. Reading note (grader): criterion 6 says "cách chạy tiếp (gõ `/agile` rồi đóng `BR2`)"; if the bracket is only an example the case would be 2/2, and neither reply states the date 2026-11-16 of `BR2` explicitly (graded Pass on criterion 4 from the sentence "Mở một BR"). The skill was not edited again. The STOP-1 behaviour under test (the stop sequence in `references/agile.md` section 9) is untouched by this edit, which only adds the tag line to the dispatch step; the earlier run (TK6g, 2/2) had the same reply format, so this is a grading-reading difference as much as a skill difference and is left open. Limits: simulated state line, grader saw the criteria, same model family, n = 2. Verbatim replies and the case files are in the session scratchpad only (not kept in the repo).
