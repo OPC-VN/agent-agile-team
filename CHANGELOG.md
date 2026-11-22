@@ -3,6 +3,12 @@
 Mục mới nhất đứng đầu. Tiêu đề mỗi mục là đúng chuỗi version trong các manifest (test đồng bộ
 version kiểm điều này).
 
+## 0.13.1 (2026-11-22)
+
+- **Sửa — skill `running-sprint` dạy thẻ vai (RQ-435 L2a, điểm 3 của Fable):** `SKILL.md` bước 4.1 và `references/brief.md` mục 1 dặn: khi agile BẬT và giao bằng subagent chung (`general-purpose`, `Explore`, `Plan`), dòng đầu brief là thẻ vai `[AAT role=implementer]` (hoặc `[AAT role=direct]`), không thì hook `tier_hook` chặn `role_tag_required`; giao bằng tên agent có sẵn thì không cần thẻ. Bài kiểm áp lực chạy lại ngày 22/11/2026: OFF-3 2/2, ON-1 2/2, STOP-1 0/2 (trượt tiêu chí 6, ghi đúng, chưa sửa skill; ghi ở `skills/running-sprint/tests/pressure.md`).
+- **Sửa — tài liệu alias model (điểm 4 của Fable):** `hosts/claude/README.md` và `docs/INSTALL.md` ghi rõ model tier 4 Claude mặc định `claude-fable-5-2` (alias `fable`) chỉ đo ngày 22/11/2026 ở Claude Code 2.1.325, gói có Fable; máy khác bị từ chối alias thì đổi ô tier 4 của Claude trong `tiers.json` thành `claude-opus-5-5` hoặc khai alias qua `AGENT_AGILE_MODEL_ALIASES`.
+- **Sửa — test:** `tests/test_legacy_allowlist.py` bỏ qua `.venv` và `venv` (thư viện bên thứ ba làm test hỏng trên máy có môi trường ảo trong repo).
+
 ## 0.13.0 (2026-11-22)
 
 - **Thêm — hook `PreToolUse` `Agent|Task` ép model subagent theo vai (RQ-435 L2a, CO16 đợt 1):** `hooks/hooks.json` thêm hook thứ tư chạy `scripts/tier_hook.py`; chỉ làm việc khi agile BẬT (TẮT thì thoát 0, không ghi gì). Thẻ vai `[AAT role=<vai>]` ở dòng đầu brief, ba agent vai quyết định (`gate-delegate`, `business-reviewer`, `tech-reviewer`), bảng tier hai chế độ (`tiers/role-catalog.json`, `tiers/tiers.defaults.json`, `scripts/tier_resolve.py`, `scripts/tier_setup.py`), biên nhận `tier-receipts.jsonl`. **Máy mới không có OpcOS:** chạy chế độ riêng; lượt vai lõi bị chặn `tiers_file_missing` cho tới khi chạy `python scripts/tier_setup.py` một lần (lý do chặn in đường tuyệt đối tới script); `/agent-agile-team:agile stop` luôn thoát được. Chỉ Claude Code bị ép; cần lệnh `python` trên PATH; alias `fable` đo ngày 22/11/2026 ở một bản Claude Code (đo lại khi đổi bản). Chi tiết: `hosts/claude/README.md`, `scripts/README.md`, `docs/agents.md`.
