@@ -2,6 +2,8 @@
 
 # Dữ liệu chạy — repo phương pháp không có dữ liệu riêng; dòng này là lưới an toàn.
 /workspace/
+/runtime/
+/workspaces/
 
 # Môi trường Python và cache
 /.venv/
