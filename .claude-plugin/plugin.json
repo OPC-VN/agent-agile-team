@@ -10,6 +10,7 @@
   "homepage": "https://github.com/OPC-VN/agent-agile-team",
   "repository": "https://github.com/OPC-VN/agent-agile-team",
   "license": "MIT",
+  "skills": "./skills/",
   "keywords": [
     "agile",
     "agents",
