@@ -355,3 +355,49 @@ def test_hook_upper_case_session_id_turns_on(repo, state):  # R1b MF1
     fire(expansion(repo, "", sid="ABC"), state)
     assert load(repo, "ABC", state)["effective_on"] is True
     assert "agile: ON" in context(fire(start(repo, sid="ABC"), state))
+
+
+@pytest.mark.parametrize("args", ["secure", "secure on", " Secure   ON "])
+def test_secure_hook_on_preserves_agile(repo, state, args):
+    st.apply_command("on", repo, "s1", source="script", prompt_id="old", directory=state)
+    before = load(repo, state=state)
+    fire(expansion(repo, args), state)
+    current = load(repo, state=state)
+    assert current["secure_on"] is True and current["secure_source"] == "hook"
+    assert (current["session_agile"], current["source"], current["prompt_id"]) == (before["session_agile"], before["source"], before["prompt_id"])
+
+
+@pytest.mark.parametrize("args", ["secure off", "secure stop"])
+def test_secure_hook_off(repo, state, args):
+    st.apply_command("secure_on", repo, "s1", directory=state)
+    fire(expansion(repo, args), state)
+    assert load(repo, state=state)["secure_on"] is False
+
+
+def test_secure_hook_ignores_unknown_and_other_name(repo, state):
+    st.apply_command("secure_on", repo, "s1", directory=state)
+    before = (state / "session-s1.json").read_bytes()
+    fire(expansion(repo, "secure always"), state)
+    fire(expansion(repo, "secure off", name="agent-agile-team:agile-secure"), state)
+    assert (state / "session-s1.json").read_bytes() == before
+
+
+def test_secure_hook_session_start_and_resume(repo, state):
+    text = context(fire(start(repo, "gone", "resume"), state))
+    assert text.startswith("agile: OFF") and "secure OFF" in text
+    assert "/agent-agile-team:agile secure" in text and "/agent-agile-team:agile" in text
+    fire(expansion(repo, "secure"), state)
+    text = context(fire(start(repo), state))
+    assert text.startswith("agile: OFF") and "secure ON" in text
+
+
+@pytest.mark.parametrize("always", [False, True])
+def test_secure_hook_resume_missing_session_reminds_both_commands(repo, state, always):
+    if always:
+        fire(expansion(repo, "always", sid="other"), state)
+    text = context(fire(start(repo, "missing", "resume"), state))
+    assert text.startswith("agile: ON" if always else "agile: OFF")
+    assert "secure OFF" in text
+    assert "/agent-agile-team:agile and /agent-agile-team:agile secure" in text
+    if always:
+        assert "agile is OFF" not in text and "agile and secure are OFF" not in text

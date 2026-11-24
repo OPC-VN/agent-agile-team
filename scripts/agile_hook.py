@@ -26,7 +26,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 COMMAND_NAME = "agent-agile-team:agile"
-ARG_TO_COMMAND = {"": "on", "always": "always", "manual": "manual", "stop": "stop", "status": None}
+ARG_TO_COMMAND = {"": "on", "always": "always", "manual": "manual", "stop": "stop", "status": None,
+                  "secure": "secure_on", "secure on": "secure_on", "secure off": "secure_off",
+                  "secure stop": "secure_off"}
 MAX_STDIN = 1_000_000
 
 
@@ -49,7 +51,7 @@ def state_line(project, session_id, source_event: str, directory=None, write_fai
     parts = [f"mode {state['mode']}", f"always {'yes' if state['always'] else 'no'}"]
     if state["effective_on"]:
         parts.append(f"source {state['source']}")
-    text = f"agile: {flavor} ({', '.join(parts)}) session_id={state['session']}"
+    text = f"agile: {flavor} ({', '.join(parts)}) secure {'ON' if state['secure_on'] else 'OFF'} session_id={state['session']}"
     if os.environ.get(st.ENV_STATE_DIR):
         shown = st.state_dir_override()
         text += f" state_dir={st.safe_path(shown) if shown else '(override ignored)'}"
@@ -69,9 +71,9 @@ def state_line(project, session_id, source_event: str, directory=None, write_fai
         notices.append("source is self-declared, not verified")
     if state["non_hook_on"]:
         notices.append("non-hook ON: the switch was set by a script, not by a human-typed command")
-    if source_event == "resume" and state["session_known"] and not state["session_file_exists"] and not state["always"]:
-        notices.append("no switch state found for this session id after resume; agile is OFF, type "
-                       "/agent-agile-team:agile to turn it on")
+    if source_event == "resume" and state["session_known"] and not state["session_file_exists"]:
+        notices.append("no switch state found for this session id after resume; type "
+                       "/agent-agile-team:agile and /agent-agile-team:agile secure to set the switches")
     for marker in st.legacy_markers(project):
         notices.append(f"old marker {marker} exists; it no longer switches anything")
     if not state["effective_on"]:
@@ -114,7 +116,7 @@ def handle_prompt_expansion(payload: dict, directory=None) -> str | None:
     args = "" if args is None else args
     if not isinstance(args, str):
         return None
-    key = args.strip().lower()
+    key = " ".join(args.split()).lower()
     if key not in ARG_TO_COMMAND:
         return None
     cmd = ARG_TO_COMMAND[key]
