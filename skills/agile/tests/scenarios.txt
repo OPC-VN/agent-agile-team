@@ -20,7 +20,7 @@ agile status
   project: C:/work/demo
   agile: OFF (mode auto, always no, source -)
   last command: none
-  secure: not available yet
+  secure: OFF (source -)
   tier: not available yet
   team: not available yet
   open sprint: none
@@ -61,7 +61,7 @@ agile status
   project: C:/work/demo
   agile: OFF (mode auto, always no, source -)
   last command: stop changed=yes prompt_id=p-31 ts=2026-11-16T09:12:40Z
-  secure: not available yet
+  secure: OFF (source -)
   tier: not available yet
   team: not available yet
   open sprint: SPR-41 [in_progress] Xuất đơn hàng ra CSV (plans/2026-11-10-xuat-csv)
@@ -85,7 +85,7 @@ agile status
   project: C:/work/demo
   agile: OFF (mode auto, always no, source -)
   last command: stop changed=no prompt_id=p-52 ts=2026-11-16T09:30:02Z
-  secure: not available yet
+  secure: OFF (source -)
   tier: not available yet
   team: not available yet
   open sprint: SPR-38 [verifying] Đồng bộ kho (plans/2026-11-01-dong-bo-kho)
@@ -107,7 +107,7 @@ agile status
   project: /Users/an/work/demo
   agile: OFF (mode auto, always no, source -)
   last command: none
-  secure: not available yet
+  secure: OFF (source -)
   tier: not available yet
   team: not available yet
   open sprint: none

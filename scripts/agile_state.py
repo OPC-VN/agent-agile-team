@@ -289,7 +289,7 @@ def _clean_source(value) -> str:
 
 def _clean_last_command(value) -> dict | None:
     """`last_command` is free JSON in a file anyone can write: only a known command and a real bool go further."""
-    if not isinstance(value, dict) or value.get("command") not in COMMANDS or not isinstance(value.get("changed"), bool):
+    if not isinstance(value, dict) or value.get("command") not in (*COMMANDS, "secure_on", "secure_off") or not isinstance(value.get("changed"), bool):
         return None
     return {"command": value["command"], "changed": value["changed"],
             "prompt_id": safe_text(value.get("prompt_id") or "-"), "ts": safe_text(value.get("ts") or "-")}
@@ -328,6 +328,7 @@ def load_state(project, session_id=None, directory: Path | None = None) -> dict:
     always = repo.get("always") is True
     repo_manual = repo.get("manual") is True
     session_on = sess.get("agile") is True
+    secure_on = sess.get("secure") is True and not problems
     mode = "manual" if (repo_manual or sess.get("mode") == "manual") else "auto"
     effective = (always or session_on) and not problems
     non_hook = bool((session_on and sess.get("source") != "hook") or (always and repo.get("always_source") != "hook"))
@@ -348,7 +349,12 @@ def load_state(project, session_id=None, directory: Path | None = None) -> dict:
         "non_hook_on": non_hook and effective,
         "effective_on": effective,
         "state_problem": "; ".join(problems) if problems else None,
-        "guard_must_stay_active": bool(effective or problems),
+        "guard_must_stay_active": bool(secure_on or problems),
+        "secure_on": secure_on,
+        "secure_source": _clean_source(sess.get("secure_source")) if "secure_source" in sess else "-",
+        "secure_ts": sess.get("secure_ts"),
+        "secure_prompt_id": sess.get("secure_prompt_id"),
+        "secure_transcript_path": sess.get("secure_transcript_path"),
         "prompt_id": sess.get("prompt_id"),
         "transcript_path": sess.get("transcript_path"),
         "ts": sess.get("ts"),
@@ -431,7 +437,7 @@ def apply_command(cmd: str, project, session_id=None, source: str = "script", pr
 
     `source` is `script` for the CLI and `hook` only when `agile_hook.py` calls this on a human-typed command.
     `on` and `manual` need a session; `always` and `stop` also work at repo level."""
-    if cmd not in ("on", "off", "always", "manual", "stop"):
+    if cmd not in ("on", "off", "always", "manual", "stop", "secure_on", "secure_off"):
         raise ValueError(f"unknown command: {cmd}")
     directory = directory or state_dir()
     sid = sanitize_session_id(session_id)  # only to test "is there a session"; the raw id goes on to the writers
@@ -439,10 +445,15 @@ def apply_command(cmd: str, project, session_id=None, source: str = "script", pr
     key = repo_key(project)
     meta = {"source": source, "prompt_id": prompt_id, "transcript_path": transcript_path, "ts": ts, "repo_key": key}
     before = load_state(project, session_id, directory)
-    if cmd in ("on", "off") and sid is None:
+    if cmd in ("on", "off", "secure_on", "secure_off") and sid is None:
         raise ValueError(f"'{cmd}' needs --session (agile is per session)")
     message = ""
-    if cmd == "on":
+    if cmd in ("secure_on", "secure_off"):
+        _update_session(session_id, directory, {"secure": cmd == "secure_on", "secure_source": source,
+                                                "secure_ts": ts, "secure_prompt_id": prompt_id,
+                                                "secure_transcript_path": transcript_path})
+        message = "secure ON for this session" if cmd == "secure_on" else "secure OFF for this session"
+    elif cmd == "on":
         _update_session(session_id, directory, dict(meta, agile=True, mode="auto"))
         message = "agile ON for this session (mode auto)"
     elif cmd == "off":
@@ -463,12 +474,12 @@ def apply_command(cmd: str, project, session_id=None, source: str = "script", pr
     else:  # stop: never refused
         repo_active = bool(before["always"] or before["manual_flag"] or before["state_problem"])
         if sid is not None:
-            already = not (before["effective_on"] or before["mode"] == "manual") and not before["state_problem"]
+            already = not (before["effective_on"] or before["secure_on"] or before["mode"] == "manual") and not before["state_problem"]
             if already:
                 message = "already off"
             else:
                 _clear_repo(project, directory, source, ts)
-                _update_session(session_id, directory, dict(meta, agile=False, mode="auto"))
+                _update_session(session_id, directory, dict(meta, agile=False, mode="auto", secure=False))
                 message = "agile stopped: session switch, manual mode and always are cleared"
         else:
             if repo_active:
@@ -522,7 +533,7 @@ def cleanup_stale(directory: Path | None = None, days: int = STALE_DAYS, now: fl
             horizon = days
             if is_session:
                 data, _problem = read_json(path)
-                if data is None or data.get("agile") is True:
+                if data is None or data.get("agile") is True or data.get("secure") is True:
                     horizon = on_days  # ON or not provably OFF: long horizon
             if first.st_mtime >= clock - horizon * 86400:
                 continue
@@ -649,7 +660,7 @@ def build_status(project, session_id=None, directory: Path | None = None) -> dic
                   "prompt_id": st["prompt_id"], "ts": st["ts"], "transcript_path": st["transcript_path"]},
         "last_command": st["last_command"],
         "project": safe_path(effective_project(project)),
-        "secure": NOT_YET, "tier": NOT_YET, "team": NOT_YET,
+        "secure": {"on": st["secure_on"], "source": st["secure_source"]}, "tier": NOT_YET, "team": NOT_YET,
         "open_sprints": [{k: v for k, v in s.items() if k != "frontmatter"} for s in info["sprints"]],
         "ledger": info["ledger"],
         "routing_mode": routing_mode,
@@ -684,7 +695,10 @@ def render_status(status: dict) -> str:
         lines.append("  last command: none")
     if a["non_hook_on"]:
         lines.append("  WARNING non-hook ON: the switch was set by a script, not by the human-typed command hook")
-    lines.append(f"  secure: {status['secure']}")
+    secure = status["secure"]
+    lines.append(f"  secure: {'ON' if secure['on'] else 'OFF'} (source {secure['source']})")
+    if secure["on"] and secure["source"] != "hook":
+        lines.append("  WARNING non-hook secure ON: the switch was set by a script, not by the human-typed command hook")
     lines.append(f"  tier: {status['tier']}")
     lines.append(f"  team: {status['team']}")
     if status["open_sprints"]:
