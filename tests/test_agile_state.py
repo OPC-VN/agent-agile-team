@@ -879,6 +879,17 @@ def test_secure_stop_and_last_command(repo, state):
     assert st.load_state(repo, "s1")["last_command"]["command"] == "secure_off"
 
 
+def test_secure_stop_records_own_provenance(repo, state):
+    st.apply_command("secure_on", repo, "s1", source="hook", prompt_id="P1", transcript_path="fake-one", now=100)
+    st.apply_command("stop", repo, "s1", source="script", prompt_id="P2", transcript_path="fake-two", now=200)
+    current = st.load_state(repo, "s1")
+    assert (current["secure_source"], current["secure_ts"], current["secure_prompt_id"], current["secure_transcript_path"]) == ("script", st.now_iso(200), "P2", "fake-two")
+    assert "secure: OFF (source script)" in st.render_status(st.build_status(repo, "s1"))
+    st.apply_command("on", repo, "s2", source="hook")
+    st.apply_command("stop", repo, "s2", source="script")
+    assert st.load_state(repo, "s2")["secure_source"] == "-"
+
+
 def test_secure_stale_session_uses_long_horizon(repo, state):
     st.apply_command("secure_on", repo, "s1", source="hook")
     path = st.session_file("s1", state)

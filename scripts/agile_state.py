@@ -479,7 +479,11 @@ def apply_command(cmd: str, project, session_id=None, source: str = "script", pr
                 message = "already off"
             else:
                 _clear_repo(project, directory, source, ts)
-                _update_session(session_id, directory, dict(meta, agile=False, mode="auto", secure=False))
+                changes = dict(meta, agile=False, mode="auto", secure=False)
+                if before["secure_on"]:
+                    changes.update(secure_source=source, secure_ts=ts, secure_prompt_id=prompt_id,
+                                   secure_transcript_path=transcript_path)
+                _update_session(session_id, directory, changes)
                 message = "agile stopped: session switch, manual mode and always are cleared"
         else:
             if repo_active:
