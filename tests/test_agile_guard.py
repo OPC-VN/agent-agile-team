@@ -45,8 +45,8 @@ def write_repo_always(repo, spec, session_id=None):
     return path
 
 
-def write_switch(repo, spec, session_id=None):
-    return write_repo_always(repo, spec, session_id)
+def write_switch(repo, spec, session_id=SID):
+    return write_secure_session(repo, spec, session_id)
 
 
 def write_secure_session(repo, spec, session_id=SID):
@@ -96,7 +96,7 @@ def claude_without_session(cmd, cwd, tool="Bash"):
     return {"tool_name": tool, "tool_input": {"command": cmd}, "cwd": str(cwd)}
 
 
-def claude(cmd, cwd, tool="Bash", session_id=None):
+def claude(cmd, cwd, tool="Bash", session_id=SID):
     payload = claude_without_session(cmd, cwd, tool)
     if session_id is not None:
         payload["session_id"] = session_id
@@ -228,28 +228,28 @@ def test_guard_bad_marker_binary_bytes(tmp_path):
 
 
 def test_guard_codex_and_antigravity_event_shapes(tmp_path):
-    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
     # Codex: tool shell, command dạng chuỗi hoặc danh sách ["bash","-lc","<script>"], cwd ở payload hoặc workdir
     for tool in ("shell", "Bash", "exec_command"):
-        rc, out, err = run("codex", {"tool_name": tool, "tool_input": {"command": "rm -rf x"}, "cwd": str(repo)})
+        rc, out, err = run("codex", {"tool_name": tool, "tool_input": {"command": "rm -rf x"}, "cwd": str(repo), "session_id": SID})
         assert rc == 2 and out == "" and "'irreversible_delete'" in err
-    rc, _, err = run("codex", {"tool_name": "shell", "tool_input": {"command": ["bash", "-lc", "git add . && rm -rf x"], "workdir": str(repo)}})
+    rc, _, err = run("codex", {"tool_name": "shell", "tool_input": {"command": ["bash", "-lc", "git add . && rm -rf x"], "workdir": str(repo)}, "session_id": SID})
     assert rc == 2 and "'irreversible_delete'" in err
-    rc, _, err = run("codex", {"tool_name": "shell", "tool_input": {"command": ["rm", "-rf", "x"]}, "cwd": str(repo)})
+    rc, _, err = run("codex", {"tool_name": "shell", "tool_input": {"command": ["rm", "-rf", "x"]}, "cwd": str(repo), "session_id": SID})
     assert rc == 2 and "'irreversible_delete'" in err
-    rc, _, err = run("codex", {"tool_name": "shell", "tool_input": {"cmd": "rm -rf x"}, "cwd": str(repo)})
+    rc, _, err = run("codex", {"tool_name": "shell", "tool_input": {"cmd": "rm -rf x"}, "cwd": str(repo), "session_id": SID})
     assert rc == 2
-    assert run("codex", {"tool_name": "shell", "tool_input": {"command": ["ls"]}, "cwd": str(repo)}) == (0, "", "")
+    assert run("codex", {"tool_name": "shell", "tool_input": {"command": ["ls"]}, "cwd": str(repo), "session_id": SID}) == (0, "", "")
     # Codex apply_patch có khoá command nhưng là patch, không phải shell
     patch = "*** Begin Patch\n*** Update File: a.md\n+rm -rf x\n*** End Patch"
-    assert run("codex", {"tool_name": "apply_patch", "tool_input": {"command": patch}, "cwd": str(repo)}) == (0, "", "")
+    assert run("codex", {"tool_name": "apply_patch", "tool_input": {"command": patch}, "cwd": str(repo), "session_id": SID}) == (0, "", "")
     # Antigravity: toolCall.args.CommandLine, in JSON quyết định chặn ở stdout, thoát 0; cho qua in {}
-    payload = {"toolCall": {"name": "run_command", "args": {"CommandLine": "rm -rf x", "Cwd": str(repo)}}, "stepIdx": 1}
+    payload = {"toolCall": {"name": "run_command", "args": {"CommandLine": "rm -rf x", "Cwd": str(repo)}}, "stepIdx": 1, "session_id": SID}
     rc, out, err = run("antigravity", payload)
     assert rc == 0 and err == ""
     decision = json.loads(out)
     assert decision["decision"] == "deny" and "'irreversible_delete'" in decision["reason"]
-    ok = {"toolCall": {"name": "run_command", "args": {"CommandLine": "ls", "Cwd": str(repo)}}, "stepIdx": 1}
+    ok = {"toolCall": {"name": "run_command", "args": {"CommandLine": "ls", "Cwd": str(repo)}}, "stepIdx": 1, "session_id": SID}
     assert run("antigravity", ok) == (0, "{}\n", "")
     write = {"toolCall": {"name": "write_to_file", "args": {"TargetFile": str(repo / "a.md")}}}
     assert run("antigravity", write) == (0, "{}\n", "")
@@ -257,12 +257,12 @@ def test_guard_codex_and_antigravity_event_shapes(tmp_path):
     rc, _, err = run("claude", claude("rm -rf x", repo, tool="PowerShell"))
     assert rc == 2
     # công cụ không phải shell: cho qua dù chứa chữ rm -rf x
-    assert run("claude", {"tool_name": "Write", "tool_input": {"file_path": "x", "content": "rm -rf x", "command": "rm -rf x"}, "cwd": str(repo)}) == (0, "", "")
-    assert run("claude", {"tool_name": "mcp__x__y", "tool_input": {"command": "rm -rf x"}, "cwd": str(repo)}) == (0, "", "")
+    assert run("claude", {"tool_name": "Write", "tool_input": {"file_path": "x", "content": "rm -rf x", "command": "rm -rf x"}, "cwd": str(repo), "session_id": SID}) == (0, "", "")
+    assert run("claude", {"tool_name": "mcp__x__y", "tool_input": {"command": "rm -rf x"}, "cwd": str(repo), "session_id": SID}) == (0, "", "")
     # không có tên công cụ nhưng có lệnh: coi là shell (đóng)
-    assert run("claude", {"tool_input": {"command": "rm -rf x"}, "cwd": str(repo)})[0] == 2
+    assert run("claude", {"tool_input": {"command": "rm -rf x"}, "cwd": str(repo), "session_id": SID})[0] == 2
     # shell mà không có lệnh
-    assert run("claude", {"tool_name": "Bash", "tool_input": {}, "cwd": str(repo)}) == (0, "", "")
+    assert run("claude", {"tool_name": "Bash", "tool_input": {}, "cwd": str(repo), "session_id": SID}) == (0, "", "")
 
 
 # --- tìm file dấu và nhánh ----------------------------------------------------------------------------------------
@@ -275,14 +275,14 @@ def test_guard_finds_marker_walking_up(tmp_path):
 
 
 def test_guard_stops_at_first_git(tmp_path):
-    outer = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
+    outer = make_repo(tmp_path, branch="spr-12", marker="{broken", repo_always=True)
     inner = outer / "vendor"
     (inner / ".git").mkdir(parents=True)  # repo lồng: file dấu ở ngoài không áp
     assert_allowed(inner, "rm -rf x")
 
 
 def test_guard_no_cwd_uses_process_cwd(tmp_path, monkeypatch):
-    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path, branch="spr-12", marker="{broken", repo_always=True)
     monkeypatch.chdir(repo)
     rc, _, err = run("claude", {"tool_name": "Bash", "tool_input": {"command": "rm -rf x"}})
     assert rc == 2 and "'irreversible_delete'" in err
@@ -382,17 +382,16 @@ def test_guard_bad_stdin_with_agile_off_passes_and_with_agile_on_blocks(tmp_path
     monkeypatch.chdir(tmp_path)
     assert run("claude", "{broken") == (0, "", "")
     assert run("antigravity", "[]") == (0, "{}\n", "")
-    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker())
     monkeypatch.chdir(repo)
-    rc, _, err = run("claude", "{broken")
+    rc, _, err = run("claude", '{"session_id": "t1", "tool_name": ')
     assert rc == 2 and "agile" in err
-    rc, out, _ = run("antigravity", "null")
+    rc, out, _ = run("antigravity", '{"session_id": "t1", "toolCall": ')
     assert rc == 0 and json.loads(out)["decision"] == "deny"
 
 
 def test_guard_unexpected_exception_closed_when_agile_on(tmp_path, monkeypatch):
-    claude = claude_without_session  # repo-scoped legacy case
-    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
     monkeypatch.chdir(repo)  # ngoại lệ lạ → xác định trạng thái từ thư mục của tiến trình hook
     monkeypatch.setattr(agile_guard, "_analyze", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
     rc, _, err = run("claude", claude("git status", repo))
@@ -404,7 +403,7 @@ def test_guard_unexpected_exception_closed_when_agile_on(tmp_path, monkeypatch):
     plain = tmp_path / "plain"
     plain.mkdir()
     monkeypatch.chdir(plain)
-    assert run("claude", claude("git status", plain))[0] == 0
+    assert run("claude", claude("git status", plain, session_id=None))[0] == 0
 
 
 def _nest(cmd, layers):
@@ -414,8 +413,7 @@ def _nest(cmd, layers):
 
 
 def test_guard_deep_command_nesting_fails_closed(tmp_path):
-    claude = claude_without_session  # repo-scoped legacy case
-    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
     rc, _, err = run("claude", claude(_nest("rm -rf x", 3), repo))  # trong giới hạn: mở hết lớp, thấy push
     assert rc == 2 and "'irreversible_delete'" in err
     rc, _, err = run("claude", claude(_nest("rm -rf x", 4), repo))  # quá giới hạn: không phân tích được → chặn
@@ -424,7 +422,7 @@ def test_guard_deep_command_nesting_fails_closed(tmp_path):
     assert rc == 2 and "lồng" in err
     plain = tmp_path / "plain"
     plain.mkdir()
-    assert run("claude", claude(_nest("rm -rf x", 6), plain)) == (0, "", "")  # không có file dấu → qua
+    assert run("claude", claude(_nest("rm -rf x", 6), plain, session_id=None)) == (0, "", "")  # không có file dấu → qua
 
 
 def test_guard_cli_subprocess(tmp_path):
@@ -441,7 +439,7 @@ def test_guard_cli_subprocess(tmp_path):
 
 # ===================== vòng sửa 1 (S-RF1…S-RF9, T-RF1…T-RF4) =====================
 
-def codex(cmd, cwd=None, workdir=None, session_id=None):
+def codex(cmd, cwd=None, workdir=None, session_id=SID):
     payload = {"tool_name": "shell", "tool_input": {"command": cmd}}
     if session_id is not None:
         payload["session_id"] = session_id
@@ -458,7 +456,7 @@ def fwd(path):
 
 def test_guard_workdir_beats_session_cwd(tmp_path):
     """S-RF1 / T-RF3: thư mục của lệnh (workdir) quyết định, không phải cwd của phiên."""
-    repo = make_repo(tmp_path / "a", branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path / "a", branch="spr-12", marker=good_marker())
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
     rc, _, err = run("codex", codex(["bash", "-lc", "rm -rf x"], cwd=elsewhere, workdir=repo))
@@ -468,16 +466,16 @@ def test_guard_workdir_beats_session_cwd(tmp_path):
     assert rc == 2
     # workdir tương đối ghép với cwd phiên; Antigravity: Cwd trong args thắng cwd phiên
     (repo / "sub").mkdir()
-    rc, _, err = run("codex", {"tool_name": "shell", "cwd": str(repo), "tool_input": {"command": "rm -rf x", "workdir": "sub"}})
+    rc, _, err = run("codex", {"tool_name": "shell", "cwd": str(repo), "tool_input": {"command": "rm -rf x", "workdir": "sub"}, "session_id": SID})
     assert rc == 2
-    ag = {"toolCall": {"name": "run_command", "args": {"CommandLine": "rm -rf x", "Cwd": str(repo)}}, "cwd": str(elsewhere)}
+    ag = {"toolCall": {"name": "run_command", "args": {"CommandLine": "rm -rf x", "Cwd": str(repo)}}, "cwd": str(elsewhere), "session_id": SID}
     assert json.loads(run("antigravity", ag)[1])["decision"] == "deny"
 
 
 def test_guard_error_after_event_dir_probes_event_dir(tmp_path, monkeypatch):
     """T-RF1 / S-RF4: lỗi sau khi có sự kiện → trạng thái xác định từ chính sự kiện (cwd của nó), không phải thư mục tiến trình."""
     claude = claude_without_session  # repo-scoped legacy case
-    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path / "r", branch="spr-12", marker="{broken", repo_always=True)
     away = tmp_path / "away"
     away.mkdir()
     monkeypatch.chdir(away)
@@ -783,8 +781,7 @@ def test_launcher_without_python_warns_and_exits_zero(tmp_path, bare_sh_ok):
 
 
 def test_launcher_with_python_delegates_to_guard(tmp_path, bare_sh_ok):
-    claude = claude_without_session  # repo-scoped legacy case
-    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker())
     path = [bare_sh_ok, Path(sys.executable).parent]
     blocked_run = run_launcher(repo, claude("rm -rf x", repo), path)
     if "không chạy được Python" in blocked_run.stderr:
@@ -792,7 +789,7 @@ def test_launcher_with_python_delegates_to_guard(tmp_path, bare_sh_ok):
     assert blocked_run.returncode == 2 and "'irreversible_delete'" in blocked_run.stderr
     assert run_launcher(repo, claude("ls", repo), path).returncode == 0
     plain = make_repo(tmp_path / "p", branch="spr-12")
-    assert run_launcher(plain, claude("rm -rf x", plain), path).returncode == 0  # agile TẮT: guard ngủ
+    assert run_launcher(plain, claude("rm -rf x", plain, session_id=None), path).returncode == 0  # agile TẮT: guard ngủ
 
 
 def test_launcher_is_posix_sh_text():
@@ -1067,7 +1064,7 @@ def test_guard_stash_and_clean_plain_allowed(tmp_path):
 
 def test_guard_old_python_guard_falls_back(tmp_path, monkeypatch):
     """Python < 3.9: không phân tích, chỉ xác định công tắc agile từ thư mục tiến trình (hàm lưới cuối)."""
-    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path / "r", branch="spr-12", marker="{broken", repo_always=True)
     plain = tmp_path / "p"
     plain.mkdir()
     import contextlib
@@ -1166,44 +1163,37 @@ def test_session_switch_activates_only_that_session(tmp_path):
 def test_repo_always_activates_every_session_of_that_repo_only(tmp_path):
     repo = make_repo(tmp_path / "a")
     write_repo_always(repo, good_marker())
-    assert blocked_delete(dict(claude("rm -rf x", repo), session_id="whoever"))[0]
-    assert run("claude", dict(claude("rm -rf x", make_repo(tmp_path / "b")), session_id="whoever")) == (0, "", "")
+    assert st.load_state(repo, SID)["effective_on"]
+    assert run("claude", claude("rm -rf x", repo)) == (0, "", "")
 
 
 def test_project_dir_env_decides_the_repo_key(tmp_path, monkeypatch):
-    """Khoá repo theo `CLAUDE_PROJECT_DIR` như `agile_state` (RF3): `git init sub; cd sub` không đổi khoá, thư mục sự kiện lạ không làm rào ngủ."""
-    claude = claude_without_session  # repo key is the subject of this test
     repo = make_repo(tmp_path / "r")
     write_repo_always(repo, good_marker())
     sub = repo / "sub"
     (sub / ".git").mkdir(parents=True)
-    away = tmp_path / "away"
-    away.mkdir()
-    assert run("claude", claude("rm -rf x", sub)) == (0, "", "")  # repo lồng có khoá riêng (không đặt biến)
+    assert not st.load_state(sub, SID)["effective_on"]
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(repo))
+    assert st.load_state(sub, SID)["effective_on"]
+    assert run("claude", claude("rm -rf x", sub)) == (0, "", "")
+    write_secure_session(repo, {})
     assert blocked_delete(claude("rm -rf x", sub))[0]
-    assert blocked_delete(claude("rm -rf x", away))[0]
 
 
 def test_subagent_without_session_file_is_guarded_not_dormant(tmp_path):
-    """SC1.7 / R0-M11: có `agent_id` mà không có file phiên nào khớp → được bảo vệ (bảy mục), không bao giờ ngủ."""
-    claude = claude_without_session  # ca này cố ý không có session_id
     repo = make_repo(tmp_path)
-    sub = dict(claude("rm -rf x", repo), session_id="no-such-session", agent_id="ac0db6e777f737813", agent_type="general-purpose")
-    ok, err = blocked_delete(sub)
-    assert ok and "trạng thái hỏng" not in err
-    no_session = dict(claude("rm -rf x", repo), agent_id="ac0db6e777f737813")  # cả session_id cũng thiếu
-    assert blocked_delete(no_session)[0]
-    active, broken, _ = agile_guard.activation(sub)
-    assert not broken and active == ALWAYS
-    assert run("claude", claude("rm -rf x", repo)) == (0, "", "")  # luật áp cho tác tử con, không cho phiên chính không file
+    sub = dict(claude_without_session("rm -rf x", repo), session_id="no-such-session", agent_id="child")
+    assert agile_guard.activation(sub) is None
+    assert run("claude", sub) == (0, "", "")
+    sub.pop("session_id")
+    assert run("claude", sub) == (0, "", "")
 
 
 def test_subagent_with_matching_session_file_follows_the_switch(tmp_path):
     repo = make_repo(tmp_path)
-    write_repo_always(repo, good_marker(), session_id=SID)
+    write_secure_session(repo, good_marker(), session_id=SID)
     assert blocked_delete(session_payload("rm -rf x", repo, agent_id="a1", agent_type="general-purpose"))[0]  # cùng session_id (TK1b)
-    st.apply_command("off", repo, SID, source="hook")  # phiên đã TẮT tường minh: có file phiên khớp → tác tử con cũng ngủ
+    st.apply_command("secure_off", repo, SID, source="hook")  # phiên đã TẮT tường minh: có file phiên khớp → tác tử con cũng ngủ
     assert run("claude", session_payload("rm -rf x", repo, agent_id="a1")) == (0, "", "")
 
 
@@ -1362,16 +1352,24 @@ def test_redirecting_state_by_environment_blocked(tmp_path, cmd):
 
 
 def test_tamper_rules_apply_to_subagents_and_other_formats(tmp_path):
-    repo = make_repo(tmp_path)  # agile TẮT; tác tử con không có file phiên: được bảo vệ
-    sub = dict(claude("python scripts/agile_state.py off", repo), session_id="zz", agent_id="a9")
-    rc, _, err = run("claude", sub)
-    assert rc == 2 and TAMPER_REASON in err
-    rc, out, _ = run("antigravity", {"toolCall": {"name": "run_command", "args": {"CommandLine": "python scripts/agile_state.py stop", "Cwd": str(repo)}},
-                                     "session_id": "zz", "agent_id": "a9"})
-    assert rc == 0 and json.loads(out)["decision"] == "deny" and TAMPER_REASON in json.loads(out)["reason"]
-    rc, _, err = run("codex", {"tool_name": "shell", "tool_input": {"command": ["bash", "-lc", "python scripts/agile_state.py off"]}, "cwd": str(repo),
-                               "agent_id": "a9"})
-    assert rc == 2 and TAMPER_REASON in err
+    repo = make_repo(tmp_path)
+    payloads = [
+        ("claude", dict(claude("python scripts/agile_state.py off", repo, session_id=None), agent_id="a9")),
+        ("antigravity", {"toolCall": {"name": "run_command", "args": {"CommandLine": "python scripts/agile_state.py stop", "Cwd": str(repo)}}, "agent_id": "a9"}),
+        ("codex", {"tool_name": "shell", "tool_input": {"command": ["bash", "-lc", "python scripts/agile_state.py off"]}, "cwd": str(repo), "agent_id": "a9"}),
+    ]
+    for fmt, payload in payloads:
+        rc, out, err = run(fmt, payload)
+        assert (rc, out, err) == ((0, "{}\n", "") if fmt == "antigravity" else (0, "", ""))
+    write_secure_session(repo, {})
+    for fmt, payload in payloads:
+        payload["session_id"] = SID
+        rc, out, err = run(fmt, payload)
+        if fmt == "antigravity":
+            assert rc == 0 and json.loads(out)["decision"] == "deny" and TAMPER_REASON in json.loads(out)["reason"]
+        else:
+            assert rc == 2 and TAMPER_REASON in err
+
 
 
 # --- chống phá công tắc: dạng được phép ------------------------------------------------------------------------------
@@ -1394,17 +1392,17 @@ def test_readonly_and_unrelated_forms_allowed(tmp_path, cmd):
 
 
 def test_write_tool_blocked_only_for_state_paths(tmp_path):
-    repo = make_repo(tmp_path, marker=good_marker(), repo_always=True)
+    repo = make_repo(tmp_path, marker=good_marker())
     state = state_dir()
     for path in (state / "session-t1.json", state / "repo-whatever.json", state / "new-file.txt", state):
-        rc, _, err = run("claude", {"tool_name": "Write", "tool_input": {"file_path": str(path), "content": "{}"}, "cwd": str(repo)})
+        rc, _, err = run("claude", {"tool_name": "Write", "tool_input": {"file_path": str(path), "content": "{}"}, "cwd": str(repo), "session_id": SID})
         assert rc == 2 and TAMPER_REASON in err, path
     link_dir(state, repo / "alias")
     rc, _, err = run("claude", {"tool_name": "Edit", "tool_input": {"file_path": "alias/session-t1.json", "old_string": "a", "new_string": "b"},
-                                "cwd": str(repo)})
+                                "cwd": str(repo), "session_id": SID})
     assert rc == 2 and TAMPER_REASON in err  # liên kết/junction giải về thư mục trạng thái
     for path in (repo / "scripts" / "agile_state.py", repo / "tests" / "test_agile_state.py", repo / "session-notes.json", tmp_path / "state-copy" / "x.json"):
-        assert run("claude", {"tool_name": "Write", "tool_input": {"file_path": str(path), "content": "import agile_state"}, "cwd": str(repo)}) == (0, "", "")
+        assert run("claude", {"tool_name": "Write", "tool_input": {"file_path": str(path), "content": "import agile_state"}, "cwd": str(repo), "session_id": SID}) == (0, "", "")
 
 
 def test_hook_state_write_path_is_not_a_tool_call(tmp_path):

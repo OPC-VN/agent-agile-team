@@ -234,7 +234,7 @@ def test_guard_colon_attached_flags_ordinary_use_allowed(tmp_path):
 
 
 def _in_dir(cmd, cwd):
-    return {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": str(cwd)}
+    return {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": str(cwd), "session_id": "t1"}
 
 
 @pytest.mark.parametrize("cmd", ["cd .git && rm objects/pack/*", "cd .git; mv objects D:/y", "cd .git/objects && rm -f pack/x", "pushd ?git; rm HEAD",

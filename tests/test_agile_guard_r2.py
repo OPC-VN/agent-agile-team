@@ -105,7 +105,7 @@ def test_rf1_write_tool_paths_with_wildcards_blocked(tmp_path):
     repo = on_repo(tmp_path)
     parent = str(state_dir().parent).replace("\\", "/")
     pattern = parent + "/" + state_dir().name[:-2] + "??/session-t1.json"
-    rc, _, err = run("claude", {"tool_name": "Write", "tool_input": {"file_path": pattern, "content": "{}"}, "cwd": str(repo)})
+    rc, _, err = run("claude", {"tool_name": "Write", "tool_input": {"file_path": pattern, "content": "{}"}, "cwd": str(repo), "session_id": SID})
     assert rc == 2 and TAMPER_REASON in err
 
 
