@@ -308,7 +308,7 @@ def _dir_problem(directory: Path) -> str | None:
 
 def load_state(project, session_id=None, directory: Path | None = None) -> dict:
     """Current switch state. Corrupt/unreadable state => agile OFF, `state_problem` set and
-    `guard_must_stay_active` True (SC4.3). Never raises for file problems."""
+    `guard_must_stay_active` True when secure is on or state is corrupt. Never raises for file problems."""
     directory = directory or state_dir()
     problems = []
     for found in (state_dir_problem(), _dir_problem(directory)):

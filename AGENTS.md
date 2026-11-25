@@ -5,7 +5,7 @@ File này nạp ở MỌI phiên nên giữ ngắn. Chi tiết: `method/`, `role
 ## Quy trình agile: chỉ khi người dùng bật
 
 - Mặc định agile **TẮT**: việc thường làm như bình thường, không mở sprint, không sổ, không cổng.
-- Chỉ khi **người dùng gõ** `/agent-agile-team:agile` (kèm `always`, `manual`, `stop` hoặc `status`) công tắc mới đổi; model không được tự bật. Hook `SessionStart` đưa dòng `agile: ON|OFF` vào ngữ cảnh; không có dòng đó nghĩa là hook không chạy (agile chưa hoạt động, rào máy không bật trong phiên này).
+- Chỉ khi **người dùng gõ** `/agent-agile-team:agile` (kèm `always`, `manual`, `stop`, `status` hoặc `secure`) công tắc mới đổi; model không được tự bật. Hook `SessionStart` đưa dòng `agile: ON|OFF` vào ngữ cảnh; không có dòng đó nghĩa là hook không chạy (agile chưa hoạt động; không suy ra trạng thái secure).
 - Khi BẬT: nạp `method/agile.md` (sáu bước, vai và tier, cổng, rào) và skill `agile`, rồi theo skill quy trình `intake`, `running-sprint`, `closing-sprint`. Tắt bằng `/agent-agile-team:agile stop`.
 
 ## Luật dừng (luôn áp, agile BẬT hay TẮT)
@@ -18,7 +18,7 @@ Gặp một trong năm việc sau thì **dừng đúng bước đó và hỏi ng
 - **xoá không đảo ngược** (xoá đệ quy, xoá `.git`, dữ liệu ngoài vùng tạm);
 - git **phá lịch sử** (force-push, `reset --hard`, `clean -fd[x]`, `filter-branch`, `reflog expire`, xoá nhánh chưa gộp).
 
-Hook máy chỉ là lưới phụ, chạy khi agile BẬT và lách được bằng gián tiếp; luật chữ này vẫn áp khi hook không chạy.
+Hook máy chỉ là lưới phụ, chặn khi secure BẬT hoặc trạng thái hỏng và lách được bằng gián tiếp; luật chữ này vẫn áp khi hook không chạy.
 
 ## Dùng skill
 

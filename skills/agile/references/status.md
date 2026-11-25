@@ -11,7 +11,7 @@ line per field; fields not yet available print `not available yet`.
 | `switch set` | printed only when ON: `prompt_id`, `ts` of the write, and a note that `source` is self-declared and not verified |
 | `last command` | the last command the hook or CLI applied to this session: `none`, or `<command> changed=yes\|no prompt_id=.. ts=..`; for `stop`, `changed=no` means already off |
 | `WARNING non-hook ON` | printed only when ON was not written by the hook; report it, never reset it |
-| `secure` | `not available yet` (the secure variant does not exist in this release) |
+| `secure` | `ON\|OFF (source …)` for the current session; non-hook ON is warned; JSON key `secure` |
 | `tier` | `not available yet` |
 | `team` | `not available yet` |
 | `open sprint` | one line per open sprint: id, status, title, folder; or `none` |

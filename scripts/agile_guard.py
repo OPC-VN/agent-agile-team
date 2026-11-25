@@ -2,7 +2,7 @@
 
 Gọi: python agile_guard.py --format {claude,codex,antigravity}; đọc JSON sự kiện ở stdin.
 
-KÍCH HOẠT: secure lấy từ file phiên theo session_id sự kiện; agent_id dùng phiên cha. Không session_id hoặc
+KÍCH HOẠT: secure lấy từ file phiên theo session_id sự kiện; harness gửi session_id phiên cha, guard chỉ đọc session_id, không xét agent_id. Không session_id hoặc
 không có file phiên thì ngủ nếu trạng thái lành (CQ4 = C). Agile hay always của repo không tự bật rào.
 Secure BẬT và trạng thái lành chặn 7 mục; trạng thái hỏng hoặc không nạp được lớp trạng thái chặn 13 mục;
 còn lại ngủ. Khoá repo xét cwd sự kiện, rồi projects do caller đưa, rồi cwd tiến trình; CLAUDE_PROJECT_DIR
@@ -228,7 +228,7 @@ def _state_dirs(st: object) -> tuple[str, ...]:
 def activation(payload: dict, projects: tuple[str, ...] = ()) -> tuple[set[str], bool, tuple[str, ...]] | None:
     """Trả mục chặn, cờ hỏng và thư mục trạng thái; None khi ngủ.
 
-    Secure theo session_id sự kiện, agent_id dùng phiên cha; thiếu session_id hoặc file phiên
+    Secure theo session_id sự kiện; harness gửi session_id phiên cha, guard chỉ đọc session_id, không xét agent_id; thiếu session_id hoặc file phiên
     thì ngủ nếu trạng thái lành. Khoá repo xét cwd sự kiện, projects của caller, rồi cwd
     tiến trình; agile_state ưu tiên CLAUDE_PROJECT_DIR tuyệt đối khi xác định khoá repo.
     Secure lành chặn 7 mục; trạng thái hỏng ở bất kỳ repo nào chặn 13 mục; còn lại ngủ.
