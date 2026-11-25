@@ -48,4 +48,8 @@ def test_law_describes_the_per_command_claude_rule_and_the_encoded_command_decod
 
 
 def test_fallback_always_side_effect_for_claude_sessions_is_stated():
-    assert "cùng repo cũng thấy rào BẬT" in read("method/agile.md")
+    """FR3.1/SC9: always bật agile nhưng không tự bật rào secure."""
+    law = read("method/agile.md")
+    assert "cùng repo thấy agile BẬT" in law
+    assert "nhưng secure không tự bật" in law
+    assert "cùng repo cũng thấy rào BẬT" not in law
