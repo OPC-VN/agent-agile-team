@@ -54,7 +54,7 @@ Bốn điều kiện dừng (nhất là (b): phép kiểm cần secret thật, v
 môi trường kiểm không dựng được (ghi Chưa chạy, báo Analyst) · cạn hạn mức tier.
 
 ## 8. Skill dùng
-`verify-before-done` · `tdd` (phần test tốt) · `web-qa` · `python` (phần testing) · `debugging` (phần
+`verify-before-done` · `tdd` (phần test tốt) · `web-qa` · `python` (phần testing) · `rust` (phần testing) · `debugging` (phần
 tìm test gây nhiễu) · `response-style` · `id-convention` · `token-economy`.
 
 ## 9. Đo và ghi coverage

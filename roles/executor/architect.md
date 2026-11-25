@@ -72,5 +72,5 @@ cạn hạn mức tier.
 
 ## 8. Skill dùng
 `writing-plan` · `adr` · `shaping-spec` (phần đường Spike / Bounded / Architectural) · `api-design` ·
-`database-migrations` · `deployment` · `writing-skills` (khi sprint sinh skill mới) · `response-style` ·
+`database-migrations` · `deployment` · `tauri-desktop` · `writing-skills` (khi sprint sinh skill mới) · `response-style` ·
 `id-convention` · `token-economy`.
