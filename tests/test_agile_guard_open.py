@@ -41,6 +41,7 @@ def test_agile_on_active_set_is_the_seven_always_blocked_items(tmp_path):
 def test_legacy_mode_and_exclusions_keys_are_ignored(tmp_path, legacy):
     repo = make_repo(tmp_path)
     write_repo_state(repo, **legacy)
+    write_switch(repo, {})
     active, broken, _dirs = agile_guard.activation(payload_for(repo))
     assert not broken and active == ALWAYS
 
@@ -48,6 +49,7 @@ def test_legacy_mode_and_exclusions_keys_are_ignored(tmp_path, legacy):
 def test_state_without_extra_keys_is_valid(tmp_path):
     repo = make_repo(tmp_path)
     write_repo_state(repo)
+    write_switch(repo, {})
     active, broken, _dirs = agile_guard.activation(payload_for(repo))
     assert not broken and active == ALWAYS
 
@@ -76,4 +78,10 @@ def test_session_on_is_enough_without_repo_always(tmp_path):
     write_switch(repo, good_marker(), session_id=SID)
     active, broken, _dirs = agile_guard.activation(dict(payload_for(repo), session_id=SID))
     assert not broken and active == ALWAYS
-    assert agile_guard.activation(payload_for(repo)) is None  # không có session_id: không phải phiên này
+    assert agile_guard.activation(claude("ls", repo, session_id=None)) is None  # không có session_id: không phải phiên này
+
+
+def test_repo_always_without_secure_is_dormant(tmp_path):
+    repo = make_repo(tmp_path)
+    write_repo_state(repo)
+    assert agile_guard.activation(payload_for(repo)) is None

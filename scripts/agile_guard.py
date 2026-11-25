@@ -2,19 +2,18 @@
 
 Gọi: python agile_guard.py --format {claude,codex,antigravity}; đọc JSON sự kiện ở stdin.
 
-KÍCH HOẠT (SPR-32 B3, thay file dấu `.tmp/autopilot.json`): rào BẬT khi (a) công tắc agile hiệu lực — `always` của repo (khoá repo suy từ
-`cwd` của sự kiện / `CLAUDE_PROJECT_DIR`, đúng như `agile_state`) hoặc phiên của `session_id` trong sự kiện đang BẬT; (b) lớp trạng thái
-báo `guard_must_stay_active` (trạng thái hỏng/không đọc được: đóng khi lỗi, chặn cả 13 mục); (c) sự kiện có `agent_id` (tác tử con) mà
-không có file phiên nào khớp: coi là đang bảo vệ, không bao giờ ngủ; (d) không nạp được `agile_state`: đóng khi lỗi. Ngoài bốn trường hợp
-đó (agile TẮT, trạng thái lành) rào thoát 0 ngay, không in. Không dùng tiến trình con (không `git`): tra trạng thái trong tiến trình.
-Rào KHÔNG đọc file dấu cũ; nếu `.tmp/autopilot.json` còn đó thì chỉ in MỘT dòng nhắc ở stderr, không chặn.
+KÍCH HOẠT: secure lấy từ file phiên theo session_id sự kiện; harness gửi session_id phiên cha, guard chỉ đọc session_id, không xét agent_id. Không session_id hoặc
+không có file phiên thì ngủ nếu trạng thái lành (CQ4 = C). Agile hay always của repo không tự bật rào.
+Secure BẬT và trạng thái lành chặn 7 mục; trạng thái hỏng hoặc không nạp được lớp trạng thái chặn 13 mục;
+còn lại ngủ. Khoá repo xét cwd sự kiện, rồi projects do caller đưa, rồi cwd tiến trình; CLAUDE_PROJECT_DIR
+tuyệt đối được agile_state ưu tiên khi xác định khoá. Khoá repo quyết always và phát hiện trạng thái hỏng.
+Không dùng tiến trình con; file dấu cũ nếu còn chỉ nhắc một dòng ở stderr, không chặn.
 
-Lối dừng: lối thoát cũ (`--clear` xoá file dấu) đã bỏ. Thay bằng luật chống phá công tắc dưới đây và lệnh `/agile stop` do NGƯỜI DÙNG gõ
-(hook `UserPromptExpansion`, không phải tác tử, ghi trạng thái); đó là cách duy nhất được phép tắt rào.
+Lối dừng: người dùng gõ `/agent-agile-team:agile secure off` hoặc `/agile stop`; lối `--clear` cũ đã bỏ.
 
 Khi rào đang bật: lệnh shell hay công cụ ghi file bị chặn (thoát 2, cùng khuôn lý do) nếu (a) đích là thư mục trạng thái (thư mục mặc định
 của nền tảng hay giá trị `AGENT_AGILE_STATE_DIR`; đường tương đối, `..`, dạng biến môi trường, qua liên kết/junction) hay file `repo-*.json`/
-`session-*.json` trong đó; (b) chạy `agile_state.py` với lệnh con đổi công tắc (`on|off|stop|always|manual`; `status`/`get` vẫn qua) hay chạy
+`session-*.json` trong đó; (b) chạy `agile_state.py` với lệnh con đổi công tắc (`on|off|stop|always|manual|secure|secure_on|secure_off`; `status`/`get` vẫn qua) hay chạy
 `agile_hook.py` (nhận JSON qua stdin); (c) `import agile_state`/`agile_hook` trong `python -c`/heredoc/văn bản lệnh; (d) đặt hay export
 `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` để đổi hướng trạng thái. Lệnh chỉ-đọc (`cat`, `ls`, `grep`…) vào thư mục trạng thái vẫn qua.
 TK6h (R3): (e) `cd`/`pushd`/`Set-Location`/`env -C`/`sudo -D` tới thư mục trạng thái HAY BẤT KỲ TỔ TIÊN của nó bị chặn; sau mọi `cd` (thư mục hiện hành không còn
@@ -28,7 +27,7 @@ GIỚI HẠN ĐÃ BIẾT (nói thẳng): so khớp chuỗi LUÔN lách được 
 rồi chạy sau, biến chưa biết giá trị, `getattr`, `eval` dựng chuỗi). Luật này là sàn chống TAI NẠN, không phải bằng chứng an ninh; cùng tài
 khoản có Bash thì ghi đè file trạng thái được. Cái bảo vệ thật là lệnh người dùng gõ + cờ `source` + soát transcript.
 
-Rào không còn dựa vào file dấu: bật hay ngủ theo trạng thái agile (không phải theo việc có file nào hay không); xem KÍCH HOẠT. Đầu ra: claude/codex in lý do ở stderr rồi thoát 2; antigravity
+Rào không còn dựa vào file dấu: bật hay ngủ theo trạng thái secure của phiên; xem KÍCH HOẠT. Đầu ra: claude/codex in lý do ở stderr rồi thoát 2; antigravity
 in JSON `deny` ở stdout, thoát 0; cho qua: claude/codex thoát 0 không in, antigravity in `{}`.
 Lý do: `agile: '<mục loại>' cần người dùng nói trong chat — lệnh không chạy`.
 
@@ -227,12 +226,14 @@ def _state_dirs(st: object) -> tuple[str, ...]:
 
 
 def activation(payload: dict, projects: tuple[str, ...] = ()) -> tuple[set[str], bool, tuple[str, ...]] | None:
-    """Rào có bật cho sự kiện này không? None = ngủ (agile TẮT, trạng thái lành). Ngược lại (mục đang chặn, trạng thái hỏng?, thư mục trạng thái).
-    Bật khi: công tắc hiệu lực (`always` của repo hay phiên `session_id` BẬT) · trạng thái hỏng (`guard_must_stay_active`) · có `agent_id` mà
-    không có file phiên khớp (tác tử con không bao giờ ngủ) · không nạp được `agile_state`. Không có tiến trình con; chỉ đọc vài file nhỏ.
-    Khoá repo như `agile_hook`: `cwd` của sự kiện (hay `CLAUDE_PROJECT_DIR`, do `agile_state` đọc). Sự kiện của host không có `cwd` (Codex/
-    Antigravity chỉ có thư mục lệnh) thì dùng `projects` (người gọi đưa vào), rồi thư mục tiến trình. Thư mục lệnh khác thư mục phiên thì `always`
-    của repo ở thư mục lệnh cũng tính (như bản cũ dùng file dấu: thấy ở đâu cũng bật); khi harness đã xuất `CLAUDE_PROJECT_DIR` hai khoá trùng nhau."""
+    """Trả mục chặn, cờ hỏng và thư mục trạng thái; None khi ngủ.
+
+    Secure theo session_id sự kiện; harness gửi session_id phiên cha, guard chỉ đọc session_id, không xét agent_id; thiếu session_id hoặc file phiên
+    thì ngủ nếu trạng thái lành. Khoá repo xét cwd sự kiện, projects của caller, rồi cwd
+    tiến trình; agile_state ưu tiên CLAUDE_PROJECT_DIR tuyệt đối khi xác định khoá repo.
+    Secure lành chặn 7 mục; trạng thái hỏng ở bất kỳ repo nào chặn 13 mục; còn lại ngủ.
+    Vế and not bảo đảm repo hỏng không bị nhánh secure lành che khuất.
+    """
     try:
         st = _state_module()
     except Exception:  # noqa: BLE001 — không nạp được lớp trạng thái: đóng khi lỗi
@@ -248,12 +249,10 @@ def activation(payload: dict, projects: tuple[str, ...] = ()) -> tuple[set[str],
         dirs = _state_dirs(st)
     except Exception:  # noqa: BLE001
         return set(known_exclusions()), True, ()
-    if any(s["effective_on"] for s in states):
+    if any(s["secure_on"] for s in states) and not any(s["state_problem"] for s in states):
         return set(OPEN_ALWAYS_BLOCKED), False, dirs
     if any(s["state_problem"] or s["guard_must_stay_active"] for s in states):
         return set(known_exclusions()), True, dirs
-    if _text(payload.get("agent_id")) and not states[0]["session_file_exists"]:
-        return set(OPEN_ALWAYS_BLOCKED), False, dirs  # tác tử con không có file phiên: được bảo vệ, không ngủ
     return None
 
 
@@ -292,7 +291,7 @@ def _legacy_notice(dirs: tuple[str, ...], notes: list[str]) -> None:
 # biến không biết giá trị, `getattr`, `eval`). Đây là SÀN chống tai nạn, không phải bằng chứng an ninh.
 
 STATE_NAME = re.compile(r"(?:repo|session)-[A-Za-z0-9_.-]*\.json", re.IGNORECASE)
-SWITCH_COMMANDS = frozenset({"on", "off", "stop", "always", "manual"})  # lệnh con của agile_state.py đổi công tắc; `status`/`get` chỉ đọc
+SWITCH_COMMANDS = frozenset({"on", "off", "stop", "always", "manual", "secure", "secure_on", "secure_off"})  # lệnh con của agile_state.py đổi công tắc; `status`/`get` chỉ đọc
 SCRIPT_REF = re.compile(r"(?:^|[/.])agile_(state|hook)(?:\.py)?$", re.IGNORECASE)
 ENV_VAR = re.compile(r"\$env:([A-Za-z_][A-Za-z0-9_]*)|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)|%([A-Za-z_][A-Za-z0-9_]*)%", re.IGNORECASE)
 STATE_SIGNATURE = re.compile(r"agent-agile-team[/'\",\s]+state(?![\w-])|(?<![\w-])state[/'\",\s]+agent-agile-team(?![\w-])")
@@ -1771,14 +1770,14 @@ def _allow(fmt: str, stdout: TextIO) -> int:
 
 def reason_for(item: str, broken: bool) -> str:
     if item == TAMPER:
-        return "agile: công tắc agile là rào — chỉ người dùng gõ /agile stop mới tắt được; lệnh không chạy"
+        return "agile: công tắc agile là rào — chỉ người dùng gõ /agile stop mới tắt được (hoặc người dùng gõ /agent-agile-team:agile secure off); lệnh không chạy"
     if item == UNDECODABLE:
         return "agile: giá trị -EncodedCommand không giải mã được, không xét được nó chứa gì — cần người dùng nói trong chat — lệnh không chạy"
     if item == DEADLINE:
         return "agile: guard deadline: command too long to check — lệnh không chạy"
     if item == NESTED:
         return "agile: lệnh lồng quá {} lớp shell, không phân tích được — cần người dùng nói trong chat — lệnh không chạy".format(MAX_UNWRAP)
-    lead = "agile: trạng thái hỏng, " if broken else "agile: "
+    lead = "agile: trạng thái hỏng, người dùng gõ /agent-agile-team:agile stop để xoá công tắc hỏng; " if broken else "agile: "
     return "{}'{}' cần người dùng nói trong chat — lệnh không chạy".format(lead, item)
 
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from test_agile_guard import claude, make_repo, run, write_switch
+from test_agile_guard import SID, claude, make_repo, run, write_repo_always, write_switch
 
 pytestmark = pytest.mark.usefixtures("agile_state_dir")
 
@@ -50,7 +50,7 @@ KNOWN_FALSE_POSITIVES: dict[str, str] = {
 }
 
 
-@pytest.fixture(params=["repo-always", "session-on"])
+@pytest.fixture(params=["repo-always", "session-on"])  # IDs retained for baseline comparison; both use secure sessions.
 def switch(request, tmp_path, monkeypatch):
     """(repo, session_id, mode): công tắc BẬT ở mức repo (cờ `always`) hay ở mức phiên (`session-t1.json`), thư mục trạng thái tạm riêng."""
     state = tmp_path / "home" / ".claude" / "plugins" / "data" / "agent-agile-team" / "state"
@@ -58,10 +58,11 @@ def switch(request, tmp_path, monkeypatch):
     monkeypatch.setenv("AGENT_AGILE_STATE_DIR", str(state))
     repo = make_repo(tmp_path / "work", marker=None)
     if request.param == "session-on":
-        write_switch(repo, {}, session_id="t1")
-        return repo, "t1", request.param
+        write_switch(repo, {}, session_id=SID)
+        return repo, SID, request.param
+    write_repo_always(repo, {})
     write_switch(repo, {})
-    return repo, None, request.param
+    return repo, SID, request.param
 
 
 def verdict(switch, cmd):

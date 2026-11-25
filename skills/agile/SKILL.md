@@ -1,6 +1,6 @@
 ---
 name: agile
-description: Use when the user types /agile (or /agent-agile-team:agile) with an optional argument always, manual, stop or status, or explicitly asks to turn the agile process on or off (bật agile, tắt agile, dừng agile) or to show its status (agile đang bật hay tắt). Not for a session that only carries the SessionStart agile line, and not for ordinary work.
+description: Use when the user types /agile (or /agent-agile-team:agile) with an optional argument always, manual, stop, status or secure, or explicitly asks to turn the agile process on or off (bật agile, tắt agile, dừng agile) or to show its status (agile đang bật hay tắt). Not for a session that only carries the SessionStart agile line, and not for ordinary work.
 metadata:
   group: "process"
   roles: "all"
@@ -19,7 +19,9 @@ metadata:
 | `/agile` | ON for this session, mode auto: the Gate Delegate signs Gate 1 and Gate 2 |
 | `/agile always` | ON for every session of this repository |
 | `/agile manual` | ON, and the human signs Gate 1 and Gate 2 |
-| `/agile stop` | OFF: clears the session switch, manual mode and `always` |
+| `/agile stop` | OFF: clears agile and secure for this session, manual mode and repository `always`; secure in other sessions is unchanged |
+| `/agile secure` or `/agile secure on` | secure ON for this session, independent of agile |
+| `/agile secure off` or `/agile secure stop` | secure OFF for this session, without changing agile |
 | `/agile status` | no change, report only |
 
 The state is written only by the hook that reads the human-typed command. **This skill never writes ON, `always` or
@@ -29,7 +31,7 @@ sanctioned way to switch is to type `/agile` (or `/agile always`, `/agile manual
 
 ## 2. Steps
 
-1. **Read the state line.** The SessionStart hook put a line such as `agile: ON|OFF (...) session_id=<id>` in the context.
+1. **Read the state line.** The SessionStart hook put a line such as `agile: ON|OFF (...) secure ON|OFF session_id=<id>` in the context.
    Take `<id>` from it exactly as printed (do not change its case). No line (hook not installed or not run): say so, use
    the repo-level view (omit `--session`).
 2. **Run the status against the user's project, not the plugin.** The plugin root (`${CLAUDE_PLUGIN_ROOT}` when the host
@@ -47,10 +49,11 @@ sanctioned way to switch is to type `/agile` (or `/agile always`, `/agile manual
    changed nothing and the guard is dormant, and tell the user what to check: `python` is on PATH (the hooks call `python`;
    on macOS and Linux with only `python3` they cannot start, so `python` must be on PATH or a `python` link installed) and
    the plugin is enabled; then start a new session. Report the rest of the `status` output as read. Never turn ON yourself to compensate.
-4. **Check the state matches what was typed.** If the user typed `/agile`, `always`, `manual` or `stop` and the status does
+4. **Check the state matches what was typed.** If the user typed `/agile`, `always`, `manual`, `stop`, `secure`, `secure on`, `secure off` or `secure stop` and the status does
    not show the matching state (the hook did not run, the argument was not in the whitelist, or the state shows a problem),
    say exactly that and **stop there**. Do not run `on`, `off`, `always`, `manual` or `stop` yourself to "fix" it, and
    do not edit state files. Tell the user to retype the command or check the hook install.
+   An unrecognised `secure` argument changes nothing; report the valid forms above. After `secure` commands report secure status and finish; after `stop` explicitly report that secure is also OFF.
 5. **`status` argument or a question about state:** report and finish. No other action.
 6. **Ask the language once.** This step runs only when step 4 confirmed that this turn's typed `/agile` or
    `/agile always` turned agile ON (so `manual`, `stop`, `status` and a model-initiated call never reach it). Run
@@ -83,6 +86,7 @@ The hook prints nothing to you; the outcome is recorded in the state and shown b
 
 ## 4. What ON and OFF change for the agent
 
+- Agile ON does not turn secure ON. With secure OFF and healthy state the machine guard sleeps, including switch protection; corrupt state still blocks 13 categories. The written rules remain in force.
 - **ON:** load the agile process document, [method/agile.md](../../method/agile.md), and apply the skills `intake`, `running-sprint` and `closing-sprint`. In `manual` mode the human signs Gate 1
   and Gate 2; the Gate Delegate does not. Floor rules in `AGENTS.md` stay in force in every mode.
 - **OFF:** do not open sprints, do not register `RQ-` items, do not run gates or write sprint documents (the one blocker
@@ -97,6 +101,7 @@ The hook prints nothing to you; the outcome is recorded in the state and shown b
 | No `agile:` state line, or `hook seen this session: no` | do not claim ON or OFF as confirmed; say the hooks did not run in this session; list what to check (step 3 of section 2) |
 | `status` prints `state problem` | report it verbatim; the guard stays active; `/agile stop` repairs it |
 | `status` prints `WARNING non-hook ON` | report it: the switch was not set by the human-typed command; do not reset it yourself |
+| `status` prints `WARNING non-hook secure ON` | report it; do not reset it yourself |
 | `project:` is not the user's project | rerun with the right `--project`; do not report the wrong view |
 | Session id unknown | use the repo-level view and say the view is not per-session |
 | User asks the model to "just turn it on" | decline the write, give the typed command |

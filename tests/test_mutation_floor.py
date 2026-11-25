@@ -20,7 +20,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 PINNED_SUITES = ("tests/test_fence_wiring.py", "tests/test_floor_check.py",
-                 "tests/test_agile_guard.py", "tests/test_agile_guard_undo.py", "tests/test_check.py")
+                 "tests/test_agile_guard.py", "tests/test_agile_guard_undo.py", "tests/test_check.py",
+                 "tests/test_agile_guard_secure.py")
 KEYWORDS = "fence or floor or marker or agile or delegation or push"
 IGNORE = shutil.ignore_patterns(".git", ".tmp", ".claude", "__pycache__", ".pytest_cache", "*.pyc", ".env", ".env.*")
 WIRING = "tests/test_fence_wiring.py"
@@ -122,19 +123,31 @@ def state_problem_open(root: Path) -> None:
     edit(root, GUARD, 'if any(s["state_problem"] or s["guard_must_stay_active"] for s in states):', "if False:")
 
 
-def subagent_dormant(root: Path) -> None:
-    """SPR-32 B3: tác tử con không có file phiên lại ngủ (R0-M11)."""
-    edit(root, GUARD, 'if _text(payload.get("agent_id")) and not states[0]["session_file_exists"]:', "if False:")
-
-
 def env_redirect_open(root: Path) -> None:
     """SPR-32 B3: bỏ luật chặn đặt/export `AGENT_AGILE_STATE_DIR`/`CLAUDE_PROJECT_DIR` (R1b-M1b)."""
     edit(root, GUARD, "return any(ENV_REDIRECT.search(segment) and not _env_read_only(segment) for segment in RAW_SEPARATORS.split(text))", "return False")
 
 
-def activation_on_ignored(root: Path) -> None:
-    """SPR-32 TK6e S6: công tắc BẬT không còn làm rào bật (đường kích hoạt chính): rào ngủ khi agile BẬT mà trạng thái lành."""
-    edit(root, GUARD, 'if any(s["effective_on"] for s in states):', "if False:")
+def secure_on_ignored(root: Path) -> None:
+    edit(root, GUARD, 'if any(s["secure_on"] for s in states) and not any(s["state_problem"] for s in states):', "if False:")
+
+
+def secure_ignores_state_problem(root: Path) -> None:
+    needle = ' and not any(s["state_problem"] for s in states)'
+    assert (root / GUARD).read_text(encoding="utf-8").count(needle) == 1
+    edit(root, GUARD, needle, "")
+
+
+def flag_includes_agile(root: Path) -> None:
+    edit(root, "scripts/agile_state.py", '"guard_must_stay_active": bool(secure_on or problems),', '"guard_must_stay_active": bool(effective or problems),')
+
+
+def stop_keeps_secure(root: Path) -> None:
+    edit(root, "scripts/agile_state.py", 'changes = dict(meta, agile=False, mode="auto", secure=False)', 'changes = dict(meta, agile=False, mode="auto")')
+
+
+def hook_ignores_secure_off(root: Path) -> None:
+    edit(root, "scripts/agile_hook.py", "    if key not in ARG_TO_COMMAND:\n        return None\n", "    if key not in ARG_TO_COMMAND or key in ('secure off', 'secure stop'):\n        return None\n")
 
 
 def hook_stop_refused(root: Path) -> None:
@@ -324,10 +337,14 @@ MUTATIONS = {
     "state-switch-script-open": Mutation(state_switch_script_open, f"{GUARDT}::test_switching_agile_state_script_blocked", (GUARDT,)),
     "state-path-open": Mutation(state_path_open, f"{GUARDT}::test_guard_state_protection_resolves_from_command_dir_and_other_trees_allowed", (GUARDT,)),
     "state-problem-open": Mutation(state_problem_open, f"{GUARDT}::test_corrupt_state_fails_guarded", (GUARDT,)),
-    "subagent-dormant": Mutation(subagent_dormant, f"{GUARDT}::test_subagent_without_session_file_is_guarded_not_dormant", (GUARDT,)),
     "env-redirect-open": Mutation(env_redirect_open, f"{GUARDT}::test_redirecting_state_by_environment_blocked", (GUARDT,)),
-    # SPR-32 TK6e: đường kích hoạt chính, lối dừng của hook, và ba rào của vòng R2 (đường trạng thái trong mã, ký tự đại diện, hạn nội bộ).
-    "activation-on-ignored": Mutation(activation_on_ignored, "tests/test_agile_guard_open.py::test_agile_on_active_set_is_the_seven_always_blocked_items", ("tests/test_agile_guard_open.py",)),
+    # SPR-37: secure kích hoạt rào độc lập với agile và có lối tắt riêng.
+    "secure-ignores-state-problem": Mutation(secure_ignores_state_problem, "tests/test_agile_guard_secure.py::test_secure_session_with_second_repo_broken_blocks_thirteen", ("tests/test_agile_guard_secure.py",)),
+    "secure-on-ignored": Mutation(secure_on_ignored, "tests/test_agile_guard_secure.py::test_secure_on_agile_off_is_healthy_seven_items", ("tests/test_agile_guard_secure.py",)),
+    "flag-includes-agile": Mutation(flag_includes_agile, "tests/test_agile_guard_secure.py::test_sc1_activation_dormant", ("tests/test_agile_guard_secure.py",)),
+    "stop-keeps-secure": Mutation(stop_keeps_secure, "tests/test_agile_state.py::test_secure_stop_and_last_command", ("tests/test_agile_state.py",)),
+    "hook-ignores-secure-off": Mutation(hook_ignores_secure_off, "tests/test_agile_hook.py::test_secure_hook_off", ("tests/test_agile_hook.py",)),
+    # SPR-32 TK6e: lối dừng của hook và ba rào của vòng R2 (đường trạng thái trong mã, ký tự đại diện, hạn nội bộ).
     "hook-stop-refused": Mutation(hook_stop_refused, "tests/test_agile_hook.py::test_stop_never_refused_even_when_off_or_corrupt", ("tests/test_agile_hook.py",)),
     "hook-stop-ignored": Mutation(hook_stop_ignored, "tests/test_agile_hook.py::test_stop_never_refused_even_when_off_or_corrupt", ("tests/test_agile_hook.py",)),
     "raw-state-scan-open": Mutation(raw_state_scan_open, "tests/test_agile_guard_r2.py::test_rf1_literal_state_path_inside_code_is_blocked", ("tests/test_agile_guard_r2.py",)),
