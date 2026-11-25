@@ -10,7 +10,7 @@ updated: 2026-10-05
 > **Kết luận:** agent-agile-team là một **phương pháp làm phần mềm cho đội AI agent**: bạn giao việc bằng lời
 > thường, xác nhận **một tin trao đổi** lúc tiếp nhận (mục tiêu, bậc việc, có mở sprint không), rồi trả lời đúng
 > **hai lần** (duyệt kế hoạch, nghiệm thu kết quả), đội agent làm phần còn lại, ghi sổ,
-> và nhờ **agent khác** kiểm. Repo gồm luật lõi, 39 skill, 13 agent, bộ mẫu tài liệu và ba công cụ kiểm; cài
+> và nhờ **agent khác** kiểm. Repo gồm luật lõi, 39 skill, 16 agent, bộ mẫu tài liệu và ba công cụ kiểm; cài
 > được trên Claude Code, Codex và Antigravity. Bản hiện tại `0.4.0`, repo công khai (MIT).
 
 File này là nguồn cho trang giới thiệu <https://ducnguyen.vn/agent-agile-team/>. Số liệu và tên file khớp repo
@@ -37,7 +37,7 @@ Lợi ích cho người không chuyên:
   nghi thức. Việc 1–2 thao tác có kết quả rõ, hay bạn nói "không cần sprint", agent **làm thẳng** — không hồ sơ,
   vẫn kiểm và báo kết quả.
 
-Con số của bản hiện hành (sau `0.4.0`): **6** bước · **2** cổng người · **7** vai · **3** tier · **36** skill · **13** agent ·
+Con số của bản hiện hành (sau `0.4.0`): **6** bước · **2** cổng người · **7** vai · **3** tier · **39** skill · **16** agent ·
 **3** công cụ Python · **3** harness được hỗ trợ.
 
 ## 2. Tính năng
@@ -90,7 +90,7 @@ Chín vai agent chia ba nhóm; mỗi vai có tier; repo không chứa tên model
 - Cạn hạn mức model: dừng tier đó, ghi vướng mắc, báo bạn — **không tự hạ tier**.
 - Mỗi lần giao việc cho agent con, hồ sơ ghi đủ vai · tier · model · effort thực tế.
 
-### 2.4 Bộ 39 skill và 13 agent
+### 2.4 Bộ 39 skill và 16 agent
 
 Skill là năng lực thường trực: agent rà danh mục trước mỗi hành động và tự gọi skill khớp tình huống.
 
@@ -101,7 +101,7 @@ Skill là năng lực thường trực: agent rà danh mục trước mỗi hàn
   `id-convention`, `token-economy`, `progress-report`) · Meta (2: `writing-skills`, `eval-harness`).
 - Skill **kỷ luật** (25) có luật sắt và được thử áp lực; skill **tham chiếu** (14) là bảng tra kỹ thuật và được
   thử truy xuất. 39 trong 39 skill có tệp thử đã chạy; `agile` 9/10 lượt GREEN (n = 2, chưa có lượt RED, AG-5 1/2).
-- **13 agent** chuyên đề: 12 agent **chỉ đọc** (reviewer theo ngôn ngữ, bảo mật, CSDL, săn lỗi bị nuốt, kiểm
+- **16 agent** chuyên đề: 15 agent **chỉ đọc** (reviewer theo ngôn ngữ, bảo mật, CSDL, săn lỗi bị nuốt, kiểm
   comment, kiểm test, lần bản đồ code…) và `build-fixer` — agent duy nhất được sửa file, chỉ sửa đúng chỗ lỗi
   build đòi.
 - Thứ tự gọi: skill quy trình trước, skill kỹ thuật sau. "Làm X" → định hình spec trước; "sửa lỗi" → debug trước.
@@ -197,7 +197,7 @@ agent-agile-team/
 ├── roles/               thẻ vai: executor/ (5) · verifier/ (2 + dual-review + 4 chuyên đề)
 ├── tiers/               ba tier, hợp đồng bảng tier → model và ma trận mẫu (tiers.example.json)
 ├── skills/              39 skill, mỗi skill một thư mục skills/<tên>/SKILL.md
-├── agents/              13 agent chuyên đề, mỗi agent một file
+├── agents/              16 agent chuyên đề, mỗi agent một file
 ├── templates/           khuôn hồ sơ: sprint/ (6) · registry/ (5) · project/agile.json
 ├── scripts/             init.py · check.py · index.py (+ _common.py)
 ├── tests/               bộ test pytest và fixture
@@ -318,7 +318,7 @@ mọi lệnh `python` dưới đây là `python3`.
 | **Antigravity** | mỗi skill một liên kết thư mục từ `~/.gemini/antigravity/skills/<tên>` về `skills/<tên>/` của bản clone | ghép vào `~/.gemini/GEMINI.md` như Codex | [`hosts/antigravity/`](../hosts/antigravity/README.md) |
 | Claude Desktop, tab chat | **chưa hỗ trợ** — dùng tab Code | — | [`hosts/claude-desktop/`](../hosts/claude-desktop/README.md) |
 
-Trên Codex và Antigravity, 13 agent trong `agents/` là thẻ vai Markdown: brief của agent con ghi "đọc
+Trên Codex và Antigravity, 16 agent trong `agents/` là thẻ vai Markdown: brief của agent con ghi "đọc
 `agents/<tên>.md` rồi làm theo".
 
 ### 6.4 Điểm cắm (tuỳ chọn)
