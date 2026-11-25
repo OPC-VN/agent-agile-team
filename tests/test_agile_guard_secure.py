@@ -111,3 +111,24 @@ def test_fr24_corrupt_repo_with_agile_on_secure_off(tmp_path):
     st.repo_file(repo).write_text("{broken", encoding="utf-8")
     active, broken, _ = agile_guard.activation(claude("ls", repo, session_id=SID))
     assert broken and set(active) == set(rules.AGILE_EXCLUSIONS) and len(active) == 13
+
+
+def test_secure_session_with_second_repo_broken_blocks_thirteen(tmp_path):
+    a = make_repo(tmp_path / "a")
+    b = make_repo(tmp_path / "b")
+    session(secure=True)
+    payload = claude("ls", a, session_id=SID)
+    st.repo_file(b).write_text("{broken", encoding="utf-8")
+    active, broken, _ = agile_guard.activation(payload, projects=(a, b))
+    assert active == set(rules.AGILE_EXCLUSIONS) and len(active) == 13
+    assert broken is True
+
+
+def test_secure_session_with_second_repo_healthy_blocks_seven(tmp_path):
+    a = make_repo(tmp_path / "a")
+    b = make_repo(tmp_path / "b")
+    session(secure=True)
+    payload = claude("ls", a, session_id=SID)
+    active, broken, _ = agile_guard.activation(payload, projects=(a, b))
+    assert active == set(rules.OPEN_ALWAYS_BLOCKED) and len(active) == 7
+    assert broken is False

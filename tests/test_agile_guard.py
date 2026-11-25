@@ -1161,6 +1161,7 @@ def test_session_switch_activates_only_that_session(tmp_path):
 
 
 def test_repo_always_activates_every_session_of_that_repo_only(tmp_path):
+    """SPR-37 FR3.1: always chỉ bật agile, không tự bật rào."""
     repo = make_repo(tmp_path / "a")
     write_repo_always(repo, good_marker())
     assert st.load_state(repo, SID)["effective_on"]
@@ -1168,6 +1169,7 @@ def test_repo_always_activates_every_session_of_that_repo_only(tmp_path):
 
 
 def test_project_dir_env_decides_the_repo_key(tmp_path, monkeypatch):
+    """SPR-37 FR3.1: khoá repo theo môi trường, rào theo secure của phiên."""
     repo = make_repo(tmp_path / "r")
     write_repo_always(repo, good_marker())
     sub = repo / "sub"
@@ -1181,6 +1183,7 @@ def test_project_dir_env_decides_the_repo_key(tmp_path, monkeypatch):
 
 
 def test_subagent_without_session_file_is_guarded_not_dormant(tmp_path):
+    """SPR-37 CQ4 = C: tác tử con thiếu file phiên thì rào ngủ khi trạng thái lành."""
     repo = make_repo(tmp_path)
     sub = dict(claude_without_session("rm -rf x", repo), session_id="no-such-session", agent_id="child")
     assert agile_guard.activation(sub) is None

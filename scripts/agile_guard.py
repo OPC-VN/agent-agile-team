@@ -2,8 +2,11 @@
 
 Gọi: python agile_guard.py --format {claude,codex,antigravity}; đọc JSON sự kiện ở stdin.
 
-KÍCH HOẠT: secure theo phiên; agile hay always của repo không tự bật rào. Trạng thái hỏng hoặc không nạp được
-lớp trạng thái thì chặn 13 mục. Secure TẮT và trạng thái lành thì ngủ, kể cả tác tử con không có file phiên.
+KÍCH HOẠT: secure lấy từ file phiên theo session_id sự kiện; agent_id dùng phiên cha. Không session_id hoặc
+không có file phiên thì ngủ nếu trạng thái lành (CQ4 = C). Agile hay always của repo không tự bật rào.
+Secure BẬT và trạng thái lành chặn 7 mục; trạng thái hỏng hoặc không nạp được lớp trạng thái chặn 13 mục;
+còn lại ngủ. Khoá repo xét cwd sự kiện, rồi projects do caller đưa, rồi cwd tiến trình; CLAUDE_PROJECT_DIR
+tuyệt đối được agile_state ưu tiên khi xác định khoá. Khoá repo quyết always và phát hiện trạng thái hỏng.
 Không dùng tiến trình con; file dấu cũ nếu còn chỉ nhắc một dòng ở stderr, không chặn.
 
 Lối dừng: người dùng gõ `/agent-agile-team:agile secure off` hoặc `/agile stop`; lối `--clear` cũ đã bỏ.
@@ -224,7 +227,13 @@ def _state_dirs(st: object) -> tuple[str, ...]:
 
 def activation(payload: dict, projects: tuple[str, ...] = ()) -> tuple[set[str], bool, tuple[str, ...]] | None:
     """Trả mục chặn, cờ hỏng và thư mục trạng thái; None khi ngủ.
-    Khoá repo dùng cwd sự kiện, projects hoặc thư mục tiến trình."""
+
+    Secure theo session_id sự kiện, agent_id dùng phiên cha; thiếu session_id hoặc file phiên
+    thì ngủ nếu trạng thái lành. Khoá repo xét cwd sự kiện, projects của caller, rồi cwd
+    tiến trình; agile_state ưu tiên CLAUDE_PROJECT_DIR tuyệt đối khi xác định khoá repo.
+    Secure lành chặn 7 mục; trạng thái hỏng ở bất kỳ repo nào chặn 13 mục; còn lại ngủ.
+    Vế and not bảo đảm repo hỏng không bị nhánh secure lành che khuất.
+    """
     try:
         st = _state_module()
     except Exception:  # noqa: BLE001 — không nạp được lớp trạng thái: đóng khi lỗi

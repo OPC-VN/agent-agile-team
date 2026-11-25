@@ -132,6 +132,12 @@ def secure_on_ignored(root: Path) -> None:
     edit(root, GUARD, 'if any(s["secure_on"] for s in states) and not any(s["state_problem"] for s in states):', "if False:")
 
 
+def secure_ignores_state_problem(root: Path) -> None:
+    needle = ' and not any(s["state_problem"] for s in states)'
+    assert (root / GUARD).read_text(encoding="utf-8").count(needle) == 1
+    edit(root, GUARD, needle, "")
+
+
 def flag_includes_agile(root: Path) -> None:
     edit(root, "scripts/agile_state.py", '"guard_must_stay_active": bool(secure_on or problems),', '"guard_must_stay_active": bool(effective or problems),')
 
@@ -333,6 +339,7 @@ MUTATIONS = {
     "state-problem-open": Mutation(state_problem_open, f"{GUARDT}::test_corrupt_state_fails_guarded", (GUARDT,)),
     "env-redirect-open": Mutation(env_redirect_open, f"{GUARDT}::test_redirecting_state_by_environment_blocked", (GUARDT,)),
     # SPR-37: secure kích hoạt rào độc lập với agile và có lối tắt riêng.
+    "secure-ignores-state-problem": Mutation(secure_ignores_state_problem, "tests/test_agile_guard_secure.py::test_secure_session_with_second_repo_broken_blocks_thirteen", ("tests/test_agile_guard_secure.py",)),
     "secure-on-ignored": Mutation(secure_on_ignored, "tests/test_agile_guard_secure.py::test_secure_on_agile_off_is_healthy_seven_items", ("tests/test_agile_guard_secure.py",)),
     "flag-includes-agile": Mutation(flag_includes_agile, "tests/test_agile_guard_secure.py::test_sc1_activation_dormant", ("tests/test_agile_guard_secure.py",)),
     "stop-keeps-secure": Mutation(stop_keeps_secure, "tests/test_agile_state.py::test_secure_stop_and_last_command", ("tests/test_agile_state.py",)),
