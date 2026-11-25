@@ -3,6 +3,16 @@
 Mục mới nhất đứng đầu. Tiêu đề mỗi mục là đúng chuỗi version trong các manifest (test đồng bộ
 version kiểm điều này).
 
+## 0.14.0 (2026-11-25)
+
+- **Thêm — `secure` theo phiên (SPR-37):** người dùng bật bằng `/agent-agile-team:agile secure`, tắt bằng `/agent-agile-team:agile secure off`; `/agent-agile-team:agile stop` tắt cả agile và secure của phiên. Trạng thái hiển thị `agile: … secure ON|OFF session_id=…`.
+- **Đổi — rào máy:** khi secure bật, guard chặn theo chính sách; khi secure tắt và trạng thái lành, guard ngủ. Agile BẬT và chế độ `always` của repo đều không tự bật rào. Trạng thái hỏng vẫn chặn 13 mục; agent con không có file phiên thì guard ngủ. Luật dừng bằng chữ vẫn áp dụng. Tài liệu và skill được cập nhật; ghim lại sàn `method/agile.md`.
+- **Thêm — kiểm thử đột biến:** thêm `secure-on-ignored`, `flag-includes-agile`, `stop-keeps-secure`, `hook-ignores-secure-off`, `secure-ignores-state-problem`; bỏ `subagent-dormant`.
+- **Đổi — phạm vi thay đổi:** `git diff 7c42e2d HEAD --stat` đo 26 file, 600 dòng thêm, 175 dòng xóa trước mục phát hành này.
+- **Số đo:** `AGENTS.md` 89 dòng, 8805 → 8838 byte (đếm byte sau khi chuẩn hóa CRLF thành LF).
+- **Sửa — test số đo:** giữ nguyên số lịch sử của 0.12.0 và đối chiếu file hiện tại với số đo trong mục phát hành mới nhất.
+- **Chưa làm / chưa đo:** thử áp lực lại STOP-1 của skill `running-sprint` trượt 0/2; khoản 4 lệch tiêu chí, sửa khoản 4 ở sprint sau. Mẫu trạng thái cũ còn ở `skills/intake/tests/scenarios.txt` và `skills/closing-sprint/tests/scenarios.txt`; đoạn trích khoảng dòng 162 của `method/agile.md` thiếu `secure off`.
+
 ## 0.13.1 (2026-11-22)
 
 - **Sửa — skill `running-sprint` dạy thẻ vai (RQ-435 L2a, điểm 3 của Fable):** `SKILL.md` bước 4.1 và `references/brief.md` mục 1 dặn: khi agile BẬT và giao bằng subagent chung (`general-purpose`, `Explore`, `Plan`), dòng đầu brief là thẻ vai `[AAT role=implementer]` (hoặc `[AAT role=direct]`), không thì hook `tier_hook` chặn `role_tag_required`; giao bằng tên agent có sẵn thì không cần thẻ. Bài kiểm áp lực chạy lại ngày 22/11/2026: OFF-3 2/2, ON-1 2/2, STOP-1 0/2 (trượt tiêu chí 6, ghi đúng, chưa sửa skill; ghi ở `skills/running-sprint/tests/pressure.md`).
