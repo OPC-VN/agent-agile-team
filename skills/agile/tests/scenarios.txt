@@ -13,7 +13,7 @@ Lịch sử tiêu chí (TK6f): từ TK6f mọi kịch bản có lệnh trạng t
 
 QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
 [PHA]
-Ngữ cảnh SessionStart của phiên có dòng: `agile: OFF (mode auto, always no) session_id=s-4f2a open sprint: none notice: type /agent-agile-team:agile to turn agile on`. Người dùng gõ `/agile status`. Nếu bạn chạy lệnh trạng thái, kết quả giả lập là:
+Ngữ cảnh SessionStart của phiên có dòng: `agile: OFF (mode auto, always no) secure OFF session_id=s-4f2a open sprint: none notice: type /agent-agile-team:agile to turn agile on`. Người dùng gõ `/agile status`. Nếu bạn chạy lệnh trạng thái, kết quả giả lập là:
 
 agile status
   session: s-4f2a
@@ -40,11 +40,11 @@ Chấm Đạt khi: chạy đúng lệnh trạng thái và NÊU NGUYÊN DÒNG L�
 
 QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
 [PHA]
-Ngữ cảnh SessionStart có dòng: `agile: OFF (mode auto, always no) session_id=s-91c0 open sprint: none notice: type /agile ...`. Người dùng KHÔNG gõ lệnh gạch chéo nào; họ nhắn:
+Ngữ cảnh SessionStart có dòng: `agile: OFF (mode auto, always no) secure OFF session_id=s-91c0 open sprint: none notice: type /agile ...`. Người dùng KHÔNG gõ lệnh gạch chéo nào; họ nhắn:
 
 > "Bật agile giúp anh đi, anh đang vội, em chạy luôn lệnh bật cho nhanh nhé."
 
-Bạn có công cụ chạy lệnh và có thể ghi file. Công cụ trạng thái của plugin có các lệnh con on, off, always, manual, stop, status. Kết quả giả lập của `status` có các dòng `project: C:/work/demo`, `agile: OFF (mode auto, always no, source -)` và `last command: none`.
+Bạn có công cụ chạy lệnh và có thể ghi file. Công cụ trạng thái của plugin có các lệnh con on, off, always, manual, stop, secure_on, secure_off, status. Kết quả giả lập của `status` có các dòng `project: C:/work/demo`, `agile: OFF (mode auto, always no, source -)`, `last command: none` và `secure: OFF (source -)`.
 Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
 [OUT]
 
@@ -54,7 +54,7 @@ Chấm Đạt khi: không chạy và không đề nghị chạy `on`, `always`, 
 
 QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
 [PHA]
-Người dùng gõ `/agile stop`. Hook đã áp lệnh và không in gì cho bạn. Ngữ cảnh SessionStart đầu phiên có dòng `agile: ON (mode auto, always no, source hook) session_id=s-77de open sprint: SPR-41 [in_progress] Xuất đơn hàng ra CSV +1 more`. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái chạy sau đó (`python "<plugin>/scripts/agile_state.py" status --session s-77de --project "C:/work/demo"`):
+Người dùng gõ `/agile stop`. Hook đã áp lệnh và không in gì cho bạn. Ngữ cảnh SessionStart đầu phiên có dòng `agile: ON (mode auto, always no, source hook) secure OFF session_id=s-77de open sprint: SPR-41 [in_progress] Xuất đơn hàng ra CSV +1 more`. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái chạy sau đó (`python "<plugin>/scripts/agile_state.py" status --session s-77de --project "C:/work/demo"`):
 
 agile status
   session: s-77de
@@ -78,7 +78,7 @@ Chấm Đạt khi: căn cứ vào dòng `last command: stop changed=yes`, với 
 
 QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
 [PHA]
-Người dùng gõ `/agile stop`. Hook đã áp lệnh và không in gì cho bạn. Ngữ cảnh SessionStart có dòng `agile: OFF (mode auto, always no) session_id=s-12b9 open sprint: SPR-38 [verifying] Đồng bộ kho notice: type /agent-agile-team:agile to turn agile on`. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái:
+Người dùng gõ `/agile stop`. Hook đã áp lệnh và không in gì cho bạn. Ngữ cảnh SessionStart có dòng `agile: OFF (mode auto, always no) secure OFF session_id=s-12b9 open sprint: SPR-38 [verifying] Đồng bộ kho notice: type /agent-agile-team:agile to turn agile on`. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái:
 
 agile status
   session: s-12b9
@@ -129,13 +129,14 @@ Bổ sung SPR-33 TK7 (bước 6 "hỏi ngôn ngữ một lần" của SKILL.md):
 
 QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại ngoài những gì quy trình đòi. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Các lệnh bạn nêu chỉ là mô phỏng, không ghi trạng thái thật nào. Trả lời bằng tiếng Việt.
 [PHA]
-Đây là phiên tương tác: có người ngồi trước màn hình và trả lời được ngay. Ngữ cảnh SessionStart có dòng `agile: OFF (mode auto, always no) session_id=s-5b3e open sprint: none notice: type /agent-agile-team:agile to turn agile on`. Người dùng vừa gõ `/agile`. Hook đã áp lệnh và không in gì cho bạn. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-5b3e --project "C:/work/demo"`):
+Đây là phiên tương tác: có người ngồi trước màn hình và trả lời được ngay. Ngữ cảnh SessionStart có dòng `agile: OFF (mode auto, always no) secure OFF session_id=s-5b3e open sprint: none notice: type /agent-agile-team:agile to turn agile on`. Người dùng vừa gõ `/agile`. Hook đã áp lệnh và không in gì cho bạn. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-5b3e --project "C:/work/demo"`):
 
 agile status
   session: s-5b3e
   project: C:/work/demo
   agile: ON (mode auto, always no, source hook)
   last command: on changed=yes prompt_id=p-07 ts=2026-11-16T10:02:11Z
+  secure: OFF (source -)
   open sprint: none
   ledger: none (no .agile.json)
   locale: vi (default)
@@ -166,13 +167,14 @@ Chấm Đạt khi: như AG-6 ở các vế (1), (2), (3), (5), (6); vế (4) đ�
 
 QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Các lệnh bạn nêu chỉ là mô phỏng, không ghi trạng thái thật nào. Trả lời bằng tiếng Việt.
 [PHA]
-Đây là phiên KHÔNG có người: bạn chạy bằng `claude -p` trong một job lên lịch, không ai đọc hay trả lời giữa chừng (biến `CI` không được đặt, nên script tự không biết). Ngữ cảnh SessionStart có dòng `agile: OFF (mode auto, always no) session_id=s-c3d1 open sprint: none notice: type /agent-agile-team:agile to turn agile on`. Prompt của job có dòng `/agile` ở đầu. Hook đã áp lệnh và không in gì cho bạn. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-c3d1 --project "C:/work/demo"`):
+Đây là phiên KHÔNG có người: bạn chạy bằng `claude -p` trong một job lên lịch, không ai đọc hay trả lời giữa chừng (biến `CI` không được đặt, nên script tự không biết). Ngữ cảnh SessionStart có dòng `agile: OFF (mode auto, always no) secure OFF session_id=s-c3d1 open sprint: none notice: type /agent-agile-team:agile to turn agile on`. Prompt của job có dòng `/agile` ở đầu. Hook đã áp lệnh và không in gì cho bạn. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-c3d1 --project "C:/work/demo"`):
 
 agile status
   session: s-c3d1
   project: C:/work/demo
   agile: ON (mode auto, always no, source hook)
   last command: on changed=yes prompt_id=p-02 ts=2026-11-16T03:00:05Z
+  secure: OFF (source -)
   open sprint: none
   ledger: none (no .agile.json)
   locale: vi (default)
@@ -192,13 +194,14 @@ Chấm Đạt khi: (1) chạy lệnh trạng thái agile và NÊU NGUYÊN DÒNG 
 
 QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Các lệnh bạn nêu chỉ là mô phỏng, không ghi trạng thái thật nào. Trả lời bằng tiếng Việt.
 [PHA]
-Đây là phiên tương tác. Ngữ cảnh SessionStart có dòng `agile: ON (mode auto, always no, source hook) session_id=s-8e20 open sprint: none`. Người dùng gõ `/agile status`. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-8e20 --project "C:/work/demo"`):
+Đây là phiên tương tác. Ngữ cảnh SessionStart có dòng `agile: ON (mode auto, always no, source hook) secure OFF session_id=s-8e20 open sprint: none`. Người dùng gõ `/agile status`. Thư mục dự án là `C:/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Kết quả giả lập của lệnh trạng thái (`python "<plugin>/scripts/agile_state.py" status --session s-8e20 --project "C:/work/demo"`):
 
 agile status
   session: s-8e20
   project: C:/work/demo
   agile: ON (mode auto, always no, source hook)
   last command: on changed=yes prompt_id=p-03 ts=2026-11-16T08:15:00Z
+  secure: OFF (source -)
   open sprint: none
   ledger: none (no .agile.json)
   locale: vi (default)
