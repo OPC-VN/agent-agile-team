@@ -911,3 +911,52 @@ def test_secure_non_hook_warning_and_off_status(repo, state):
 def test_secure_cli_is_not_a_command(repo, state):
     result = run_script("agile_state.py", "secure", "--session", "s1", "--project", str(repo), env={st.ENV_STATE_DIR: str(state)})
     assert result.returncode == 2
+
+
+def test_secure_cleanup_retains_before_and_removes_after_90_day_boundary(repo, state):
+    """SPR-37 RF65(2): secure sessions use the same 90-day horizon as agile."""
+    now = 2_000_000_000
+    for session in ("before", "after"):
+        st.apply_command("secure_on", repo, session, source="hook", now=now)
+    before = st.session_file("before", state)
+    after = st.session_file("after", state)
+    os.utime(before, (now - 90 * 86400 + 1, now - 90 * 86400 + 1))
+    os.utime(after, (now - 90 * 86400 - 1, now - 90 * 86400 - 1))
+    assert st.cleanup_stale(state, now=now) == [after.name]
+    assert before.exists()
+    assert not after.exists()
+
+
+def test_secure_on_persists_own_provenance_and_preserves_all_agile_fields(repo, state):
+    """SPR-37 SPEC FR1.1: secure provenance must not overwrite agile provenance."""
+    st.apply_command(
+        "manual", repo, "s1", source="script", prompt_id="agile-id", transcript_path="agile-path", now=100
+    )
+    path = st.session_file("s1", state)
+    before = json.loads(path.read_text(encoding="utf-8"))
+    st.apply_command(
+        "secure_on", repo, "s1", source="hook", prompt_id="secure-id", transcript_path="secure-path", now=200
+    )
+    after = json.loads(path.read_text(encoding="utf-8"))
+    assert {key: after[key] for key in ("agile", "mode", "source", "prompt_id", "transcript_path", "ts")} == {
+        key: before[key] for key in ("agile", "mode", "source", "prompt_id", "transcript_path", "ts")
+    }
+    secure_keys = ("secure", "secure_ts", "secure_source", "secure_prompt_id", "secure_transcript_path")
+    assert {key: after[key] for key in secure_keys} == {
+        "secure": True, "secure_ts": st.now_iso(200), "secure_source": "hook",
+        "secure_prompt_id": "secure-id", "secure_transcript_path": "secure-path",
+    }
+
+
+@pytest.mark.parametrize(
+    ("command", "expected_on", "source"), [("secure_on", True, "hook"), ("secure_off", False, "script")]
+)
+def test_status_json_cli_reports_secure_switch_and_source(repo, state, command, expected_on, source):
+    """SPR-37 SPEC section 7: status JSON exposes secure state and source."""
+    st.apply_command(command, repo, "s1", source=source)
+    result = run_script(
+        "agile_state.py", "status", "--json", "--session", "s1", "--project", str(repo),
+        env={st.ENV_STATE_DIR: str(state)},
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["secure"] == {"on": expected_on, "source": source}
