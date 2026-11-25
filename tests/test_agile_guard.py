@@ -23,9 +23,10 @@ pytestmark = pytest.mark.usefixtures("agile_state_dir")
 
 ALL = list(_agile_rules.AGILE_EXCLUSIONS)
 WITHOUT_BRANCH = [e for e in ALL if e != "branch_merge_local"]
+SID = "t1"  # session_id dùng trong test: file phiên `session-t1.json`
 
 
-def write_switch(repo, spec, session_id=None):
+def write_repo_always(repo, spec, session_id=None):
     """Bật công tắc agile cho `repo` trong thư mục trạng thái tạm (SPR-32 B3: thay file dấu `.tmp/autopilot.json`).
     `spec` là dict → agile BẬT ở mức repo (`always`, cùng phạm vi repo như file dấu cũ) hay, có `session_id`, ở mức phiên; là chuỗi → ghi nguyên văn
     làm file trạng thái hỏng. Đường file lấy từ `agile_state` (khoá repo từ `repo`)."""
@@ -44,7 +45,21 @@ def write_switch(repo, spec, session_id=None):
     return path
 
 
-def make_repo(tmp_path, branch="main", marker=None, worktree=False):
+def write_switch(repo, spec, session_id=None):
+    return write_repo_always(repo, spec, session_id)
+
+
+def write_secure_session(repo, spec, session_id=SID):
+    if isinstance(spec, str) or session_id is None:
+        return write_repo_always(repo, spec, session_id)
+    path = st.session_file(session_id)
+    data = {"schema": 1, "session_id": st.sanitize_session_id(session_id), "agile": True,
+            "secure": True, "mode": "auto", "source": "hook"}
+    st.write_json_atomic(path, data)
+    return path
+
+
+def make_repo(tmp_path, branch="main", marker=None, worktree=False, repo_always=False):
     """Dựng repo giả: `.git/HEAD` ở nhánh `branch`; `marker` (tên cũ, giữ để khỏi đổi mọi chỗ gọi) là dict (agile BẬT ở mức repo), chuỗi (trạng
     thái hỏng, ghi nguyên văn) hay None (agile TẮT)."""
     repo = tmp_path / "repo"
@@ -53,7 +68,7 @@ def make_repo(tmp_path, branch="main", marker=None, worktree=False):
     (git / "HEAD").write_text("ref: refs/heads/{}\n".format(branch), encoding="utf-8")
     (repo / ".tmp").mkdir()
     if marker is not None:
-        write_switch(repo, marker)
+        (write_repo_always if repo_always else write_switch)(repo, marker)
     return repo
 
 
@@ -77,8 +92,15 @@ def link_dir(target, link):
     pytest.skip("không tạo được liên kết thư mục trên máy này")
 
 
-def claude(cmd, cwd, tool="Bash"):
+def claude_without_session(cmd, cwd, tool="Bash"):
     return {"tool_name": tool, "tool_input": {"command": cmd}, "cwd": str(cwd)}
+
+
+def claude(cmd, cwd, tool="Bash", session_id=None):
+    payload = claude_without_session(cmd, cwd, tool)
+    if session_id is not None:
+        payload["session_id"] = session_id
+    return payload
 
 
 def run(fmt, payload, *extra):
@@ -90,7 +112,6 @@ def run(fmt, payload, *extra):
 
 TAMPER_REASON = "công tắc agile là rào — chỉ người dùng gõ /agile stop mới tắt được"
 BS = chr(92)  # dấu gạch ngược trong lệnh Windows/PowerShell
-SID = "t1"  # session_id dùng trong test: file phiên `session-t1.json`
 
 
 def state_dir():
@@ -207,7 +228,7 @@ def test_guard_bad_marker_binary_bytes(tmp_path):
 
 
 def test_guard_codex_and_antigravity_event_shapes(tmp_path):
-    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
+    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
     # Codex: tool shell, command dạng chuỗi hoặc danh sách ["bash","-lc","<script>"], cwd ở payload hoặc workdir
     for tool in ("shell", "Bash", "exec_command"):
         rc, out, err = run("codex", {"tool_name": tool, "tool_input": {"command": "rm -rf x"}, "cwd": str(repo)})
@@ -254,14 +275,14 @@ def test_guard_finds_marker_walking_up(tmp_path):
 
 
 def test_guard_stops_at_first_git(tmp_path):
-    outer = make_repo(tmp_path, branch="spr-12", marker=good_marker())
+    outer = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
     inner = outer / "vendor"
     (inner / ".git").mkdir(parents=True)  # repo lồng: file dấu ở ngoài không áp
     assert_allowed(inner, "rm -rf x")
 
 
 def test_guard_no_cwd_uses_process_cwd(tmp_path, monkeypatch):
-    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
+    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
     monkeypatch.chdir(repo)
     rc, _, err = run("claude", {"tool_name": "Bash", "tool_input": {"command": "rm -rf x"}})
     assert rc == 2 and "'irreversible_delete'" in err
@@ -361,7 +382,7 @@ def test_guard_bad_stdin_with_agile_off_passes_and_with_agile_on_blocks(tmp_path
     monkeypatch.chdir(tmp_path)
     assert run("claude", "{broken") == (0, "", "")
     assert run("antigravity", "[]") == (0, "{}\n", "")
-    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker())
+    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker(), repo_always=True)
     monkeypatch.chdir(repo)
     rc, _, err = run("claude", "{broken")
     assert rc == 2 and "agile" in err
@@ -370,7 +391,8 @@ def test_guard_bad_stdin_with_agile_off_passes_and_with_agile_on_blocks(tmp_path
 
 
 def test_guard_unexpected_exception_closed_when_agile_on(tmp_path, monkeypatch):
-    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
+    claude = claude_without_session  # repo-scoped legacy case
+    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
     monkeypatch.chdir(repo)  # ngoại lệ lạ → xác định trạng thái từ thư mục của tiến trình hook
     monkeypatch.setattr(agile_guard, "_analyze", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
     rc, _, err = run("claude", claude("git status", repo))
@@ -392,7 +414,8 @@ def _nest(cmd, layers):
 
 
 def test_guard_deep_command_nesting_fails_closed(tmp_path):
-    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker())
+    claude = claude_without_session  # repo-scoped legacy case
+    repo = make_repo(tmp_path, branch="spr-12", marker=good_marker(), repo_always=True)
     rc, _, err = run("claude", claude(_nest("rm -rf x", 3), repo))  # trong giới hạn: mở hết lớp, thấy push
     assert rc == 2 and "'irreversible_delete'" in err
     rc, _, err = run("claude", claude(_nest("rm -rf x", 4), repo))  # quá giới hạn: không phân tích được → chặn
@@ -418,8 +441,10 @@ def test_guard_cli_subprocess(tmp_path):
 
 # ===================== vòng sửa 1 (S-RF1…S-RF9, T-RF1…T-RF4) =====================
 
-def codex(cmd, cwd=None, workdir=None):
+def codex(cmd, cwd=None, workdir=None, session_id=None):
     payload = {"tool_name": "shell", "tool_input": {"command": cmd}}
+    if session_id is not None:
+        payload["session_id"] = session_id
     if cwd is not None:
         payload["cwd"] = str(cwd)
     if workdir is not None:
@@ -433,7 +458,7 @@ def fwd(path):
 
 def test_guard_workdir_beats_session_cwd(tmp_path):
     """S-RF1 / T-RF3: thư mục của lệnh (workdir) quyết định, không phải cwd của phiên."""
-    repo = make_repo(tmp_path / "a", branch="spr-12", marker=good_marker())
+    repo = make_repo(tmp_path / "a", branch="spr-12", marker=good_marker(), repo_always=True)
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
     rc, _, err = run("codex", codex(["bash", "-lc", "rm -rf x"], cwd=elsewhere, workdir=repo))
@@ -451,7 +476,8 @@ def test_guard_workdir_beats_session_cwd(tmp_path):
 
 def test_guard_error_after_event_dir_probes_event_dir(tmp_path, monkeypatch):
     """T-RF1 / S-RF4: lỗi sau khi có sự kiện → trạng thái xác định từ chính sự kiện (cwd của nó), không phải thư mục tiến trình."""
-    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker())
+    claude = claude_without_session  # repo-scoped legacy case
+    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker(), repo_always=True)
     away = tmp_path / "away"
     away.mkdir()
     monkeypatch.chdir(away)
@@ -626,6 +652,7 @@ def test_guard_state_dir_blocks_write_tools(tmp_path, payload_of):
         "antigravity_multi": ("antigravity", {"toolCall": {"name": "multi_replace_file_content", "args": {"TargetFile": target, "Cwd": str(repo)}}}),
     }
     fmt, payload = payloads[payload_of]
+    payload = dict(payload, session_id=SID)
     rc, out, err = run(fmt, payload)
     if fmt == "antigravity":
         decision = json.loads(out)
@@ -705,7 +732,7 @@ def test_guard_git_c_from_outside_repo_with_session_on(tmp_path):
         assert rc == 2, (cmd, err)
     ok = dict(claude("git -C {} status".format(rel), outside), session_id=SID)
     assert run("claude", ok) == (0, "", "")
-    off = claude("git -C {} worktree remove --force x".format(fwd(outside)), outside)  # cùng lệnh, không có session_id: phiên khác, agile TẮT
+    off = claude_without_session("git -C {} worktree remove --force x".format(fwd(outside)), outside)  # cùng lệnh, không có session_id: phiên khác, agile TẮT
     assert run("claude", off) == (0, "", "")
 
 
@@ -756,7 +783,8 @@ def test_launcher_without_python_warns_and_exits_zero(tmp_path, bare_sh_ok):
 
 
 def test_launcher_with_python_delegates_to_guard(tmp_path, bare_sh_ok):
-    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker())
+    claude = claude_without_session  # repo-scoped legacy case
+    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker(), repo_always=True)
     path = [bare_sh_ok, Path(sys.executable).parent]
     blocked_run = run_launcher(repo, claude("rm -rf x", repo), path)
     if "không chạy được Python" in blocked_run.stderr:
@@ -1039,7 +1067,7 @@ def test_guard_stash_and_clean_plain_allowed(tmp_path):
 
 def test_guard_old_python_guard_falls_back(tmp_path, monkeypatch):
     """Python < 3.9: không phân tích, chỉ xác định công tắc agile từ thư mục tiến trình (hàm lưới cuối)."""
-    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker())
+    repo = make_repo(tmp_path / "r", branch="spr-12", marker=good_marker(), repo_always=True)
     plain = tmp_path / "p"
     plain.mkdir()
     import contextlib
@@ -1122,8 +1150,9 @@ def test_agile_off_and_healthy_state_means_dormant_for_every_format(tmp_path):
 
 
 def test_session_switch_activates_only_that_session(tmp_path):
+    claude = claude_without_session  # ca này kiểm tra cả payload không có session_id
     repo = make_repo(tmp_path)
-    write_switch(repo, good_marker(), session_id=SID)
+    write_secure_session(repo, good_marker(), session_id=SID)
     assert blocked_delete(session_payload("rm -rf x", repo))[0]
     other = dict(claude("rm -rf x", repo), session_id="another-session")
     assert run("claude", other) == (0, "", "")
@@ -1136,15 +1165,16 @@ def test_session_switch_activates_only_that_session(tmp_path):
 
 def test_repo_always_activates_every_session_of_that_repo_only(tmp_path):
     repo = make_repo(tmp_path / "a")
-    write_switch(repo, good_marker())
+    write_repo_always(repo, good_marker())
     assert blocked_delete(dict(claude("rm -rf x", repo), session_id="whoever"))[0]
     assert run("claude", dict(claude("rm -rf x", make_repo(tmp_path / "b")), session_id="whoever")) == (0, "", "")
 
 
 def test_project_dir_env_decides_the_repo_key(tmp_path, monkeypatch):
     """Khoá repo theo `CLAUDE_PROJECT_DIR` như `agile_state` (RF3): `git init sub; cd sub` không đổi khoá, thư mục sự kiện lạ không làm rào ngủ."""
+    claude = claude_without_session  # repo key is the subject of this test
     repo = make_repo(tmp_path / "r")
-    write_switch(repo, good_marker())
+    write_repo_always(repo, good_marker())
     sub = repo / "sub"
     (sub / ".git").mkdir(parents=True)
     away = tmp_path / "away"
@@ -1157,6 +1187,7 @@ def test_project_dir_env_decides_the_repo_key(tmp_path, monkeypatch):
 
 def test_subagent_without_session_file_is_guarded_not_dormant(tmp_path):
     """SC1.7 / R0-M11: có `agent_id` mà không có file phiên nào khớp → được bảo vệ (bảy mục), không bao giờ ngủ."""
+    claude = claude_without_session  # ca này cố ý không có session_id
     repo = make_repo(tmp_path)
     sub = dict(claude("rm -rf x", repo), session_id="no-such-session", agent_id="ac0db6e777f737813", agent_type="general-purpose")
     ok, err = blocked_delete(sub)
@@ -1170,7 +1201,7 @@ def test_subagent_without_session_file_is_guarded_not_dormant(tmp_path):
 
 def test_subagent_with_matching_session_file_follows_the_switch(tmp_path):
     repo = make_repo(tmp_path)
-    write_switch(repo, good_marker(), session_id=SID)
+    write_repo_always(repo, good_marker(), session_id=SID)
     assert blocked_delete(session_payload("rm -rf x", repo, agent_id="a1", agent_type="general-purpose"))[0]  # cùng session_id (TK1b)
     st.apply_command("off", repo, SID, source="hook")  # phiên đã TẮT tường minh: có file phiên khớp → tác tử con cũng ngủ
     assert run("claude", session_payload("rm -rf x", repo, agent_id="a1")) == (0, "", "")
@@ -1181,7 +1212,7 @@ def test_subagent_with_matching_session_file_follows_the_switch(tmp_path):
 def test_corrupt_state_fails_guarded(tmp_path, which, text):
     """SC4.3: trạng thái hỏng → công tắc TẮT nhưng rào vẫn bật, chặn cả 13 mục."""
     repo = make_repo(tmp_path)
-    write_switch(repo, text, session_id=SID if which == "session" else None)
+    write_repo_always(repo, text, session_id=SID if which == "session" else None)
     rc, _, err = run("claude", session_payload("rm -rf x", repo))
     assert rc == 2 and "trạng thái hỏng" in err and "'irreversible_delete'" in err
     active, broken, _ = agile_guard.activation(session_payload("ls", repo))
@@ -1363,7 +1394,7 @@ def test_readonly_and_unrelated_forms_allowed(tmp_path, cmd):
 
 
 def test_write_tool_blocked_only_for_state_paths(tmp_path):
-    repo = make_repo(tmp_path, marker=good_marker())
+    repo = make_repo(tmp_path, marker=good_marker(), repo_always=True)
     state = state_dir()
     for path in (state / "session-t1.json", state / "repo-whatever.json", state / "new-file.txt", state):
         rc, _, err = run("claude", {"tool_name": "Write", "tool_input": {"file_path": str(path), "content": "{}"}, "cwd": str(repo)})
