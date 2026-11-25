@@ -359,12 +359,14 @@ def test_hook_upper_case_session_id_turns_on(repo, state):  # R1b MF1
 
 @pytest.mark.parametrize("args", ["secure", "secure on", " Secure   ON "])
 def test_secure_hook_on_preserves_agile(repo, state, args):
-    st.apply_command("on", repo, "s1", source="script", prompt_id="old", directory=state)
-    before = load(repo, state=state)
+    st.apply_command("manual", repo, "s1", source="script", prompt_id="old", transcript_path="old-transcript", now=100, directory=state)
+    before = json.loads((state / "session-s1.json").read_text(encoding="utf-8"))
     fire(expansion(repo, args), state)
-    current = load(repo, state=state)
-    assert current["secure_on"] is True and current["secure_source"] == "hook"
-    assert (current["session_agile"], current["source"], current["prompt_id"]) == (before["session_agile"], before["source"], before["prompt_id"])
+    current = json.loads((state / "session-s1.json").read_text(encoding="utf-8"))
+    for key in ("agile", "mode", "source", "prompt_id", "transcript_path", "ts"):
+        assert current[key] == before[key]
+    assert (current["secure"], current["secure_source"], current["secure_prompt_id"], current["secure_transcript_path"]) == (True, "hook", "pid-9", "/t.jsonl")
+    assert current["secure_ts"] > before["ts"]
 
 
 @pytest.mark.parametrize("args", ["secure off", "secure stop"])
@@ -385,7 +387,7 @@ def test_secure_hook_ignores_unknown_and_other_name(repo, state):
 def test_secure_hook_session_start_and_resume(repo, state):
     text = context(fire(start(repo, "gone", "resume"), state))
     assert text.startswith("agile: OFF") and "secure OFF" in text
-    assert "/agent-agile-team:agile secure" in text and "/agent-agile-team:agile" in text
+    assert "/agent-agile-team:agile secure" in text
     fire(expansion(repo, "secure"), state)
     text = context(fire(start(repo), state))
     assert text.startswith("agile: OFF") and "secure ON" in text
