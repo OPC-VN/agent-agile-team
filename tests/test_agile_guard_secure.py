@@ -62,6 +62,25 @@ def test_fr24_broken_state_blocks_thirteen(tmp_path):
     assert rc == 2 and "tr\u1ea1ng th\u00e1i h\u1ecfng" in err and "c\u1ea7n ng\u01b0\u1eddi d\u00f9ng n\u00f3i trong chat \u2014 l\u1ec7nh kh\u00f4ng ch\u1ea1y" in err
 
 
+def test_fr24_broken_state_explains_recovery(tmp_path):
+    repo = make_repo(tmp_path)
+    st.session_file(SID).write_text("{broken", encoding="utf-8")
+    rc, _, err = run("claude", claude("rm -rf x", repo, session_id=SID))
+    assert rc == 2
+    assert "cần người dùng nói trong chat — lệnh không chạy" in err
+    assert "người dùng gõ /agent-agile-team:agile stop" in err
+
+
+def test_fr24_healthy_secure_has_no_recovery_guidance(tmp_path):
+    repo = make_repo(tmp_path)
+    session(secure=True)
+    rc, _, err = run("claude", claude("rm -rf x", repo, session_id=SID))
+    assert rc == 2
+    assert "trạng thái hỏng" not in err
+    assert "/agent-agile-team:agile stop" not in err
+    assert "cần người dùng nói trong chat — lệnh không chạy" in err
+
+
 def test_fr25_subagent_without_session_sleeps(tmp_path):
     repo = make_repo(tmp_path)
     payload = dict(claude("rm -rf x", repo, session_id=SID), agent_id="child")

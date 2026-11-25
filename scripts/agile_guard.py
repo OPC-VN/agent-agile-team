@@ -1777,7 +1777,7 @@ def reason_for(item: str, broken: bool) -> str:
         return "agile: guard deadline: command too long to check — lệnh không chạy"
     if item == NESTED:
         return "agile: lệnh lồng quá {} lớp shell, không phân tích được — cần người dùng nói trong chat — lệnh không chạy".format(MAX_UNWRAP)
-    lead = "agile: trạng thái hỏng, " if broken else "agile: "
+    lead = "agile: trạng thái hỏng, người dùng gõ /agent-agile-team:agile stop để xoá công tắc hỏng; " if broken else "agile: "
     return "{}'{}' cần người dùng nói trong chat — lệnh không chạy".format(lead, item)
 
 
