@@ -3,11 +3,12 @@ skill: rust
 method: retrieval
 model: sonnet
 tier: T3
-skill_sha: 1222f98c444f8be2868a739bdf34d1288a2c00d0
+skill_sha: 7a924cfac8e6468bcaee75e83c8c2349fff1ee20
 date: 2026-11-28
 result: "strict 10/10 (+0 partial, 0 fail) — at threshold (≥4/5 scenario questions strict pass and the boundary question strict pass); points-right 10/10"
 agent_ids:
-  answers: a80fd20648004b2f6
+  answers: a5729ba430ddb3ef2
+  answers_previous_sha_1222f98c: a80fd20648004b2f6
   answers_previous_sha_6e57013f: a0603729097c6c7db
   answers_previous_sha_a500b5af: a975ec91c0176cccc
 ---
@@ -18,7 +19,7 @@ agent_ids:
 
 > **Kết luận:** strict 10/10 (+0 partial, 0 fail), đạt ngưỡng (câu tình huống Đạt hẳn 9/9, câu ranh giới Đạt). Cả 10 câu trỏ đúng mục; ba câu cho ba reference thêm ở SPR-38 (`build-loop.md`, `windows-pitfalls.md`, `project-baseline.md`) trỏ đúng và có nội dung quyết định.
 
-**Giới hạn của lượt này:** lượt thứ tư cùng ngày, trên skill_sha `1222f98c` (chỉ đổi tên file mẫu `AGENTS.md` → `AGENTS.template.md` và một dòng ở `project-baseline.md`); lượt thứ ba trên skill_sha `6e57013f` (chủ thể `a0603729097c6c7db`) cũng strict 10/10. Lượt ba (sau sửa review vòng 1: bước tạo `Cargo.lock` lần đầu, CLI mẫu dùng `args_os`, câu chốt cách so đường dẫn ở `windows-pitfalls.md`). Lượt thứ hai (skill_sha `a500b5af`, chủ thể `a975ec91c0176cccc`) cho strict 9/10, câu 9 Một phần vì thiếu đúng câu chốt đó; câu chốt được thêm vì lượt hai chỉ ra, nên câu 9 lượt ba không còn độc lập với lượt hai. Một lượt mỗi skill_sha (n = 1). Câu 1–7 giữ nguyên lượt đầu; câu 8–10 mới ở SPR-38. Người soạn câu hỏi, viết cột kỳ vọng và chấm là cùng một agent (điều phối OpcOS SPR-99); cột kỳ vọng ghi vào file nháp trước khi giao chủ thể. Chủ thể là subagent mới (không đọc `tests/`, không đọc skill khác ngoài `tauri-desktop` khi được trỏ), đánh dấu «(tự suy)» chỗ skill không ghi (câu 2 tên nhánh enum, câu 4 `tokio::time::sleep`).
+**Giới hạn của lượt này:** lượt thứ năm cùng ngày, trên skill_sha `7a924cfa` (chỉ đổi một liên kết thư mục ở bảng «Đọc gì khi nào» của `SKILL.md` thành chữ dạng mã, cho bộ chép Antigravity); lượt thứ tư trên skill_sha `1222f98c` (đổi tên file mẫu `AGENTS.md` → `AGENTS.template.md`, chủ thể `a80fd20648004b2f6`) cũng strict 10/10; lượt thứ ba trên skill_sha `6e57013f` (chủ thể `a0603729097c6c7db`) cũng strict 10/10. Lượt ba (sau sửa review vòng 1: bước tạo `Cargo.lock` lần đầu, CLI mẫu dùng `args_os`, câu chốt cách so đường dẫn ở `windows-pitfalls.md`). Lượt thứ hai (skill_sha `a500b5af`, chủ thể `a975ec91c0176cccc`) cho strict 9/10, câu 9 Một phần vì thiếu đúng câu chốt đó; câu chốt được thêm vì lượt hai chỉ ra, nên câu 9 lượt ba không còn độc lập với lượt hai. Một lượt mỗi skill_sha (n = 1). Câu 1–7 giữ nguyên lượt đầu; câu 8–10 mới ở SPR-38. Người soạn câu hỏi, viết cột kỳ vọng và chấm là cùng một agent (điều phối OpcOS SPR-99); cột kỳ vọng ghi vào file nháp trước khi giao chủ thể. Chủ thể là subagent mới (không đọc `tests/`, không đọc skill khác ngoài `tauri-desktop` khi được trỏ), đánh dấu «(tự suy)» chỗ skill không ghi (câu 2 tên nhánh enum, câu 4 `tokio::time::sleep`).
 
 | # | Câu hỏi | Mục kỳ vọng | Mục agent trỏ | Kết quả |
 |---|---|---|---|---|
