@@ -34,9 +34,9 @@ cấp. Nhóm ghi trong frontmatter `metadata.group` và trong mục lục dướ
   để `check` không quét như tài liệu; file chứa khoá, mật khẩu hay token làm mồi thì dòng thứ hai ghi rõ
   chúng là **GIÁ TRỊ GIẢ**.
 
-**Hiện trạng thử:** 39 trong 39 skill có tệp thử đã chạy; `agile` 17/18 lượt GREEN theo cách đọc chặt (SPR-33 TK7, n = 2, AG-1..AG-8, AG-5 r2 trượt vế rào máy; 18/18 chỉ khi đọc nới; RED chỉ cho 4 ca mới AG-6, AG-6b, AG-7, AG-8: 3/8); kết quả trước (TK6g): `agile` 9/10 lượt GREEN (n = 2, chưa có lượt RED, AG-5 1/2) — bảng ở mục 4.
+**Hiện trạng thử:** 42 trong 42 skill có tệp thử đã chạy; `agile` 17/18 lượt GREEN theo cách đọc chặt (SPR-33 TK7, n = 2, AG-1..AG-8, AG-5 r2 trượt vế rào máy; 18/18 chỉ khi đọc nới; RED chỉ cho 4 ca mới AG-6, AG-6b, AG-7, AG-8: 3/8); kết quả trước (TK6g): `agile` 9/10 lượt GREEN (n = 2, chưa có lượt RED, AG-5 1/2) — bảng ở mục 4.
 
-## 3. Mục lục — 39 skill
+## 3. Mục lục — 42 skill
 
 ### Quy trình
 
@@ -48,6 +48,7 @@ cấp. Nhóm ghi trong frontmatter `metadata.group` và trong mục lục dướ
 | [running-sprint](running-sprint/SKILL.md) | hai chế độ thực thi, brief/review theo việc, phán quyết, 4 điều kiện dừng, 3 vòng khuyến nghị |
 | [closing-sprint](closing-sprint/SKILL.md) | tiền kiểm → REPORT/Cổng 2 → docs-sync, release notes, bài học → menu nhánh 3 lựa chọn |
 | [bug-triage](bug-triage/SKILL.md) | tái hiện, xếp mức → đường xử lý, test hồi quy |
+| [rust-porting](rust-porting/SKILL.md) | chuyển mã có sẵn sang Rust: ghi oracle từ bản cũ → port → cổng (khớp ca, fmt, clippy, test, không stub) → chạy song song rồi mới tắt bản cũ |
 | [agile](agile/SKILL.md) | `/agile` (bật, always, manual, stop, status) hoặc hỏi trạng thái agile: đọc dòng trạng thái và báo, không tự bật; sau `stop` ghi một blocker vào mỗi sprint đang mở |
 
 ### Kỹ thuật
@@ -74,6 +75,8 @@ Cột "Loại": **tham chiếu** = `metadata.kind: reference`.
 | [rag-pageindex](rag-pageindex/SKILL.md) | tham chiếu | hỏi đáp PDF dài qua cây mục lục của MCP pageindex: agent suy luận section/trang, trả lời kèm số trang, không vector, không API key |
 | [gcp-devops](gcp-devops/SKILL.md) | kỷ luật | vận hành Google Cloud (Cloud Run, Cloud SQL, Secret Manager): không đoán định danh, `describe` trước khi đổi, không để lộ secret, placeholder thay giá trị riêng |
 | [gcp-incident-response](gcp-incident-response/SKILL.md) | kỷ luật | sự cố Google Cloud: khám phá phạm vi trước khi chạm, giảm thiểu trước tìm gốc sau (bảng 7 chiến lược), triage log không tràn ngữ cảnh, SLO, postmortem |
+| [rust](rust/SKILL.md) | tham chiếu | viết, sửa, review Rust: ownership, kiểu, lỗi, async, FFI Windows; vòng biên dịch qua sandbox/cầu, bẫy Windows, workspace mẫu có bảng lint |
+| [tauri-desktop](tauri-desktop/SKILL.md) | tham chiếu | vỏ desktop Tauri v2 trên Windows: capabilities, IPC, sidecar, Job Object, bộ cài |
 
 ### Kiểm định
 
@@ -104,7 +107,7 @@ Cột "Loại": **tham chiếu** = `metadata.kind: reference`.
 | [writing-skills](writing-skills/SKILL.md) | tạo/sửa skill, viết description hoặc thử áp lực, đề xuất nâng bài học thành skill, chẩn đoán phiên/sprint chạy sai |
 | [eval-harness](eval-harness/SKILL.md) | tiêu chí đạt/hỏng và kiểm hồi quy cho tính năng có gọi mô hình của sản phẩm (đánh giá kết quả mô hình, không phải thử áp lực skill) |
 
-## 4. Hiện trạng thử — 39 skill
+## 4. Hiện trạng thử — 42 skill
 
 Đọc từ frontmatter của tệp thử, không từ trí nhớ (`tests/test_skill_tests.py` đối chiếu bảng này với frontmatter). Tệp kỷ luật:
 cột `result` là đoạn đầu (số kịch bản Đạt), chi tiết RED và GREEN ở chính tệp. Tệp truy xuất: một thước chung — `strict` là
@@ -134,12 +137,13 @@ số câu Đạt hẳn trên tổng số câu (kèm số Một phần và Không
 | [postgres](postgres/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 4/7 (+2 partial, 1 fail), below threshold; points-right 6/7 | 2026-10-04 |
 | [python](python/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 3/7 (+4 partial, 0 fail), below threshold; points-right 7/7 | 2026-10-04 |
 | [react](react/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 3/7 (+4 partial, 0 fail), below threshold; points-right 7/7 | 2026-10-04 |
-| [rust](rust/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 7/7 (+0 partial, 0 fail), at threshold; points-right 7/7 | 2026-11-28 |
+| [rust](rust/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 10/10 (+0 partial, 0 fail), at threshold; points-right 10/10 | 2026-11-28 |
+| [rust-porting](rust-porting/tests/pressure.md) | kỷ luật | `pressure.md` | 3/3 GREEN pass | 2026-11-28 |
 | [tauri-desktop](tauri-desktop/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 7/7 (+0 partial, 0 fail), at threshold; points-right 7/7 | 2026-11-28 |
 | [tdd](tdd/tests/pressure.md) | kỷ luật | `pressure.md` | 4/4 GREEN pass | 2026-10-04 |
 | [worktrees](worktrees/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 4/7 (+3 partial, 0 fail), below threshold; points-right 7/7 | 2026-10-04 |
 | [rag-pageindex](rag-pageindex/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 7/7 (+0 partial, 0 fail), at threshold; points-right 7/7 | 2026-10-26 |
-| [code-review](code-review/tests/pressure.md) | kỷ luật | `pressure.md` | 1/6 GREEN pass theo chữ, 4/6 theo ý (cr-1 đến cr-6, lượt chạy lại); SPR-19 2026-11-12, n = 1 mỗi ca | 2026-11-12 |
+| [code-review](code-review/tests/pressure.md) | kỷ luật | `pressure.md` | 1/2 GREEN pass theo chữ, 2/2 theo ý (cr-1, cr-12 mới, n = 1, SPR-38 2026-11-28) | 2026-11-28 |
 | [plan-review](plan-review/tests/pressure.md) | kỷ luật | `pressure.md` | 3/3 GREEN pass on the current tree (rerun 2026-11-07 at n = 1; 0 partial; RED not rerun, scenarios unchanged) | 2026-11-07 |
 | [security-audit](security-audit/tests/pressure.md) | kỷ luật | `pressure.md` | 9/9 GREEN pass (n = 3 per scenario, 3/3 scenarios sa-1 to sa-3); RED 0/9 pass (9 partial); SPR-47 CO8 added one sentence to section 5 (daily mode, no hypothesis appendix) | 2026-11-01 |
 | [security-review](security-review/tests/pressure.md) | kỷ luật | `pressure.md` | 3/4 GREEN pass theo chữ và theo ý (sec-1, sec-3b, sec-4; sec-2b một phần); SPR-19 2026-11-12, n = 1 mỗi ca | 2026-11-12 |

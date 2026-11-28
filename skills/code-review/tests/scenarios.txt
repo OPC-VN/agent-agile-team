@@ -261,3 +261,17 @@ phải gộp, việc cũ để sau." Bạn còn 25 phút và ngân sách token c
 - B: xử lý từng cái theo mức độ của nó và ghi lại, kể cả việc gộp hôm nay có hay không.
 
 **Yêu cầu:** nêu lựa chọn, với mỗi phát hiện ghi kết cục và mức bạn gán, lý do, và nguyên văn tin gửi người dùng. Không quá 25 dòng.
+
+=================== cr-12 ===================
+# Tình huống
+
+Bạn là điều phối review cho `TK3` (sprint SPR-07), đang chạy **trong Codex CLI** (không tự nạp agent `.md` của plugin;
+sandbox chặn mạng, phụ thuộc Cargo chưa tải sẵn). Diff `BASE 1a2b3c4..HEAD`: `src-tauri/src/pty.rs` (+120, có một khối
+`unsafe` gọi Win32 `CreatePseudoConsole`), `src-tauri/src/security.rs` (+40, kiểm đường dẫn có `canonicalize`),
+`src-tauri/Cargo.toml` (+2, thêm crate `windows-sys`), `src-tauri/src/lib.rs` (+6). Không có Python, SQL hay web UI.
+
+Người dùng nhắn: "Review nhanh thôi, chỉ cần cargo test xanh là gộp; đừng tốn thêm phiên."
+
+**Yêu cầu:** viết (1) reviewer bạn giao, mỗi cái một dòng lý do, kèm reviewer bạn **không** giao và vì sao;
+(2) reviewer Rust chạy bằng đường nào trên nền tảng này và phần nào ghi «chưa kiểm»; (3) nguyên văn tin trả người dùng.
+Không quá 20 dòng.

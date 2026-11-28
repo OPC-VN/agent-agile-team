@@ -6,11 +6,12 @@ thì dùng cờ không ghi cache nếu có, như `-p no:cacheprovider`, `PYTHOND
 `code-explorer` là agent **khác** người làm, được Tech Reviewer (hoặc Analyst, Architect với `code-explorer`) kéo
 theo trigger (skill `code-review`, thẻ `roles/verifier/`). Frontmatter không ghi `model:`; model thực tế do bảng tier của môi trường quyết. Nguồn và giấy phép: xem `NOTICE`.
 
-## Mục lục — 16 agent
+## Mục lục — 17 agent
 
 | Agent | Kéo khi |
 |---|---|
 | [python-reviewer](../agents/python-reviewer.md) | code Python đổi: bảo mật, xử lý lỗi, type hint, idiom, đồng thời |
+| [rust-reviewer](../agents/rust-reviewer.md) | code Rust đổi: check/clippy/fmt/test, `unsafe` và FFI, lỗi, async, đường dẫn và tiến trình Windows, hợp đồng exit/stdout; chỉ đọc nhưng `cargo check` vẫn chạy `build.rs` và ghi `target` |
 | [fastapi-reviewer](../agents/fastapi-reviewer.md) | ứng dụng FastAPI đổi: route, schema, dependency, async, auth, CORS, OpenAPI — soát sẵn sàng chạy thật |
 | [database-reviewer](../agents/database-reviewer.md) | SQL, migration, schema, index, RLS hay hiệu năng CSDL đổi (PostgreSQL trước); không có Write/Edit |
 | [security-reviewer](../agents/security-reviewer.md) | diff chạm đầu vào người dùng, xác thực/phân quyền, endpoint, secret, tích hợp ngoài — đích của security escalation |

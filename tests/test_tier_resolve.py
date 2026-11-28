@@ -268,6 +268,6 @@ def test_inheriting_role_follows_the_parent_cell_of_the_table(tmp_path):
     defaults = json.loads((REPO / "tiers" / "tiers.defaults.json").read_text(encoding="utf-8"))
     defaults["roles"] = {"tech-reviewer": {"tier": "4"}}
     heirs = [r for r, v in cat["roles"].items() if v.get("inherits") == "tech-reviewer"]
-    assert len(heirs) == 16
+    assert len(heirs) == 17
     for r in heirs:
         assert tr.resolve_role_turn(r, "claude", catalog=cat, table=defaults)["tier"] == 4, r

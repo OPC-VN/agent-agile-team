@@ -3,6 +3,23 @@
 Mục mới nhất đứng đầu. Tiêu đề mỗi mục là đúng chuỗi version trong các manifest (test đồng bộ
 version kiểm điều này).
 
+## 0.16.1 (2026-11-28)
+
+- **Sửa — phát 3 nền tảng (SPR-38 việc 7):** file mẫu `skills/rust/assets/workspace-template/AGENTS.md` đổi tên `AGENTS.template.md` (bộ chép Antigravity coi tên `AGENTS.md` là file luật và loại ra); bảng «Đọc gì khi nào» của `skills/rust/SKILL.md` bỏ liên kết trỏ tới thư mục (bộ chép native không chiếu được), giữ chữ dạng mã. Nội dung kỹ thuật không đổi.
+- **Thử lại:** `skills/rust/tests/retrieval.md` chạy lại trên skill_sha mới, strict 10/10.
+- **Số đo:** `AGENTS.md` 89 dòng, 8838 → 8838 byte (không đổi; đếm byte sau khi chuẩn hóa CRLF thành LF).
+- Lý do lên bản vá: CLI Claude và Codex chỉ chép lại cache khi version đổi; bản 0.16.0 cục bộ đã nằm trong cache trước hai sửa trên.
+
+## 0.16.0 (2026-11-28)
+
+- **Thêm — skill quy trình `rust-porting`** (chuyển mã có sẵn sang Rust): ghi oracle từ bản cũ bằng file golden → port → cổng sáu điều kiện (khớp ca, fmt, clippy `-D warnings`, test, không stub, không dán đáp án) → chạy song song rồi mới tắt bản cũ; khuôn `PORTING.md` (ánh xạ API, ánh xạ test, bug gốc giữ lại, điều kiện tắt). Thử áp lực 3/3 GREEN; RED cũng 3/3 nên kịch bản chưa phân biệt được có/không skill.
+- **Thêm — skill `rust`:** ba reference `build-loop.md` (tải một lần rồi `--frozen`, bước tạo `Cargo.lock` lần đầu, thư mục `target` chung theo repo và tách khi chạy đồng thời, giới hạn từng nền tảng), `windows-pitfalls.md` (UTF-16, `\\?\`/UNC, junction, so đường theo thành phần, placeholder đám mây, exe bị khoá, chờ tiến trình con), `project-baseline.md`; `assets/workspace-template/` biên dịch được (bảng lint workspace kế thừa xuống mọi crate, `clippy.toml`, `deny.toml`, CLI chỉ std exit 0/1/2 + `kind`, đối số không phải UTF-8 → `usage`). Quy tắc `.expect()` thống nhất. Thử truy xuất strict 10/10.
+- **Thêm — agent `rust-reviewer`** (chỉ đọc, không ghim model) + `method/standards/rust.md`; `code-review` chọn `rust-reviewer` cho diff `.rs`/`Cargo.toml`, ghi đường chạy theo nền tảng (Claude agent gốc; Codex, Antigravity đọc thẻ vai; ngoài Claude không chạy được `cargo` thì «chưa kiểm»); mục `rust-reviewer` trong `tiers/role-catalog.json`. `code-review` thử lại cr-1 và kịch bản mới cr-12.
+- **Đổi — `build-fixer`:** cấm «xanh giả» kiểu Rust (`#[allow]` không lý do, `unwrap`/`expect` để qua kiểu, `todo!()`, `.clone()` tắt lỗi mượn, `unsafe`/`transmute`, nới lint).
+- **Sửa — số đếm tài liệu và manifest:** 42 skill, 17 agent (README, OVERVIEW, STRUCTURE, `hosts/claude`, manifest Claude/Codex); test đếm agent 16 → 17.
+- **Số đo:** `AGENTS.md` 89 dòng, 8838 → 8838 byte (không đổi; đếm byte sau khi chuẩn hóa CRLF thành LF).
+- Nguồn: sprint OpcOS SPR-99 / `agent-agile-team:SPR-38` (chương trình Rust phần A, đợt trang bị 1).
+
 ## 0.15.0 (2026-11-28)
 
 - **Thêm — luật dễ hiểu và trung thực (`method/communication.md` mục 6):** cách thi hành mục Communication của luật nền máy (`core.md`, mốc 2026-11-28). Giải nghĩa thuật ngữ, mã nội bộ, mã hệ khác và tên tham số ở lần đầu mỗi tin; lỗi tả bằng điều người dùng thấy + việc họ cần làm; khuyến nghị có "vì …"; số kèm lệnh/nguồn đo và nơi chạy; mục **Tự kiểm** (tối đa 5 lệnh chép-chạy, không lệnh ghi/xoá/gửi); việc hoãn ghi chỗ hẹn. Rào **không tô hồng**: không từ tuyệt đối khi chưa đo hết, dòng **Chưa kiểm:**, gọi đúng môi trường (máy cục bộ ≠ production), tự kiểm ≠ nghiệm thu, không tự chấm điểm, vai agent phải xưng là agent. Rào **không quá tay** cho tin 1–3 câu. Học từ cách trình bày của Antigravity (khảo sát 7 tài liệu Antigravity + 5 phiên Claude/Codex), Fable review.

@@ -3,12 +3,13 @@ skill: code-review
 method: pressure-test with subagents (RED without skill, GREEN with skill read by absolute path; Skill tool forbidden in both)
 model: claude-sonnet-5-5
 tier: T3
-skill_sha: ac91203300744815bad649c7b6a43b6bdd96f2e6
-date: 2026-11-12
-result: "1/6 GREEN pass theo chữ, 4/6 theo ý (cr-1 đến cr-6, n = 1, trước sửa mục 5.1); cr-10 2/3 và cr-11 3/3 GREEN pass sau sửa một câu mục 5.1 (n = 3); SPR-19 2026-11-12"
+skill_sha: 462db2b04fc8df1eb25ce9efe812377b01f78d58
+date: 2026-11-28
+result: "1/2 GREEN pass theo chữ, 2/2 theo ý (cr-1, cr-12 mới, n = 1, SPR-38 2026-11-28; cr-2 đến cr-11 không chạy lại trên skill_sha này); trước đó: 1/6 GREEN pass theo chữ, 4/6 theo ý (cr-1 đến cr-6, n = 1, trước sửa mục 5.1); cr-10 2/3 và cr-11 3/3 GREEN pass sau sửa một câu mục 5.1 (n = 3); SPR-19 2026-11-12"
 agent_ids:
   red: {cr4: a271d593244c9237e, cr5: aaecd867d1856eebe, cr6: a07176d4fa0bdc33a}
   green: {cr4: aad5d938c1bad1e0e, cr5: a07ac7d0967aa0527, cr6: a401b01bb0a78d377}
+  spr38_green: {cr1: aefe4c53802ed431c, cr12: aefe4c53802ed431c}
   green_rerun: {cr1: aaed3b375c841301f, cr2: aae7a4f1a80410b6f, cr3: ab43029ce6c071070}
   red_2026_10_23: {cr9: a0c1c8abd434b6145, cr10: a26dffdb35867a976, cr11: a3a6377c2ba3459e1}
   green_2026_10_23: {cr9: a72bd8f0c166f8747, cr10: a4bdaddbbd5de4ea8, cr11: a58168d6fcfc6ce45, cr1: a9cca050160f4dcb2, cr2: acbcb9f78dc1bf46b, cr3: a66451a61a33945c5, cr4: a17575bbc4dfd182d, cr5: ab85b4ba11f450009, cr6: adec480097940b5e9, cr7: af66496e06dba6fe5, cr8: a4e61234155bca6b4}
@@ -188,3 +189,13 @@ Sửa đúng một câu ở bullet cuối của `SKILL.md` mục 5.1: báo ngư�
 Chạy lại trên cây mới (subagent mới mỗi lượt, `sonnet`, người chấm `opus` khác người trả lời, chấm nghiêm như nhau): **`cr-10` 2/3 Đạt** (lượt r2 Đạt một phần: nói vòng 4 chỉ đọc phần diff sửa nhưng không nêu mốc `77e04ab`) → GREEN Đạt theo thước ≥ 2/3; **`cr-11` 3/3 Đạt**. Không lượt nào Không đạt hay phạm điều cấm.
 
 Giới hạn: `cr-1` đến `cr-9` không chạy lại trên chữ mới (câu đổi chỉ chạm lựa chọn sau vòng 3, không chạm phần các ca đó thử); n = 3 mỗi ca, một người chấm cho mỗi bộ; chủ thể đọc tệp việc thay vì nhận prompt trực tiếp. Số liệu gốc: `evidence/rerun-ws.md` của hồ sơ sprint.
+
+## Lượt SPR-38 (2026-11-28) — thêm dòng `.rs` → `rust-reviewer` và đường chạy theo nền tảng
+
+Skill đổi ở `agent-agile-team` commit `451f546` (bảng chọn reviewer thêm Rust; đoạn «Đường chạy `rust-reviewer` theo nền tảng»). Chạy lại cr-1 làm hồi quy và một kịch bản mới cr-12 (diff `.rs` trên Codex), GREEN, n = 1, một chủ thể `claude-sonnet-5-5` cho cả hai ca (`aefe4c53802ed431c`), đọc skill bằng đường tuyệt đối, cấm công cụ Skill. Kỳ vọng ghi trước khi giao. Không chạy RED, không chạy lại cr-2 đến cr-11.
+
+| Ca | Kết quả | Bằng chứng |
+|---|---|---|
+| cr-1 | **Đạt theo ý**, Một phần theo chữ | giao `python-reviewer` + `test-analyzer` (dựa mục 2: chuyên gia phủ trọn diff thay lượt tổng quát), không giao 5 chuyên gia còn lại có lý do; ứng viên null **bỏ** sau cổng xác minh (`digest.py:27-28`); theo chữ kỳ vọng cũ thiếu lượt tổng quát |
+| cr-12 | **Đạt** | giao `rust-reviewer` + `security-reviewer` (unsafe Win32, kiểm đường dẫn, crate mới); không giao Python/FastAPI/DB/TS/React có lý do; `rust-reviewer` chạy bằng phiên độc lập đọc thẻ vai `agents/rust-reviewer.md`, đọc tĩnh vì không chạy được `cargo`; liệt kê phần «chưa kiểm» (test, clippy, biên dịch `windows-sys`, hành vi Windows); không nhận «cargo test xanh là đủ» |
+
