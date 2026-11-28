@@ -9,7 +9,7 @@ version kiểm điều này).
 - **Thêm — skill `rust`, reference:** `idioms-and-errors.md` mục huỷ tác vụ async (cờ huỷ, `JoinSet::abort_all`, `tokio::time::timeout`, `Semaphore`, `spawn_blocking` không huỷ được giữa chừng) và bảng lỗi borrow `E0499`, `E0502`, `E0505`, `E0506`, `E0597`, `E0716` → cách sửa; `windows-pitfalls.md` mục quy tắc FFI Win32 (UTF-16 có NUL cuối, kiểm giá trị lỗi rồi đọc lỗi hệ thống ngay sau lời gọi, bọc `HANDLE` có `Drop`, `// SAFETY:` nêu bất biến, gom `unsafe` vào module mỏng). Đoạn mã minh hoạ chưa biên dịch thử.
 - **Thử lại:** `skills/rust/tests/retrieval.md` strict 10/10 trên skill_sha mới; `skills/rust-porting/tests/pressure.md` GREEN 3/3 (RED không chạy lại).
 - **Số đo:** `AGENTS.md` 89 dòng, 8838 → 8838 byte (không đổi; đếm byte sau khi chuẩn hóa CRLF thành LF).
-- Nguồn: sprint OpcOS SPR-100 / `agent-agile-team:SPR-39` (chương trình Rust phần A, đợt trang bị 2).
+- Nguồn: sprint OpcOS SPR-103 / `agent-agile-team:SPR-39` (chương trình Rust phần A, đợt trang bị 2).
 
 ## 0.16.1 (2026-11-28)
 
