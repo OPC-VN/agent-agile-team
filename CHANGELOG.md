@@ -3,6 +3,14 @@
 Mục mới nhất đứng đầu. Tiêu đề mỗi mục là đúng chuỗi version trong các manifest (test đồng bộ
 version kiểm điều này).
 
+## 0.17.0 (2026-11-28)
+
+- **Đổi — mô tả skill `rust`, `rust-porting` cho danh mục Codex:** Codex cắt mô tả mỗi skill còn khoảng 32 ký tự khi danh mục lớn (đo 28/11 trên phiên qua cầu: 490 skill); câu mở đổi để 32 ký tự đầu có chữ «Rust» («Use when writing Rust code, …», «Use when porting code to Rust, …»), ý còn lại giữ nguyên.
+- **Thêm — skill `rust`, reference:** `idioms-and-errors.md` mục huỷ tác vụ async (cờ huỷ, `JoinSet::abort_all`, `tokio::time::timeout`, `Semaphore`, `spawn_blocking` không huỷ được giữa chừng) và bảng lỗi borrow E0499, E0502, E0505, E0506, E0597, E0716 → cách sửa; `windows-pitfalls.md` mục quy tắc FFI Win32 (UTF-16 có NUL cuối, kiểm giá trị lỗi rồi đọc lỗi hệ thống ngay sau lời gọi, bọc `HANDLE` có `Drop`, `// SAFETY:` nêu bất biến, gom `unsafe` vào module mỏng). Đoạn mã minh hoạ chưa biên dịch thử.
+- **Thử lại:** `skills/rust/tests/retrieval.md` strict 10/10 trên skill_sha mới; `skills/rust-porting/tests/pressure.md` GREEN 3/3 (RED không chạy lại).
+- **Số đo:** `AGENTS.md` 89 dòng, 8838 → 8838 byte (không đổi; đếm byte sau khi chuẩn hóa CRLF thành LF).
+- Nguồn: sprint OpcOS SPR-100 / `agent-agile-team:SPR-39` (chương trình Rust phần A, đợt trang bị 2).
+
 ## 0.16.1 (2026-11-28)
 
 - **Sửa — phát 3 nền tảng (SPR-38 việc 7):** file mẫu `skills/rust/assets/workspace-template/AGENTS.md` đổi tên `AGENTS.template.md` (bộ chép Antigravity coi tên `AGENTS.md` là file luật và loại ra); bảng «Đọc gì khi nào» của `skills/rust/SKILL.md` bỏ liên kết trỏ tới thư mục (bộ chép native không chiếu được), giữ chữ dạng mã. Nội dung kỹ thuật không đổi.
