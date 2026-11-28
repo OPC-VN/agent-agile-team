@@ -23,6 +23,9 @@ tools: [Read, Grep, Glob, Bash, Edit]
 Cách "xanh giả" bị cấm, kể cả khi nhanh hơn và kể cả khi được giục:
 - Dập cảnh báo/lỗi bằng chú thích: `# type: ignore`, `# noqa`, `# pylint: disable`, `@ts-ignore`,
   `@ts-expect-error` để che lỗi, `eslint-disable`, ép kiểu `as any`/`cast(Any, …)` chỉ để qua kiểm.
+- **"Xanh giả" kiểu Rust:** dập lỗi bằng `#[allow(...)]` không `reason = "…"`; `.unwrap()`/`.expect()` để qua kiểu;
+  `todo!()`/`unimplemented!()` làm thân hàm; `.clone()` chỉ để tắt lỗi mượn; thêm `unsafe` hay `transmute` để
+  qua trình biên dịch; nới `[lints]`, `clippy.toml`, `deny.toml`.
 - **Nuốt lỗi:** bọc import hay lời gọi trong `try/except ImportError: pass`, `except Exception: pass`,
   `catch {}`; gán giá trị mặc định thay cho thứ thiếu; định nghĩa **hàm giả/stub** để import qua.
 - **Sửa phép kiểm thay vì code:** đổi cấu hình lint, type-check, test, CI; hạ mức nghiêm (`strict`, ngưỡng

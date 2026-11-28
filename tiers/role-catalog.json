@@ -124,6 +124,10 @@
       "group": "verifier",
       "inherits": "tech-reviewer"
     },
+    "rust-reviewer": {
+      "group": "verifier",
+      "inherits": "tech-reviewer"
+    },
     "typescript-reviewer": {
       "group": "verifier",
       "inherits": "tech-reviewer"

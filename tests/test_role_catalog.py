@@ -61,7 +61,7 @@ def test_catalog_covers_the_14_role_cards_and_the_13_agents():
         assert name in CATALOG["roles"], f"{card.name}: {name} missing from the catalog"
         assert CATALOG["roles"][name]["group"] == group, name
     agents = list((REPO / "agents").glob("*.md"))
-    assert len(agents) == 16
+    assert len(agents) == 17
     for agent in agents:
         assert agent.stem in CATALOG["roles"], agent.name
     # CO16: every core role is either an agent file or reachable through the [AAT role=...] tag (a catalog role).

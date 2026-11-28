@@ -9,7 +9,7 @@ metadata:
 
 # Rust — viết code an toàn, idiomatic và kiểm thử
 
-> **Kết luận:** code Rust ưu tiên **kiểu dữ liệu chặt, sở hữu rõ ràng, lỗi tường minh**: không `.unwrap()`/`.expect()` ở luồng sản phẩm, mượn dữ liệu trước khi `.clone()`, tách logic lõi khỏi biên FFI/hạ tầng. Bộ công cụ chuẩn: `cargo fmt`, `cargo check`, `cargo clippy`, `cargo test` (viết test trước theo skill `tdd`).
+> **Kết luận:** code Rust ưu tiên **kiểu dữ liệu chặt, sở hữu rõ ràng, lỗi tường minh**. Không `.unwrap()` ở mã sản phẩm (`.expect("…")` chỉ khi bất biến đã chứng minh bằng mã ngay trước). Mượn dữ liệu trước khi `.clone()`, tách logic lõi khỏi biên FFI/hạ tầng. Bộ công cụ chuẩn: `cargo fmt`, `cargo check`, `cargo clippy`, `cargo test` (viết test trước theo skill `tdd`).
 
 ## 1. Khi nào dùng và ranh giới
 
@@ -31,7 +31,7 @@ metadata:
 ### 2.3. Lỗi tường minh và chính sách Panic
 - Dùng `Result` và toán tử `?` truyền lỗi tới tầng có quyền quyết định (thử lại, báo lỗi, thoát); dùng `Option` chỉ khi vắng mặt là lý do duy nhất.
 - Thư viện/crate lõi dùng `thiserror`; ứng dụng/binary dùng `anyhow` ở tầng trên cùng (không đưa `anyhow` vào public API thư viện).
-- Cấm `.unwrap()`/`.expect()` trên dữ liệu từ người dùng, file hay mạng; chỉ dùng trong test, hoặc khi bất biến đã chứng minh bằng mã trước đó kèm `.expect("lý do bất biến")`.
+- `.unwrap()` cấm ở mã sản phẩm (lint bắt); `.expect("…")` chỉ khi bất biến đã chứng minh bằng mã ngay trước, thông điệp nêu bất biến; cấm cả hai trên dữ liệu từ người dùng, file hay mạng. Trong test thì được.
 
 ### 2.4. `unsafe` tối thiểu và an toàn FFI
 - Chỉ viết `unsafe` cho: (1) biên FFI, (2) điểm nóng hiệu năng đã đo bằng profiler, (3) primitive ngôn ngữ không thể diễn đạt an toàn.
@@ -62,6 +62,9 @@ cargo test --all-targets --all-features
 |---|---|
 | Ownership, borrowing, `Cow`, `mem::take`, `thiserror` vs `anyhow`, async `Send + Sync`, cancellation và an toàn FFI/process Windows | [idioms-and-errors.md](references/idioms-and-errors.md) |
 | Phân tầng unit/integration/`proptest`/`insta`, workspace `Cargo.toml`, `[lints.clippy]`, `rustfmt`, feature flags và kiểm tra CI | [testing-and-tooling.md](references/testing-and-tooling.md) |
+| Chạy `cargo` để xác minh, sửa lỗi biên dịch, trần 3 vòng, thư mục `target`, giới hạn Claude/Codex/Antigravity | [build-loop.md](references/build-loop.md) |
+| Đường dẫn, tiền tố đường dài/UNC, junction, placeholder đám mây, exe bị khoá, tiến trình con làm treo lệnh | [windows-pitfalls.md](references/windows-pitfalls.md) |
+| Dựng workspace mới: bảng lint và lý do, kế thừa `[lints]`, phép thử `.unwrap()` | [project-baseline.md](references/project-baseline.md) + khuôn biên dịch được [assets/workspace-template/](assets/workspace-template/) |
 
 ## 5. Liên quan và nguồn
 

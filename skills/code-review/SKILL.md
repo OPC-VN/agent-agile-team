@@ -82,6 +82,7 @@ thứ lượt tổng quát không thấy:
 | Diff có | Thêm agent |
 |---|---|
 | Python ngoài mức tầm thường | `python-reviewer` |
+| Rust (`.rs`, `Cargo.toml`) ngoài mức tầm thường | `rust-reviewer` |
 | route / dependency / schema FastAPI | `fastapi-reviewer` |
 | SQL, schema, migration | `database-reviewer` |
 | `try/except`, fallback, đường lỗi, `.get()` mặc định | `silent-failure-hunter` |
@@ -99,6 +100,11 @@ tổng quát nhanh trên một diff mà không soạn brief riêng. Chuyên gia 
 Diff **thêm hàm mới** ở vùng hay mọc bản sao (tiện ích, định dạng, kiểm hợp lệ, đường dẫn, đổi lỗi thành chuỗi):
 thêm bước tìm hàm trùng ý theo [references/duplicates.md](references/duplicates.md) — grep và đọc thân, không giao
 agent; trùng là Nên sửa hoặc Ghi chú, không bao giờ Chặn.
+
+**Đường chạy `rust-reviewer` theo nền tảng.** Claude gọi agent gốc `rust-reviewer`. Codex: phiên độc lập đọc thẻ vai
+`agents/rust-reviewer.md`. Antigravity: subagent đọc cùng thẻ vai (nền tảng này không tự nạp agent `.md` của plugin).
+Ngoài Claude, không chạy được `cargo` thì chấm bằng đọc tĩnh; phần cần biên dịch ghi «chưa kiểm», không tính Đạt.
+Hai đường Codex và Antigravity chưa được kiểm.
 
 Chuyên gia độc lập chạy **song song** (một lượt, nhiều lệnh giao agent), mỗi agent một brief, cùng
 gói diff. Ghi vai · tier · model từng agent vào PROGRESS.
