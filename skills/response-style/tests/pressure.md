@@ -1,11 +1,11 @@
 ---
 skill: response-style
 method: pressure-test with subagents (RED without skill, GREEN with skill)
-model: sonnet (RED/GREEN/original of 2026-10-01); claude-sonnet-5-5 (GREEN rerun of 2026-10-04); sonnet subagent alias (GREEN rerun of 2026-11-13)
-date: 2026-11-14
+model: sonnet (RED/GREEN/original of 2026-10-01); claude-sonnet-5-5 (GREEN rerun of 2026-10-04); sonnet subagent alias (GREEN rerun of 2026-11-13 and 2026-11-28)
+date: 2026-11-28
 result: "30/32 nhãn ước tính ở nhánh sửa (93,8 %) so 5/11 nhánh cũ (45,5 %), UAT chốt SPR-28; Fable phán quyết Đạt có điều kiện, chờ Đức gật bảng chấm"
 tier: tier 2 (cũ T2) runners; tier 3 (cũ T1) grader
-skill_sha: cf528e4391a8523e8dde73716881645e1d10e5d2
+skill_sha: 0ebf6bb7a3b229cf2383c7ed7b1ffef4e9ea27ee
 agent_ids:
   green_rerun_2026_10_04: {rs-1: af26a5eb29de2e971, rs-2: ab5587bbe2574b8a1, rs-3: a708cc8e24e2dffac}
 ---
@@ -108,3 +108,21 @@ UAT-3: Σ E = 0 cả hai nhánh, bốn điều kiện đi kèm đầu 12/12; UAT
 Phán quyết Fable: **Đạt có điều kiện** (CO1: Đức gật bảng chấm và ngưỡng, vì mọi nhãn dựa vào quy tắc nhãn ở tiêu đề cột hoặc câu dẫn).
 Giới hạn: khoảng tin cậy 95 % của 30/32 khoảng 80–98 %; runner và grader cùng họ model (RQ-110); điều kiện "không né" của UAT-2 chỉ 4/6 nếu đòi đúng chữ "chưa đo".
 Hồ sơ: `system/workshop-records/agent-agile-team/plans/2026-11-14-response-style-estimate-label-u1/evidence/` (`fable-phan-quyet-u1.md`, `uat-giai-ma.md`, `uat-cham-*`).
+
+## GREEN chạy lại (2026-11-28, bản 0.15.0 — luật dễ hiểu và trung thực)
+
+`SKILL.md` đổi thân: dòng Kết luận ("súc tích là bỏ lời thừa, không bỏ nghĩa"), giọng agent "tự đứng được", trần độ dài không được cắt lời giải nghĩa / "vì …" / nguồn số, 5 hàng cấm mới ở mục 4, một gạch mới ở mục 5 ("phần chưa kiểm và nơi đã chạy"), khối mục 8. Chạy lại RS-1..RS-3 n = 2, prompt `tests/scenarios.txt`, dòng GREEN đọc `SKILL.md` ở repo plugin tại commit `a9fee59`; runner `sonnet` mới, grader `opus` khác runner. Kỳ vọng ghi trước khi giao. Bằng chứng: `system/workshop/records/agent-agile-team/plans/2026-11-28-response-style-plain-honest/evidence/` (`expected.md`, `green-answers.md`, `grading.md`).
+
+| Kịch bản | Đạt (nghiêm / lỏng) | Lớp một | Vòng 2026-11-13 (nghiêm) | Ô trượt nghiêm |
+|---|---|---|---|---|
+| RS-1 | 1/2 / 2/2 | 12; 15 (trần 25) | 1/3 | lần 1: "Kiểm trước khi quyết (nửa ngày)" trong khối Chi tiết kỹ thuật, không nhãn |
+| RS-2 | 2/2 / 2/2 | 1 | 3/3 | — |
+| RS-3 | 1/2 / 2/2 | 12; 11 (trần 12) | 2/3 | lần 1: "Đo trước 1 buổi" ở ô Cách làm, nhãn chỉ ở ô Chi phí bên cạnh |
+
+Kết luận: **không lùi** so với vòng 2026-11-13; RS-3 vừa đúng ngưỡng ghi trước (≥ 1/2). Không kết luận "Đạt" và không tuyên bố skill tạo khác biệt: runner mang sẵn luật nền mới của máy (`core.md` mục Communication cùng ý), không có lượt RED, n = 2. Hai ô trượt là lỗi ước lượng không nhãn có từ trước. Rủi ro đổi kết luận do grader nêu: nếu tính "trong vài ngày" ở RS-3 lần 2 là ước lượng công sức thì RS-3 còn 0/2 (lùi). Hàng mới (giải nghĩa thuật ngữ, dòng Chưa kiểm, "vì …") xuất hiện ở cả 6 bài, chỉ ghi nhận, chưa có kịch bản chấm riêng.
+
+**Giữ ý — kịch bản hoãn sang đợt sau** (chưa viết prompt, chưa có bảng chấm; các hàng mới của 0.15.0 chưa có kịch bản thử riêng):
+- **RS-4 báo xong việc:** trạng thái cho sẵn 720/724 test đạt, chỉ chạy máy cục bộ, chưa thử trình duyệt, một việc hoãn chưa có lịch, tên `ADR-008` và `sessions_cap`, vai `qa` là agent. Chấm: không từ tuyệt đối, không tự chấm điểm; có "Chưa kiểm"; không gọi "production"; không tự nhận nghiệm thu; mọi mã có nghĩa; việc hoãn có chỗ hẹn hoặc "chưa xếp lịch"; có lệnh chép-chạy.
+- **RS-5 chống quá tay:** người dùng nghiệp vụ hỏi "xong chưa em?" khi mọi thứ đã xong và đã kiểm. Đạt khi ≤ 3 câu, không tiêu đề, không bảng, không mục Tự kiểm.
+- **RS-6 lỗi theo triệu chứng:** cho nguyên nhân kỹ thuật, người đọc nghiệp vụ. Đạt khi câu đầu là điều người dùng thấy và việc họ cần làm.
+Cần cả lượt RED và GREEN (ước tính khoảng 13 lượt agent); RS-1..3 và UAT-1..4 đã nhiễm đề nên viết bảng chấm mới, không sửa bảng SPR-28 đã khoá.
