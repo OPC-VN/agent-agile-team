@@ -16,10 +16,12 @@ chữ phủ định.
 | | Súc tích (mặc định) | Diễn giải |
 |---|---|---|
 | Dấu hiệu vào (danh sách **duy nhất**; nơi khác chỉ trỏ về đây) | không có yêu cầu khác | người dùng gõ `/explain` (kèm đường dẫn thì diễn giải file đó), hoặc nói "giải thích", "diễn giải", "nói dễ hiểu hơn", "chưa hiểu", "chi tiết hơn", "tại sao", "nghĩa là gì"; hỏi lại cùng một điểm; phản hồi cho thấy hiểu sai; hoặc tin đang đòi người quyết một việc có hậu quả khó hoàn tác (mục 3) |
-| Cách trả lời | theo `skills/response-style`: câu đầu là kết luận, không dẫn nhập, không tóm tắt lặp | viết lại **tin gần nhất** (hoặc đoạn/file người dùng chỉ) bằng lời dễ hiểu — xem skill `explain` |
+| Cách trả lời | theo `skills/response-style`: câu đầu là kết luận, không dẫn nhập, không tóm tắt lặp; vẫn đủ mục 6 | viết lại **tin gần nhất** (hoặc đoạn/file người dùng chỉ) bằng lời dễ hiểu — xem skill `explain` |
 | Dấu hiệu thoát | — | giữ chế độ cho chủ đề đó tới khi người dùng hiểu hoặc chuyển việc, rồi tin sau về súc tích; "diễn giải từ giờ" giữ chế độ cả phiên; "ngắn gọn lại" về mặc định |
 
-- Mặc định phải súc tích để tiết kiệm token; chế độ diễn giải **chỉ bật theo yêu cầu**, trừ việc có hậu quả khó hoàn
+- Mặc định súc tích để người đọc **hiểu và quyết nhanh**, không phải để ít chữ: cắt dẫn nhập, tường thuật, ý lặp;
+  **không cắt** lời giải nghĩa, chữ "vì …", nguồn của con số (mục 6). Tin ngắn mà người đọc phải hỏi lại là tin hỏng.
+  Chế độ diễn giải (viết lại tin, thêm ví dụ đời thường) **chỉ bật theo yêu cầu**, trừ việc có hậu quả khó hoàn
   tác (mục 3 dưới đây). "Tại sao" và "nghĩa là gì" chỉ tính khi hỏi về **chính tin hay đoạn vừa gửi**; câu hỏi mới
   ("tại sao build hỏng?") thì trả lời súc tích. "Hậu quả khó hoàn tác" chỉ bật diễn giải khi tin **đang đòi người
   quyết** điều đó, không bật vì nhắc tới nó.
@@ -107,5 +109,39 @@ Chi tiết: [PLAN TK3:97](docs/plans/x/PLAN.md:97).
 ## 5. Điều này không đổi
 
 Skill `response-style` mục 5 (bất khả xâm phạm khi nén) và `AGENTS.md` mục Văn phong phản hồi vẫn là luật của mặc
-định súc tích; file này chỉ thêm link, mẫu câu hỏi, chế độ diễn giải và hai lớp tài liệu. Hai chỗ nói khác nhau
+định súc tích; file này chỉ thêm link, mẫu câu hỏi, chế độ diễn giải, hai lớp tài liệu và cách thi hành luật dễ hiểu, trung thực (mục 6). Hai chỗ nói khác nhau
 về cách trình bày thì file này thắng và chỗ kia sửa theo; luật cổng/secret của `AGENTS.md` và luật môi trường (nếu có) luôn thắng.
+
+## 6. Dễ hiểu và trung thực — cả hai chế độ
+
+Cách thi hành mục Communication của luật nền máy (`core.md`, đứng trên file này); không lặp luật, chỉ thêm cách làm.
+Người đọc mặc định là **người không đọc code**.
+
+- **Mã và thuật ngữ:** lần đầu mỗi tin, nghĩa tiếng Việt trước, từ gốc trong ngoặc: "khử trùng lặp (deduplication)".
+  Mã hệ khác (`ADR-008`, `CO12`), tên tham số, tên cờ: kèm việc nó làm cho người dùng — "`sessions_cap` (trần số phiên
+  chạy cùng lúc)"; không rõ nghĩa thì viết "chưa rõ nghĩa", không chép trần. Một câu tối đa hai mã.
+- **Lỗi:** điều người dùng thấy → việc họ cần làm → nguyên nhân kỹ thuật để sau.
+- **Khuyến nghị:** "vì …" nằm trong chính câu đó; lý do là hệ quả cho người đọc (tiền, thời gian, rủi ro).
+- **Số:** kèm lệnh hoặc nguồn đo và nơi chạy: "`pytest`: 720 đạt, 4 bỏ qua (máy cục bộ)".
+- **Tự kiểm:** tin báo kết quả mà người dùng tự kiểm được thì có mục **Tự kiểm** đánh số, tối đa 5 bước: mỗi bước một
+  lệnh chép-chạy trong khối code + kết quả mong đợi bằng lời. Lệnh ghi, xoá, gửi ra ngoài không đưa vào mục này.
+- **Cột "Chọn khi"** (mục 3) viết theo bối cảnh người dùng ("đã có đơn > 50 MB"), không theo tính chất kỹ thuật.
+  Rủi ro viết thành câu người không đọc code trả lời được: "hai người cùng sửa một đơn thì bản sau đè bản trước".
+- **Việc hoãn:** việc gì · vì sao · hẹn ở đâu (mã task, sprint hoặc file:dòng) · trong lúc chờ người dùng gặp gì.
+  Chưa có chỗ hẹn thì viết "chưa xếp lịch" và đưa vào việc cần quyết.
+- **Mục "Cần quyết" của luật nền** chính là mẫu `**Cần anh quyết:**` ở mục 3; câu đầu tin nói có mấy việc chờ chốt.
+
+**Không tô hồng:**
+
+- Không từ tuyệt đối khi chưa đo hết phạm vi ("100 %", "không lỗi", "loại bỏ hoàn toàn"); viết phạm vi đã đo.
+- Tin báo kết quả có dòng **Chưa kiểm:** (liệt kê, hoặc "không còn gì trong phạm vi đã giao").
+- Gọi đúng môi trường: máy cục bộ (localhost) · thử nghiệm (staging) · chạy thật (production).
+- Tự kiểm của agent không phải nghiệm thu: "em đã tự kiểm, chờ anh nghiệm thu"; không tự ghi "UAT đạt", không tự đóng việc.
+- Không tự chấm điểm ("5/5", "A+"); kết luận theo thang Đạt / Đạt có điều kiện / Không đạt, kèm bằng chứng.
+- Vai là agent thì ghi rõ: "agent `tech-reviewer` (máy) đã review" — không viết "QA đã duyệt".
+
+**Không quá tay:** tin 1–3 câu không thêm tiêu đề, mục Tự kiểm, dòng Chưa kiểm hay bảng; chỉ giữ giải nghĩa trong
+ngoặc và "vì …". Mục Tự kiểm và dòng Chưa kiểm áp cho tin báo kết quả, tin dừng, tin cuối.
+
+Đúng: `Đã sửa: mở Voice Studio không còn lỗi 500. pytest: 720 đạt, 4 bỏ qua (máy cục bộ). Chưa kiểm: trình duyệt thật.` ·
+Sai: `Hoàn tất 3A0, fix liveness theo ADR-008, không lỗi, sẵn sàng Production.`

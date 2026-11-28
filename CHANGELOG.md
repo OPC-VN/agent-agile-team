@@ -3,6 +3,20 @@
 Mục mới nhất đứng đầu. Tiêu đề mỗi mục là đúng chuỗi version trong các manifest (test đồng bộ
 version kiểm điều này).
 
+## 0.15.0 (2026-11-28)
+
+- **Thêm — luật dễ hiểu và trung thực (`method/communication.md` mục 6):** cách thi hành mục Communication của luật nền máy (`core.md`, mốc 2026-11-28). Giải nghĩa thuật ngữ, mã nội bộ, mã hệ khác và tên tham số ở lần đầu mỗi tin; lỗi tả bằng điều người dùng thấy + việc họ cần làm; khuyến nghị có "vì …"; số kèm lệnh/nguồn đo và nơi chạy; mục **Tự kiểm** (tối đa 5 lệnh chép-chạy, không lệnh ghi/xoá/gửi); việc hoãn ghi chỗ hẹn. Rào **không tô hồng**: không từ tuyệt đối khi chưa đo hết, dòng **Chưa kiểm:**, gọi đúng môi trường (máy cục bộ ≠ production), tự kiểm ≠ nghiệm thu, không tự chấm điểm, vai agent phải xưng là agent. Rào **không quá tay** cho tin 1–3 câu. Học từ cách trình bày của Antigravity (khảo sát 7 tài liệu Antigravity + 5 phiên Claude/Codex), Fable review.
+- **Đổi — súc tích ≠ nén mất nghĩa:** `method/communication.md` mục 1 bỏ "để tiết kiệm token"; `skills/response-style` thêm 5 hàng cấm/làm thay (mã hệ khác, lỗi theo nguyên nhân, khuyến nghị không lý do, tô hồng, nhãn môi trường sai), thêm "phần chưa kiểm và nơi đã chạy" vào danh sách không được cắt, cập nhật khối rút gọn cho subagent; vượt trần độ dài không được cắt lời giải nghĩa, "vì …", nguồn số.
+- **Thêm — test:** 7 test ở `tests/test_communication_rules.py` khoá mục 6 và khối rút gọn.
+- **Sửa — test đỏ do môi trường máy:** `tests/test_tier_hook.py` cô lập 4 biến `AGENT_AGILE_*` của máy; `tests/test_legacy_allowlist.py` và `tests/test_measure_claims.py` không quét thư mục git-ignore (`.worktrees`, `.claude/worktrees`, `.tmp`…). Hook và ngưỡng không đổi.
+- **Sửa — danh sách chống rò:** 23 chỗ khớp danh sách từ cấm riêng của máy (chuỗi đường dẫn) trong ghi chú, docstring, dữ liệu test và kịch bản thử của rào `agile_guard`: viết lại ghi chú, ghép chuỗi giữ nguyên giá trị chạy, đổi đường giả trong kịch bản. Hai dòng ghi chú ở file sàn `scripts/agile_guard.py` sửa theo lời cấp của người dùng; hành vi rào không đổi.
+- **Thêm — hồ sơ thử** `skills/rust/tests/retrieval.md`, `skills/tauri-desktop/tests/retrieval.md` (strict 7/7 mỗi skill; n = 1, người soạn = người chấm).
+- **Chưa làm (giữ ý, hoãn sang đợt sau):** ba kịch bản thử mới cho `response-style` — RS-4 báo xong việc (không tô hồng, có Chưa kiểm, mã có nghĩa, việc hoãn có chỗ hẹn, có lệnh tự kiểm), RS-5 chống quá tay (hỏi "xong chưa?" → ≤ 3 câu, không tiêu đề/bảng), RS-6 lỗi theo triệu chứng. Các hàng mới của skill chưa có kịch bản thử riêng.
+
+## 0.14.1 (2026-11-25)
+
+- **Thêm — skill kỹ thuật `rust` và `tauri-desktop`** (commit `577c4aa`), kèm vai executor/verifier trỏ tới. Mục này ghi bù lúc phát hành 0.15.0; theo bảng mục 4.1 thêm skill là mức MINOR, nhưng số 0.14.1 đã dùng nên giữ.
+
 ## 0.14.0 (2026-11-25)
 
 - **Thêm — `secure` theo phiên (SPR-37):** người dùng bật bằng `/agent-agile-team:agile secure`, tắt bằng `/agent-agile-team:agile secure off`; `/agent-agile-team:agile stop` tắt cả agile và secure của phiên. Trạng thái hiển thị `agile: … secure ON|OFF session_id=…`.

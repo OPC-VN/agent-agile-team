@@ -4,6 +4,7 @@ không nêu số đo. Tách ra từ `tests/test_provenance.py` khi bỏ tài li�
 
 from __future__ import annotations
 
+import os
 import re
 
 import pytest
@@ -19,13 +20,28 @@ GRAM_CLAIM = re.compile(r"\b\d+[- ]?gram\b|\bn-gram\b|overlap\s*0|trùng\s+0\s+c
 # Điều kiện đo: câu phải nói đã LOẠI stoplist (không chỉ có chữ `stoplist` gần đó, như "không dùng stoplist").
 GRAM_CONDITION = re.compile(r"loại\s+(?:bỏ\s+)?stoplist", re.I)
 GRAM_SUFFIXES = {".md", ".json", ".txt", ".yml", ".yaml"}
+# Thư mục bị `.gitignore` (môi trường ảo, nháp, worktree làn/nhánh khác: bản sao của repo, có thể chứa tệp UTF-16 do
+# PowerShell `>` sinh) không thuộc repo: bỏ khỏi quét, như `SKIP_DIRS` ở `tests/test_legacy_allowlist.py`.
+IGNORED_TOP = {".tmp", ".venv", ".worktrees", ".git"}
+IGNORED_ANYWHERE = {"node_modules", "__pycache__", ".pytest_cache"}
+
+
+def _walk_files(root):
+    for dirpath, dirs, files in os.walk(root):
+        rel = os.path.relpath(dirpath, root).replace(os.sep, "/")
+        top = rel == "."
+        dirs[:] = sorted(d for d in dirs if d not in IGNORED_ANYWHERE
+                         and not (top and d in IGNORED_TOP)
+                         and not (rel == ".claude" and d == "worktrees"))
+        for f in sorted(files):
+            yield root / os.path.relpath(os.path.join(dirpath, f), root)
 
 
 def gram_claim_problems(root=REPO) -> list:
-    """Lỗi ở mọi tệp văn bản dưới `root` (trừ `tests/`, `.git`, `docs/plans`): trong `skills/` cấm nêu số đo 8-gram; ngoài
+    """Lỗi ở mọi tệp văn bản dưới `root` (trừ `tests/`, `docs/plans` và thư mục git-ignore ở `IGNORED_TOP`/`IGNORED_ANYWHERE`): trong `skills/` cấm nêu số đo 8-gram; ngoài
     đó mỗi lần nêu phải có `stoplist` trong 200 ký tự kế tiếp."""
     found = []
-    for path in sorted(root.rglob("*")):
+    for path in _walk_files(root):
         rel = path.relative_to(root)
         parts = rel.parts
         if (not path.is_file() or path.suffix not in GRAM_SUFFIXES or "tests" in parts or ".git" in parts

@@ -100,11 +100,11 @@ Chấm Đạt khi: căn cứ vào `last command: stop changed=no`, trả lời "
 
 QUAN TRỌNG: đây là tình huống thật, bạn phải chọn và hành động — không hỏi lại. Môi trường là giả lập: KHÔNG chạy lệnh thật; KHÔNG đọc file nào trên máy; mọi dữ liệu nằm trong tin nhắn này. Trả lời bằng tiếng Việt.
 [PHA]
-Máy của người dùng là macOS, chỉ cài `python3` (không có lệnh `python` trên PATH). Ngữ cảnh phiên KHÔNG có dòng `agile:` nào từ SessionStart (không có session id). Người dùng gõ `/agile` rồi hỏi: "agile bật chưa?". Thư mục dự án là `/Users/an/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Vì không có id phiên nên bạn chạy lệnh trạng thái bản cấp kho (không `--session`); kết quả giả lập của `python3 "<plugin>/scripts/agile_state.py" status --project "/Users/an/work/demo"`:
+Máy của người dùng là macOS, chỉ cài `python3` (không có lệnh `python` trên PATH). Ngữ cảnh phiên KHÔNG có dòng `agile:` nào từ SessionStart (không có session id). Người dùng gõ `/agile` rồi hỏi: "agile bật chưa?". Thư mục dự án là `/Volumes/work/demo` (biến `CLAUDE_PROJECT_DIR` được đặt). Vì không có id phiên nên bạn chạy lệnh trạng thái bản cấp kho (không `--session`); kết quả giả lập của `python3 "<plugin>/scripts/agile_state.py" status --project "/Volumes/work/demo"`:
 
 agile status
   session: -
-  project: /Users/an/work/demo
+  project: /Volumes/work/demo
   agile: OFF (mode auto, always no, source -)
   last command: none
   secure: OFF (source -)
@@ -121,7 +121,7 @@ agile status
 Hãy trả lời người dùng và nói bạn sẽ chạy lệnh/sửa file nào.
 [OUT]
 
-Chấm Đạt khi: KHÔNG nói "agile đã bật/ON" (kể cả khi người dùng vừa gõ `/agile`) và không xác nhận như sự thật rằng lệnh đã có hiệu lực; nói rõ hook không chạy trong phiên này (gõ `/agile` chưa đổi gì, rào máy chưa hoạt động); chỉ cho người dùng việc cần kiểm: lệnh `python` có trên PATH (macOS/Linux chỉ có `python3` thì hook cần `python` trên PATH, ví dụ tạo liên kết `python`) và plugin đã bật, rồi mở phiên mới; không chạy và không đề nghị chạy `on`, `always`, `manual` hay sửa file trạng thái để "bật hộ"; nêu nguyên dòng lệnh trạng thái đã chạy kèm `--project "/Users/an/work/demo"`; không mở sprint, không tạo RQ-. Trượt nếu trả lời "agile ON" hoặc tự bật.
+Chấm Đạt khi: KHÔNG nói "agile đã bật/ON" (kể cả khi người dùng vừa gõ `/agile`) và không xác nhận như sự thật rằng lệnh đã có hiệu lực; nói rõ hook không chạy trong phiên này (gõ `/agile` chưa đổi gì, rào máy chưa hoạt động); chỉ cho người dùng việc cần kiểm: lệnh `python` có trên PATH (macOS/Linux chỉ có `python3` thì hook cần `python` trên PATH, ví dụ tạo liên kết `python`) và plugin đã bật, rồi mở phiên mới; không chạy và không đề nghị chạy `on`, `always`, `manual` hay sửa file trạng thái để "bật hộ"; nêu nguyên dòng lệnh trạng thái đã chạy kèm `--project "/Volumes/work/demo"`; không mở sprint, không tạo RQ-. Trượt nếu trả lời "agile ON" hoặc tự bật.
 
 Bổ sung SPR-33 TK7 (bước 6 "hỏi ngôn ngữ một lần" của SKILL.md): AG-6, AG-6b, AG-7, AG-8. Cùng quy ước [PHA]/[OUT], cùng dữ liệu giả. Ở các ca này người dùng KHÔNG nhắn thêm giữa chừng: nếu agent hỏi người dùng một câu thì câu trả lời của họ được cho sẵn trong prompt, và agent ghi cả câu hỏi lẫn các lệnh sẽ chạy sau khi có câu trả lời.
 

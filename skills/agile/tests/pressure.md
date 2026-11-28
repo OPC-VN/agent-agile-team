@@ -112,3 +112,5 @@ Lý do: TK5 sửa thân `SKILL.md` và `references/status.md` (mẫu dòng trạ
 | AG-8 `/agile status` khi ON | 2/2 Đạt (lượt 2 chạy lại) | lượt 1 Đạt: không chạy `locale_cli.py`, không hỏi ngôn ngữ. Lượt 2 gốc **không tính**: người chấm chấm Trượt vì dòng lệnh ghi `agent_state.py`; người điều phối nhớ chủ thể ghi `agile_state.py` và có thể đã chép sai khi chuyển, nhưng câu trả lời gốc không lưu nên không kiểm chứng được (reviewer RF84). Chạy lại lượt 2 với chủ thể mới: Đạt (đúng `agile_state.py`, không `locale_cli.py`, không hỏi ngôn ngữ; người chấm ghi chú một câu hứa hỏi ngôn ngữ ở tương lai không làm trượt) |
 
 Các ca AG-2, AG-3, AG-4, AG-6, AG-6b, AG-7 **chưa chạy lại** trên `skill_sha` này; kết quả cũ ở trên giữ làm lịch sử. Câu trả lời gốc không lưu thành file (đầu ra subagent trống); nội dung dựa trên báo cáo trả về trong phiên.
+
+2026-11-28: đổi đường giả ở kịch bản AG-5 (dòng 103,107,124 scenarios.txt) để khỏi trúng danh sách chống rò; chưa chạy lại ca này.

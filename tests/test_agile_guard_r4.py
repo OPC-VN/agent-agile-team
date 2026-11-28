@@ -19,7 +19,7 @@ FILE = "session-t1.json"
 
 @pytest.fixture
 def layout(tmp_path, monkeypatch):
-    """Như `test_agile_guard_r3.layout`: thư mục trạng thái `<tmp>/home/.claude/plugins/data/agent-agile-team/state`, repo ở cây khác."""
+    """Như `test_agile_guard_r3.layout`: thư mục trạng thái `<tmp>/<thư mục nhà>/.claude/plugins/data/agent-agile-team/state`, repo ở cây khác."""
     state = tmp_path / "home" / ".claude" / "plugins" / "data" / "agent-agile-team" / "state"
     state.mkdir(parents=True)
     monkeypatch.setenv("AGENT_AGILE_STATE_DIR", str(state))

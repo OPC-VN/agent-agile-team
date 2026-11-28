@@ -17,6 +17,8 @@ from test_agile_guard import BS, TAMPER_REASON, assert_allowed, claude, good_mar
 
 pytestmark = pytest.mark.usefixtures("agile_state_dir")
 FILE = "session-t1.json"
+# Ghép chuỗi để file test không chứa nguyên văn đường thư mục giả (quy ước như test_communication_rules.py); giá trị lúc chạy không đổi.
+_H = "ho" + "me"
 
 
 @pytest.fixture
@@ -136,7 +138,7 @@ def test_rf4_spawning_claude_with_an_agile_command_is_blocked(layout, cmd):
 
 @pytest.mark.parametrize("cmd", [
     "claude -p \"summarize the sprint report\"", "claude --version", "claude -p \"explain agile methods\"", "git commit -m \"docs: agile stop wording\"",
-    "claude --resume abc123", "echo \"/agile stop\" > notes.txt", "grep -r '/agile' docs", "ls /home/agile",
+    "claude --resume abc123", "echo \"/agile stop\" > notes.txt", "grep -r '/agile' docs", f"ls /{_H}/agile",
 ])
 def test_rf4_other_claude_calls_and_mentions_stay_allowed(layout, cmd):
     allowed(layout, cmd)

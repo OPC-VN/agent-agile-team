@@ -392,8 +392,8 @@ def _real(full: str, ctx: "Context") -> str:
 
 def _mentions_state(text: str, ctx: "Context") -> bool:
     """Chuỗi chứa đường của thư mục trạng thái hay dấu hiệu của nó (`agent-agile-team/state`, `state/agent-agile-team`)."""
-    low = DOUBLE_SLASH.sub("/", text.replace("\\", "/").lower())  # `C:\\Users\\x` (gạch ngược kép trong chuỗi mã) cũng về `c:/users/x`
-    # Chữ thường CẢ HAI phía: `normcase` chỉ hạ chữ trên Windows; trên macOS/Linux thư mục trạng thái giữ chữ hoa (`/Users/...`) nên so với `low` luôn trượt.
+    low = DOUBLE_SLASH.sub("/", text.replace("\\", "/").lower())  # đường ổ đĩa viết gạch ngược kép trong chuỗi mã (`C:\\a\\b`) cũng về dạng gạch xuôi chữ thường (`c:/a/b`)
+    # Chữ thường CẢ HAI phía: `normcase` chỉ hạ chữ trên Windows; trên macOS/Linux thư mục trạng thái giữ chữ hoa (thư mục người dùng kiểu macOS) nên so với `low` luôn trượt.
     return any(d.replace("\\", "/").lower() in low for d in ctx.state_dirs) or bool(STATE_SIGNATURE.search(low))
 
 

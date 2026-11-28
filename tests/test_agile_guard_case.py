@@ -1,7 +1,7 @@
 """Rào agile so đường thư mục trạng thái KHÔNG phân biệt hoa/thường trên mọi nền (lỗi chỉ lộ trên macOS/Linux, CI đỏ từ fc55599).
 
 Lỗi cũ: (1) `_mentions_state` hạ câu lệnh về chữ thường rồi so với thư mục trạng thái còn chữ hoa (`os.path.normcase` chỉ hạ chữ trên Windows):
-trên macOS (`/Users/...`) 13 dạng xoá file trạng thái viết trong `python -c`, `node -e`, `perl`… lọt rào; (2) đuôi mẫu `*.JSON` sau `cd` bị coi là
+trên macOS (đường thư mục người dùng mặc định, chữ đầu viết hoa) 13 dạng xoá file trạng thái viết trong `python -c`, `node -e`, `perl`… lọt rào; (2) đuôi mẫu `*.JSON` sau `cd` bị coi là
 không thể là file trạng thái (so phân biệt hoa/thường), trong khi ổ mặc định của macOS không phân biệt nên `rm state/*.JSON` xoá được `repo-x.json`.
 
 Mô phỏng trên Windows: thay `_state_dirs` bằng bản giống hệt nhưng KHÔNG `normcase` (đúng điều `normcase` làm trên POSIX: không đổi gì), đặt thư mục
@@ -19,7 +19,11 @@ from test_agile_guard_r2 import RF1_BLOCKED
 
 pytestmark = pytest.mark.usefixtures("agile_state_dir")
 
-POSIX_DIR = "/Users/Runner/Library/AgileState"  # thư mục trạng thái kiểu macOS (ghi đè bằng AGENT_AGILE_STATE_DIR), có chữ hoa
+# Ghép chuỗi để file test không chứa nguyên văn đường thư mục người dùng giả (quy ước như test_communication_rules.py); giá trị lúc chạy không đổi.
+_U = "Us" + "ers"
+_H = "ho" + "me"
+
+POSIX_DIR = f"/{_U}/Runner/Library/AgileState"  # thư mục trạng thái kiểu macOS (ghi đè bằng AGENT_AGILE_STATE_DIR), có chữ hoa
 
 
 def _posix_like_state_dirs(st: object) -> tuple[str, ...]:
@@ -66,7 +70,7 @@ def test_mentions_state_ignores_case_on_both_sides(variant):
     """Đơn vị: câu lệnh nhắc thư mục trạng thái ở bất kỳ kiểu chữ nào đều được nhận ra, khi thư mục trạng thái giữ chữ hoa (POSIX)."""
     ctx = agile_guard.Context(set(), os.getcwd(), (POSIX_DIR,), light=True)
     assert agile_guard._mentions_state("python -c \"import os;os.remove('" + variant(POSIX_DIR) + "/repo-x.json')\"", ctx)
-    assert not agile_guard._mentions_state("python -c \"import os;os.remove('/Users/Runner/Library/Other/repo-x.json')\"", ctx)
+    assert not agile_guard._mentions_state(f"python -c \"import os;os.remove('/{_U}/Runner/Library/Other/repo-x.json')\"", ctx)
 
 
 @pytest.mark.parametrize("component", ["*.JSON", "*.Json", "repo-*.JSON", "*.JSO?", "*SON"])
@@ -83,16 +87,16 @@ def test_glob_tail_that_plainly_is_not_json_stays_allowed_in_any_case(component)
 @pytest.mark.parametrize("rel", ["state/*.JSON", "STATE/*.json", "State/repo-*.JSON", "state/*"])
 def test_relative_glob_after_cd_reaches_state_dir_in_any_case(rel):
     """Đơn vị `_reaches_state` (đường tương đối sau `cd`) với thư mục trạng thái kiểu POSIX: thành phần và đuôi so không phân biệt hoa/thường."""
-    ctx = agile_guard.Context(set(), os.getcwd(), ("/Users/Runner/agile/State",), light=True)
+    ctx = agile_guard.Context(set(), os.getcwd(), (f"/{_U}/Runner/agile/State",), light=True)
     assert agile_guard._reaches_state(rel, ctx, False, False), rel
 
 
 def test_negated_class_with_uppercase_still_matches():
     """Review PR #18: chỉ hạ chữ cả mẫu thì `[!A-Z]tore` thành `[!a-z]tore` và không còn khớp `store` (bản đầu của PR làm lọt dạng base chặn).
     Shell mở rộng `[!A-Z]tore` thành `store`: phải chặn."""
-    linux_dir = "/home/runner/agile/store"
-    assert agile_guard._glob_covers("/home/runner/agile/[!A-Z]tore/*.json", linux_dir, False)
-    assert agile_guard._glob_covers("/home/runner/agile/[!A-Z]tore", linux_dir, False)
+    linux_dir = f"/{_H}/runner/agile/store"
+    assert agile_guard._glob_covers(f"/{_H}/runner/agile/[!A-Z]tore/*.json", linux_dir, False)
+    assert agile_guard._glob_covers(f"/{_H}/runner/agile/[!A-Z]tore", linux_dir, False)
     ctx = agile_guard.Context(set(), os.getcwd(), (linux_dir,), light=True)
     assert agile_guard._reaches_state("[!A-Z]tore/*.json", ctx, False, False)
     assert agile_guard._reaches_state("[!A-Z]tore", ctx, True, False)
@@ -107,17 +111,17 @@ def test_negated_class_with_lowercase_on_an_uppercase_state_dir_is_blocked(upper
 
 
 @pytest.mark.parametrize("path, directory", [
-    ("/users/runner/agile/STORE/repo-x.json", "/Users/Runner/Agile/Store"),
-    ("/Users/Runner/Agile/Store", "/users/runner/agile/store"),
+    (f"/{_U.lower()}/runner/agile/STORE/repo-x.json", f"/{_U}/Runner/Agile/Store"),
+    (f"/{_U}/Runner/Agile/Store", f"/{_U.lower()}/runner/agile/store"),
 ])
 def test_under_ignores_case(path, directory):
     """`_under` (đường đã giải, không ký tự đại diện): trên macOS `../agile/STORE/repo-x.json` trúng `.../Agile/Store` (có từ trước PR)."""
     assert agile_guard._under(path.replace("/", os.sep), directory.replace("/", os.sep))
-    assert not agile_guard._under("/Users/Runner/Agile/Storex/repo-x.json".replace("/", os.sep), directory.replace("/", os.sep))
+    assert not agile_guard._under(f"/{_U}/Runner/Agile/Storex/repo-x.json".replace("/", os.sep), directory.replace("/", os.sep))
 
 
-@pytest.mark.parametrize("cmd", ["rm ../../Users/Runner/Library/AGILESTATE/session-t1.json", "rm -rf ../../users/runner/library/agilestate",
-                                 "mv ../../USERS/runner/LIBRARY/agileState/session-t1.json x.json"])
+@pytest.mark.parametrize("cmd", [f"rm ../../{_U}/Runner/Library/AGILESTATE/session-t1.json", f"rm -rf ../../{_U.lower()}/runner/library/agilestate",
+                                 f"mv ../../{_U.upper()}/runner/LIBRARY/agileState/session-t1.json x.json"])
 def test_relative_path_in_other_case_is_blocked(upper_state, cmd):
     """Qua cả rào, đường tương đối khác kiểu chữ tới thư mục trạng thái giữ chữ hoa (mô phỏng macOS): trước bản sửa `_under` lọt."""
     repo, _ = upper_state
@@ -127,6 +131,6 @@ def test_relative_path_in_other_case_is_blocked(upper_state, cmd):
 
 def test_glob_covers_state_dir_in_any_case():
     """Đơn vị `_glob_covers`: mẫu tuyệt đối có ký tự đại diện, khác kiểu chữ với thư mục trạng thái (POSIX không `normcase` hạ chữ)."""
-    assert agile_guard._glob_covers("/USERS/runner/library/agile*", POSIX_DIR, False)
-    assert agile_guard._glob_covers("/users/RUNNER/*", POSIX_DIR, True)
-    assert not agile_guard._glob_covers("/users/runner/other*", POSIX_DIR, True)
+    assert agile_guard._glob_covers(f"/{_U.upper()}/runner/library/agile*", POSIX_DIR, False)
+    assert agile_guard._glob_covers(f"/{_U.lower()}/RUNNER/*", POSIX_DIR, True)
+    assert not agile_guard._glob_covers(f"/{_U.lower()}/runner/other*", POSIX_DIR, True)

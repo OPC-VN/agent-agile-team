@@ -13,7 +13,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 NEEDLE = "autopilot"
 # `.venv`, `venv`: môi trường ảo của máy người chạy, thư viện bên thứ ba (vd pygments) không thuộc repo và có thể chứa chữ này.
-SKIP_DIRS = {".git", ".tmp", ".claude", "node_modules", "__pycache__", ".pytest_cache", ".venv", "venv"}
+# `.worktrees`: worktree git của nhánh khác (thư mục bị ignore), bản sao của chính repo, không phải nội dung nhánh đang kiểm.
+SKIP_DIRS = {".git", ".tmp", ".claude", ".worktrees", "node_modules", "__pycache__", ".pytest_cache", ".venv", "venv"}
 TEXT_SUFFIXES = {".md", ".py", ".json", ".txt", ".sh", ".toml", ".yml", ".yaml", ".cfg", ".ini", ".mdx", ".html", "",
                  ".ps1", ".js", ".cmd", ".bat", ".mjs", ".ts"}  # TK6e S7: thêm các đuôi script, không để chữ cũ lọt qua file không quét
 

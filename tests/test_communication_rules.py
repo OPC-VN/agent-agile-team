@@ -45,6 +45,17 @@ def test_method_communication_states_each_rule(needle):
     assert needle.lower() in read(POINTER).lower(), f"`{POINTER}` thiếu nội dung luật: {needle!r}"
 
 
+@pytest.mark.parametrize("needle", ["Chưa kiểm", "nghiệm thu", "máy cục bộ", "Tự kiểm", "chưa rõ nghĩa"])
+def test_method_communication_plain_and_honest_rules(needle):
+    # 2026-11-28: luật dễ hiểu, không tô hồng (mục 6) thi hành mục Communication của core.md
+    section = read(POINTER).split("## 6.", 1)[1]
+    assert needle in section, f"`{POINTER}` mục 6 thiếu {needle!r}"
+
+
+def test_method_communication_concise_is_not_token_saving():
+    assert "tiết kiệm token" not in read(POINTER), "súc tích là để hiểu nhanh, không phải để ít chữ (mục 1)"
+
+
 def test_method_communication_question_template_has_four_parts():
     section = read(POINTER).split("## 3.", 1)[1].split("\n## ", 1)[0]
     for part in ("**Cần anh quyết:**", "Chi tiết: [", "**KHUYẾN NGHỊ:**", "| Phương án |"):
@@ -97,6 +108,8 @@ def test_response_style_brief_block_mentions_links_and_recommendation():
     assert "link" in block.lower(), "khối rút gọn cho subagent thiếu dòng về link (FR5.3)"
     assert "KHUYẾN NGHỊ" in block, "khối rút gọn cho subagent thiếu dòng về khuyến nghị (FR5.3)"
     assert "[tên:dòng](" in block, "khối rút gọn dùng dạng link khác `[tên:dòng](đường:dòng)` của method/communication.md mục 2"
+    for needle in ("Chưa kiểm", "nghiệm thu", "máy cục bộ"):
+        assert needle in block, f"khối rút gọn cho subagent thiếu luật không tô hồng: {needle!r}"
 
 
 def test_no_old_link_form_in_communication_files():

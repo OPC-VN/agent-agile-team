@@ -229,6 +229,9 @@ def test_unreadable_agile_state_passes_with_a_warning(tmp_path, agile_state_dir)
 
 
 def run_main(p, env_patch, monkeypatch):
+    # The machine of the owner may export the tier variables (OpcOS mode wins over the standalone table): isolate them first.
+    for k in ("AGENT_AGILE_TIER_SNAPSHOT", "AGENT_AGILE_TIERS", "AGENT_AGILE_ROLE_CATALOG", "AGENT_AGILE_MODEL_ALIASES"):
+        monkeypatch.delenv(k, raising=False)
     for k, v in env_patch.items():
         monkeypatch.setenv(k, v)
     stdout = io.StringIO()
