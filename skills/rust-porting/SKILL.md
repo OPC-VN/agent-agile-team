@@ -1,6 +1,6 @@
 ---
 name: rust-porting
-description: Use when porting, rewriting or migrating existing code to Rust (port to Rust, rewrite in Rust, migrate to Rust, "chuyển sang Rust", "viết lại bằng Rust"), when a legacy tool must be replaced by a Rust version with identical behavior, or when deciding whether a Rust port is done and the old version can be switched off. Not for writing new Rust code or fixing Rust compile errors (that is `rust`), nor the Tauri desktop shell (`tauri-desktop`).
+description: Use when porting code to Rust, or rewriting or migrating existing code to it (port to Rust, rewrite in Rust, migrate to Rust, "chuyển sang Rust", "viết lại bằng Rust"), when a legacy tool must be replaced by a Rust version with identical behavior, or when deciding whether a Rust port is done and the old version can be switched off. Not for writing new Rust code or fixing Rust compile errors (that is `rust`), nor the Tauri desktop shell (`tauri-desktop`).
 metadata:
   group: "process"
   roles: "architect, implementer, qa, tech-reviewer"

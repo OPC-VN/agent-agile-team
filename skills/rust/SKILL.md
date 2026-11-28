@@ -1,6 +1,6 @@
 ---
 name: rust
-description: Use when writing, reviewing, or refactoring Rust code, designing Rust crates or modules, configuring Cargo/clippy/rustfmt/tests, handling ownership/borrowing/lifetimes, error types (thiserror/anyhow), async Tokio concurrency, or Windows FFI/process safety. Not for Tauri v2 desktop shell, WebView2 IPC, capabilities, or installers (that is `tauri-desktop`).
+description: Use when writing Rust code, reviewing or refactoring it, designing Rust crates or modules, configuring Cargo/clippy/rustfmt/tests, handling ownership/borrowing/lifetimes, error types (thiserror/anyhow), async Tokio concurrency, or Windows FFI/process safety. Not for Tauri v2 desktop shell, WebView2 IPC, capabilities, or installers (that is `tauri-desktop`).
 metadata:
   group: "technique"
   kind: "reference"
@@ -60,10 +60,10 @@ cargo test --all-targets --all-features
 
 | Cần | Đọc |
 |---|---|
-| Ownership, borrowing, `Cow`, `mem::take`, `thiserror` vs `anyhow`, async `Send + Sync`, cancellation và an toàn FFI/process Windows | [idioms-and-errors.md](references/idioms-and-errors.md) |
+| Ownership, borrowing, `Cow`, `mem::take`, `thiserror` vs `anyhow`, async `Send + Sync`, huỷ task/`select!`/`CancellationToken`/`spawn_blocking`, bảng lỗi borrow `E0499`–`E0716` và an toàn FFI/process Windows | [idioms-and-errors.md](references/idioms-and-errors.md) |
 | Phân tầng unit/integration/`proptest`/`insta`, workspace `Cargo.toml`, `[lints.clippy]`, `rustfmt`, feature flags và kiểm tra CI | [testing-and-tooling.md](references/testing-and-tooling.md) |
 | Chạy `cargo` để xác minh, sửa lỗi biên dịch, trần 3 vòng, thư mục `target`, giới hạn Claude/Codex/Antigravity | [build-loop.md](references/build-loop.md) |
-| Đường dẫn, tiền tố đường dài/UNC, junction, placeholder đám mây, exe bị khoá, tiến trình con làm treo lệnh | [windows-pitfalls.md](references/windows-pitfalls.md) |
+| Đường dẫn, tiền tố đường dài/UNC, junction, placeholder đám mây, exe bị khoá, tiến trình con làm treo lệnh, quy tắc FFI Win32 (UTF-16 NUL cuối, `GetLastError`, bọc `HANDLE`) | [windows-pitfalls.md](references/windows-pitfalls.md) |
 | Dựng workspace mới: bảng lint và lý do, kế thừa `[lints]`, phép thử `.unwrap()` | [project-baseline.md](references/project-baseline.md) + khuôn biên dịch được `assets/workspace-template/` |
 
 ## 5. Liên quan và nguồn

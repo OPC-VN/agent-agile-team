@@ -15,6 +15,32 @@
 | **Mã hoá console** | Console cũ dùng code page OEM (CP437/CP850, 1252…); `println!` UTF-8 hiện chữ vỡ, và PowerShell 5.1 đọc stdout của tiến trình con bằng code page hệ thống | Với output máy đọc: ghi UTF-8 ra stdout và đặt đọc UTF-8 phía nhận; ra console người xem: `SetConsoleOutputCP(65001)` hoặc chấp nhận vỡ chữ. Không dùng ký tự Unicode làm giao thức giữa tiến trình |
 | **Chờ tiến trình con còn sống** | `Start-Process -Wait` (PowerShell) chờ **cả cây tiến trình con**; một con nền như `mspdbsrv.exe` (máy chủ PDB do trình liên kết MSVC bật) sống lâu hơn lệnh build → lệnh treo dù build xong. Tương tự: đợi EOF trên ống mà con nền còn giữ đầu ghi | Tránh `-Wait` cho lệnh build có thể sinh con nền; chạy bằng toán tử gọi trực tiếp (`& cargo ...`) hoặc `Start-Process` không `-Wait` rồi chờ đúng PID cha (`Wait-Process -Id`) có hạn. Trong Rust: `Child::wait` chỉ chờ tiến trình con trực tiếp; đặt hạn bằng luồng/`wait_timeout`, và không để con thừa kế tay cầm ống ngoài ý muốn |
 
+## Quy tắc FFI Win32
+
+- **Chuỗi UTF-16 có NUL cuối và sống đủ lâu.** Dựng `Vec<u16>` bằng `OsStr::encode_wide().chain(std::iter::once(0)).collect()`; giữ vector trong biến cục bộ **suốt lời gọi**, không truyền `.as_ptr()` của giá trị tạm đã bị drop. Chuỗi có NUL ở giữa phải bị từ chối trước khi gọi.
+- **Kiểm giá trị trả về rồi đọc lỗi ngay.** Mỗi hàm có quy ước riêng: `GetFileAttributesW` trả `INVALID_FILE_ATTRIBUTES`, `CreateFileW` trả `INVALID_HANDLE_VALUE`, nhiều hàm khác trả `0`/null. So đúng giá trị lỗi của hàm đó, rồi đọc `GetLastError()` (hoặc `std::io::Error::last_os_error()`) **ngay sau lời gọi**, trước mọi việc khác (cấp phát, log) vì chúng có thể ghi đè mã lỗi. Đổi thành `Result`, không trả giá trị thô lên tầng trên.
+- **Bọc `HANDLE` trong kiểu có `Drop`.** `struct OwnedHandle(HANDLE);` với `Drop` gọi `CloseHandle` một lần; không `Clone`, không `Copy`; hàm tạo kiểm `INVALID_HANDLE_VALUE`/null. Nhờ vậy đường lỗi (`?`, panic) cũng đóng tay cầm.
+- **`// SAFETY:` nêu bất biến cụ thể**, không chép lại chữ «unsafe». Tốt: «`wide` kết thúc bằng NUL và còn sống đến hết lời gọi; con trỏ không null». Xấu: «gọi API Windows nên an toàn».
+- **Gom `unsafe` vào một module mỏng** (ví dụ `sys` hoặc `win32`) trả về API an toàn (`fn file_attributes(&Path) -> io::Result<u32>`); phần còn lại của crate không có `unsafe`.
+- **Miễn trừ lint có chủ đích.** Khi workspace đặt `unsafe_code = "warn"`, chỉ module FFI mới có `#![allow(unsafe_code, reason = "Win32 FFI boundary")]` (hoặc `#[allow(...)]` trên từng mục) kèm lý do; không nới ở cấp crate hay workspace.
+
+Minh hoạ (chưa biên dịch thử; giả định crate `windows-sys` với feature `Win32_Storage_FileSystem`):
+
+```rust
+use std::{io, os::windows::ffi::OsStrExt, path::Path};
+use windows_sys::Win32::Storage::FileSystem::{GetFileAttributesW, INVALID_FILE_ATTRIBUTES};
+
+pub fn file_attributes(path: &Path) -> io::Result<u32> {
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+    // SAFETY: `wide` kết thúc bằng NUL và sống đến hết lời gọi; con trỏ không null.
+    let attrs = unsafe { GetFileAttributesW(wide.as_ptr()) };
+    if attrs == INVALID_FILE_ATTRIBUTES {
+        return Err(io::Error::last_os_error()); // đọc lỗi ngay sau lời gọi
+    }
+    Ok(attrs)
+}
+```
+
 ## Ghi nhớ khi viết FFI/tiến trình
 
 - Mọi lời gọi Win32 kiểm giá trị trả về và `GetLastError` ngay sau lời gọi; bọc tay cầm (`HANDLE`) trong kiểu có `Drop` đóng tay cầm.
