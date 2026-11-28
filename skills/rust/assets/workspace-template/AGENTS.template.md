@@ -1,4 +1,4 @@
-# AGENTS.md — dự án Rust (mẫu)
+# AGENTS.md — dự án Rust (mẫu; chép vào repo đích và đổi tên thành `AGENTS.md`)
 
 Sao chép file này vào gốc repo rồi điền các chỗ `<...>`.
 

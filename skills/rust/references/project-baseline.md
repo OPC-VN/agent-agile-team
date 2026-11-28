@@ -10,7 +10,7 @@
 | `rust-toolchain.toml` | Ghim kênh `stable` + `clippy`, `rustfmt`. **Không** ghim `rust-analyzer`: đó là công cụ của IDE, không phải điều kiện build |
 | `clippy.toml` | `allow-unwrap-in-tests`, `allow-expect-in-tests`, `allow-panic-in-tests` (xem bên dưới) |
 | `deny.toml` | Cho phép `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `Unicode-3.0`; cấm registry/git lạ; lỗ hổng và crate bị yanked = deny; crate nội bộ `publish = false` không cần khai license |
-| `AGENTS.md` | Mẫu cho repo đích: đường manifest, feature, lệnh xác minh, quy ước `target` |
+| `AGENTS.template.md` | Mẫu `AGENTS.md` cho repo đích (đổi tên khi chép; trong plugin giữ đuôi `.template.md` để công cụ phát không coi là file luật): đường manifest, feature, lệnh xác minh, quy ước `target` |
 | `crates/cli` | CLI chỉ dùng std (không phụ thuộc ngoài, build được offline): exit 0/1/2 + một dòng JSON có `kind`, có test đơn vị và test chạy binary |
 | `.gitignore` | Bỏ `target/` |
 
