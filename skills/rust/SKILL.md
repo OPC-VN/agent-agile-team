@@ -64,7 +64,7 @@ cargo test --all-targets --all-features
 | Phân tầng unit/integration/`proptest`/`insta`, workspace `Cargo.toml`, `[lints.clippy]`, `rustfmt`, feature flags và kiểm tra CI | [testing-and-tooling.md](references/testing-and-tooling.md) |
 | Chạy `cargo` để xác minh, sửa lỗi biên dịch, trần 3 vòng, thư mục `target`, giới hạn Claude/Codex/Antigravity | [build-loop.md](references/build-loop.md) |
 | Đường dẫn, tiền tố đường dài/UNC, junction, placeholder đám mây, exe bị khoá, tiến trình con làm treo lệnh | [windows-pitfalls.md](references/windows-pitfalls.md) |
-| Dựng workspace mới: bảng lint và lý do, kế thừa `[lints]`, phép thử `.unwrap()` | [project-baseline.md](references/project-baseline.md) + khuôn biên dịch được [assets/workspace-template/](assets/workspace-template/) |
+| Dựng workspace mới: bảng lint và lý do, kế thừa `[lints]`, phép thử `.unwrap()` | [project-baseline.md](references/project-baseline.md) + khuôn biên dịch được `assets/workspace-template/` |
 
 ## 5. Liên quan và nguồn
 
