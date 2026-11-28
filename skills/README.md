@@ -137,7 +137,7 @@ số câu Đạt hẳn trên tổng số câu (kèm số Một phần và Không
 | [postgres](postgres/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 4/7 (+2 partial, 1 fail), below threshold; points-right 6/7 | 2026-10-04 |
 | [python](python/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 3/7 (+4 partial, 0 fail), below threshold; points-right 7/7 | 2026-10-04 |
 | [react](react/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 3/7 (+4 partial, 0 fail), below threshold; points-right 7/7 | 2026-10-04 |
-| [rust](rust/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 9/10 (+1 partial, 0 fail), at threshold; points-right 10/10 | 2026-11-28 |
+| [rust](rust/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 10/10 (+0 partial, 0 fail), at threshold; points-right 10/10 | 2026-11-28 |
 | [rust-porting](rust-porting/tests/pressure.md) | kỷ luật | `pressure.md` | 3/3 GREEN pass | 2026-11-28 |
 | [tauri-desktop](tauri-desktop/tests/retrieval.md) | tham chiếu | `retrieval.md` | strict 7/7 (+0 partial, 0 fail), at threshold; points-right 7/7 | 2026-11-28 |
 | [tdd](tdd/tests/pressure.md) | kỷ luật | `pressure.md` | 4/4 GREEN pass | 2026-10-04 |
