@@ -3,7 +3,7 @@ skill: rust-porting
 method: pressure-test with subagents (RED without skill, GREEN with skill)
 model: claude-sonnet-5-5
 tier: T3
-skill_sha: 775d10b7f3e4d0e9eda48c53d207ae4a59fe1b7f
+skill_sha: 30a44b1fc926cd61e101b582627b33c40f4929fc
 date: 2026-11-28
 result: 3/3 GREEN pass; RED 3/3 pass already, so the three scenarios do not discriminate (n = 1 per phase)
 ---
@@ -11,6 +11,8 @@ result: 3/3 GREEN pass; RED 3/3 pass already, so the three scenarios do not disc
 # Thử áp lực — rust-porting
 
 > **Kết luận:** GREEN đạt 3/3. RED (không skill) cũng đạt 3/3, nên **không kịch bản nào phân biệt được có/không skill** trên nền model này: phép thử chứng minh skill không làm lùi và bổ sung bước cụ thể (ghi bug gốc vào `PORTING.md`, cổng sáu điều kiện, điều kiện tắt bản cũ), chưa chứng minh skill đổi được quyết định. Không cần REFACTOR.
+
+**Chạy lại SPR-39:** mô tả đổi câu mở (chỉ frontmatter), `skill_sha` đổi nên GREEN chạy lại một lượt (chủ thể `a225839ad3ddac6d2`, qa, không đọc `tests/`): rp-1, rp-2, rp-3 đều Đạt theo cột «Đạt khi» (không xoá bản cũ, giữ bug làm tròn xuống và ghi `PORTING.md`, không `#[ignore]`/`todo!()`, báo 37/40 chưa xong). RED không chạy lại (không phụ thuộc skill). Đề giao bằng tóm tắt ở mục từng kịch bản, không nguyên văn gốc.
 
 **Giới hạn của phép thử:** một mẫu mỗi pha (n = 1); ba kịch bản giao chung cho một chủ thể mỗi pha (chủ thể RED một phiên, GREEN một phiên), nên kịch bản sau có thể bị kịch bản trước mồi. Người soạn kịch bản, viết kỳ vọng và chấm là cùng một agent (điều phối SPR-99, Opus 5.5); kỳ vọng ghi vào file nháp trước khi giao chủ thể. Chủ thể RED được dặn không đọc file, không gọi skill; chủ thể GREEN đọc `SKILL.md` + `references/`, không đọc `tests/`. Cần môi trường trắng hoặc model yếu hơn để thấy giá trị riêng của skill.
 
