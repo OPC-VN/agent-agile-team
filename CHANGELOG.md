@@ -10,6 +10,7 @@ version kiểm điều này).
 - **Thêm — agent `rust-reviewer`** (chỉ đọc, không ghim model) + `method/standards/rust.md`; `code-review` chọn `rust-reviewer` cho diff `.rs`/`Cargo.toml`, ghi đường chạy theo nền tảng (Claude agent gốc; Codex, Antigravity đọc thẻ vai; ngoài Claude không chạy được `cargo` thì «chưa kiểm»); mục `rust-reviewer` trong `tiers/role-catalog.json`. `code-review` thử lại cr-1 và kịch bản mới cr-12.
 - **Đổi — `build-fixer`:** cấm «xanh giả» kiểu Rust (`#[allow]` không lý do, `unwrap`/`expect` để qua kiểu, `todo!()`, `.clone()` tắt lỗi mượn, `unsafe`/`transmute`, nới lint).
 - **Sửa — số đếm tài liệu và manifest:** 42 skill, 17 agent (README, OVERVIEW, STRUCTURE, `hosts/claude`, manifest Claude/Codex); test đếm agent 16 → 17.
+- **Số đo:** `AGENTS.md` 89 dòng, 8838 → 8838 byte (không đổi; đếm byte sau khi chuẩn hóa CRLF thành LF).
 - Nguồn: sprint OpcOS SPR-99 / `agent-agile-team:SPR-38` (chương trình Rust phần A, đợt trang bị 1).
 
 ## 0.15.0 (2026-11-28)
