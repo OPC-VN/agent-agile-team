@@ -4,7 +4,7 @@
 
 ## Quy tắc chung (mọi nền tảng)
 
-- Tải phụ thuộc **một lần ngoài sandbox** (`cargo fetch --locked`), sau đó mọi lệnh chạy `--frozen`.
+- Tải phụ thuộc **một lần ngoài sandbox** (`cargo fetch --locked`), sau đó mọi lệnh chạy `--frozen`. Repo mới chưa có `Cargo.lock` thì `--locked` báo lỗi «cannot create the lock file»: lần đầu chạy `cargo generate-lockfile` (hoặc `cargo fetch` không cờ), commit `Cargo.lock`, rồi mới dùng `--locked`/`--frozen`.
 - Thứ tự: `cargo check` → sửa **lỗi biên dịch đầu tiên** → `cargo test <tên_ca>` → `cargo fmt --check` → `cargo clippy --all-targets -- -D warnings` → bộ test của repo (kèm `cargo test --doc` nếu có doctest).
 - **Trần vòng sửa:** sau 3 vòng không tiến thì dừng và báo; không «xanh giả» (không `#[allow]` không lý do, không `.unwrap()` để qua kiểu, không nới lint hay bỏ test).
 - **Thư mục `target`:** mặc định **một `target` chung theo repo** cho việc tuần tự (kể cả nhiều worktree làm nối tiếp). **Tách riêng** bằng `CARGO_TARGET_DIR` khi có hai tiến trình cargo chạy đồng thời trên cùng repo (subagent/worktree song song, hoặc rust-analyzer chạy nền). Lý do: build nguội một cây phụ thuộc lớn (hàng trăm gói) có thể vượt cả hạn lệnh lẫn ngưỡng im lặng của công cụ gọi. Vượt trần dung lượng của repo thì báo, **không tự `cargo clean`** ngoài vùng tạm của task. Chưa đo: thời gian chờ khoá `target`; sản phẩm cuối trùng tên đè nhau giữa hai worktree dùng chung `target`.

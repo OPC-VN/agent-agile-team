@@ -23,10 +23,15 @@ pub fn run(args: &[String]) -> Outcome {
             code: 1,
             line: r#"{"kind":"failed"}"#.to_string(),
         },
-        _ => Outcome {
-            code: 2,
-            line: r#"{"kind":"usage"}"#.to_string(),
-        },
+        _ => usage(),
+    }
+}
+
+/// Kết quả `usage` (exit 2): đối số sai, hoặc đối số không đổi được sang UTF-8 (xem `main`).
+pub fn usage() -> Outcome {
+    Outcome {
+        code: 2,
+        line: r#"{"kind":"usage"}"#.to_string(),
     }
 }
 
