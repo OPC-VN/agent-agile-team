@@ -3,6 +3,13 @@
 Mục mới nhất đứng đầu. Tiêu đề mỗi mục là đúng chuỗi version trong các manifest (test đồng bộ
 version kiểm điều này).
 
+## 0.16.1 (2026-11-28)
+
+- **Sửa — phát 3 nền tảng (SPR-38 việc 7):** file mẫu `skills/rust/assets/workspace-template/AGENTS.md` đổi tên `AGENTS.template.md` (bộ chép Antigravity coi tên `AGENTS.md` là file luật và loại ra); bảng «Đọc gì khi nào» của `skills/rust/SKILL.md` bỏ liên kết trỏ tới thư mục (bộ chép native không chiếu được), giữ chữ dạng mã. Nội dung kỹ thuật không đổi.
+- **Thử lại:** `skills/rust/tests/retrieval.md` chạy lại trên skill_sha mới, strict 10/10.
+- **Số đo:** `AGENTS.md` 89 dòng, 8838 → 8838 byte (không đổi; đếm byte sau khi chuẩn hóa CRLF thành LF).
+- Lý do lên bản vá: CLI Claude và Codex chỉ chép lại cache khi version đổi; bản 0.16.0 cục bộ đã nằm trong cache trước hai sửa trên.
+
 ## 0.16.0 (2026-11-28)
 
 - **Thêm — skill quy trình `rust-porting`** (chuyển mã có sẵn sang Rust): ghi oracle từ bản cũ bằng file golden → port → cổng sáu điều kiện (khớp ca, fmt, clippy `-D warnings`, test, không stub, không dán đáp án) → chạy song song rồi mới tắt bản cũ; khuôn `PORTING.md` (ánh xạ API, ánh xạ test, bug gốc giữ lại, điều kiện tắt). Thử áp lực 3/3 GREEN; RED cũng 3/3 nên kịch bản chưa phân biệt được có/không skill.
