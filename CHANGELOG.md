@@ -11,6 +11,7 @@ version kiểm điều này).
 - **Sửa — test đỏ do môi trường máy:** `tests/test_tier_hook.py` cô lập 4 biến `AGENT_AGILE_*` của máy; `tests/test_legacy_allowlist.py` và `tests/test_measure_claims.py` không quét thư mục git-ignore (`.worktrees`, `.claude/worktrees`, `.tmp`…). Hook và ngưỡng không đổi.
 - **Sửa — danh sách chống rò:** 23 chỗ khớp danh sách từ cấm riêng của máy (chuỗi đường dẫn) trong ghi chú, docstring, dữ liệu test và kịch bản thử của rào `agile_guard`: viết lại ghi chú, ghép chuỗi giữ nguyên giá trị chạy, đổi đường giả trong kịch bản. Hai dòng ghi chú ở file sàn `scripts/agile_guard.py` sửa theo lời cấp của người dùng; hành vi rào không đổi.
 - **Thêm — hồ sơ thử** `skills/rust/tests/retrieval.md`, `skills/tauri-desktop/tests/retrieval.md` (strict 7/7 mỗi skill; n = 1, người soạn = người chấm).
+- **Số đo:** `AGENTS.md` 89 dòng, 8838 → 8838 byte (không đổi; đếm byte sau khi chuẩn hóa CRLF thành LF).
 - **Chưa làm (giữ ý, hoãn sang đợt sau):** ba kịch bản thử mới cho `response-style` — RS-4 báo xong việc (không tô hồng, có Chưa kiểm, mã có nghĩa, việc hoãn có chỗ hẹn, có lệnh tự kiểm), RS-5 chống quá tay (hỏi "xong chưa?" → ≤ 3 câu, không tiêu đề/bảng), RS-6 lỗi theo triệu chứng. Các hàng mới của skill chưa có kịch bản thử riêng.
 
 ## 0.14.1 (2026-11-25)
